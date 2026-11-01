@@ -12,7 +12,7 @@
 | **目前階段** | **Phase 1：Web Demo MVP v2 實機體驗驗收期 (All 18 Playtest Feedback Items Implemented)** | 🚀 **【已完成 V2-01 ~ V2-18 全部 18 項試玩反饋升級】** |
 | **當前版本** | `v2.6.0-playtest-v2-complete` | 完整實作課表中心、跨 Tab 運動提醒、固定試穿商城購物車、雙人同框串門子、紙娃娃 5 部位與 3 自由家具/寵物槽、單日完整課表紀錄與數據趨勢圖 |
 | **最後更新時間** | `2026-11-02 00:30 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `HEAD (v2.6.0)` | 與本地儲存庫保持同步 |
+| **最後 Git Commit** | `de0048e` | 與本地儲存庫保持同步 |
 | **當前焦點 (Current Focus)** | 驗收 `apps/web-demo` V2 全部 18 項修正成果（`http://localhost:5173`） |
 
 ---
