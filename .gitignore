@@ -35,6 +35,8 @@ pnpm-debug.log*
 .idea/
 *.sublime-project
 *.sublime-workspace
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
 
 # Native Mobile Build Artifacts (Capacitor)
 ios/App/Pods/
