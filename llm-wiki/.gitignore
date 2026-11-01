@@ -6,3 +6,4 @@ Thumbs.db
 *.tmp
 *.bak
 .cache/
+.obsidian/workspace*.json
