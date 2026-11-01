@@ -8,27 +8,31 @@
 
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
-| **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與房間裝潢) | 核心：雙軌紙娃娃(角色+房間)、任務金幣、好友串門 |
-| **目前階段** | **Phase 0：遊戲企劃 GDD 定案 (含房間裝修)，進入技術實作準備期** | ⚠️ **【凍結程式開發】** 待 Schema 與 PixiJS 規格就緒 |
-| **當前版本** | `v1.1.0-gdd-room-decor` | 納入角色與房間雙軌紙娃娃系統定案版本 |
-| **最後更新時間** | `2026-11-01 19:43 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `9e8ca6c` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 完成知識庫全域回寫與同頻 (TASK-006)，準備開展 MVP 前端工程落地藍圖 (PLAN-015) | 知識庫全主題 100% 同步 |
+| **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與房間裝潢) | 核心：雙軌紙娃娃、任務金幣、迷因拍貼、好友串門 |
+| **目前階段** | **Phase 1：MVP 核心實作期 (Execution Phase)** | 🚀 **【正式解除程式碼開發凍結】** |
+| **當前版本** | `v1.2.0-execution-ready` | MVP 前端工程落地藍圖定案版本 |
+| **最後更新時間** | `2026-11-01 19:49 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `1b5b13d` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 啟動 Sprint 1：初始化 apps/web-demo 工程環境與 PixiJS 180x320 像素遊戲畫布 | 雙層混合架構、小人自主遊蕩與對話氣泡 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [x] **TASK-006**：完成產品知識庫全域回寫與同頻 (`wiki/*.md` 7 大主題 + 全域索引 100% 更新)
-- [ ] **NEXT-FOCUS**：開展 MVP 前端工程目錄架構與開發任務分解 (PLAN-015)
+- [ ] **SPRINT-1.1**：初始化 `apps/web-demo` 前端專案環境 (Vite + React + TypeScript + Tailwind + PixiJS + Zustand)
+- [ ] **SPRINT-1.2**：實作 `PixiGameApp` 核心畫布容器（180x320 虛擬低解析度 + NEAREST 無損放大）
+- [ ] **SPRINT-1.3**：建立初始預置像素圖集（Starter Spritesheet），渲染 32x32 角色與房間家具
+- [ ] **SPRINT-1.4**：實作小人自主遊蕩 AI（漫遊器材、使用跑步機/深蹲架、頭頂情境對話氣泡輪播）
 
 ### 🟡 待討論與規劃清單 (Backlog / To-Do)
-- [ ] **PLAN-012 (P1)**：整合 Web Audio / Howler.js 8-bit BGM（卡帶音響切歌）與街機 SFX 模組（支援一鍵靜音與各狀態觸發）
-- [ ] **PLAN-014 (P1)**：漸進式帳號綁定流程（免註冊本地試玩 ➔ 觸發廣場社交時綁定 Supabase Auth）
-- [ ] **PLAN-015 (P0)**：整合產出 MVP 第一版前端工程目錄架構與開發任務分解 (WBS / Sprint Backlog)
+- [ ] **SPRINT-2**：頂部 HUD、任務白板、運動打卡雙模式與「VICTORY」街機金幣噴發結算
+- [ ] **SPRINT-3**：雙軌換裝商城 (衣櫃+房間) 與 Meme 拍貼工坊 (雙指手勢、自嘲梗庫、右下貼邊宣傳浮水印)
+- [ ] **SPRINT-4**：Supabase 資料庫串接、拍立得社群廣場動態牆、原子打賞與漸進式無感綁定
+- [ ] **SPRINT-5**：線上小規模試玩部署 (Cloudflare/Vercel) 與 Capacitor 原生跨端相容驗證
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261101-12**：完成 MVP 前端工程落地藍圖與 Sprint WBS 分解 ([`fitmon_mvp_engineering_plan_v1.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/fitmon_mvp_engineering_plan_v1.md))
 - [x] **DONE-20261101-11**：完成像素迷因拍貼工坊技術規格書 ([`fitmon_meme_studio_spec.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/fitmon_meme_studio_spec.md))
 - [x] **DONE-20261101-10**：完成 PixiJS 2D 像素遊戲渲染器規格書 ([`fitmon_pixijs_renderer_spec.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/fitmon_pixijs_renderer_spec.md))
 - [x] **DONE-20261101-09**：完成 Supabase 遊戲驅動資料庫綱要與原子打賞 RPC 函數 ([`supabase/migrations/20261101_init_fitmon_game_schema.sql`](../supabase/migrations/20261101_init_fitmon_game_schema.sql))
