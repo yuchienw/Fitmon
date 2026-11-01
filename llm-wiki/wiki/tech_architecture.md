@@ -1,6 +1,6 @@
 # 系統技術架構與數據儲存 (System Architecture & Tech Stack)
 
-> **鏈結索引**：[返回索引](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md) ｜ [架構決策 ADR-0001](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md) ｜ [資料庫遷移腳本](file:///Users/yuchien/Project/Github/fitmon/supabase/migrations/20261101_init_fitmon_game_schema.sql)
+> **鏈結索引**：[返回索引](00_INDEX.md) ｜ [架構決策 ADR-0001](../adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md) ｜ [資料庫遷移腳本](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)
 
 ---
 
@@ -54,7 +54,7 @@ flowchart TB
 
 ## 3. 雲端資料庫綱要 (Supabase Schema 摘要)
 
-完整 DDL 位於 [`supabase/migrations/20261101_init_fitmon_game_schema.sql`](file:///Users/yuchien/Project/Github/fitmon/supabase/migrations/20261101_init_fitmon_game_schema.sql)：
+完整 DDL 位於 [`supabase/migrations/20261101_init_fitmon_game_schema.sql`](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)：
 
 1. **`profiles`**：儲存 `avatar_config (JSONB)`、`room_config (JSONB)`、金幣餘額與 Streak 天數。
 2. **`items`**：包含角色外觀（`avatar_*`）與房間家具（`room_*`）的統一圖鑑，標註金幣價格與 PixiJS 素材 Key。

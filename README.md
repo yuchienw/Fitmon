@@ -10,8 +10,8 @@
 > - **當前階段**：`Phase 0 - 規劃與 LLM-Wiki 知識庫構建期`
 > - **開發狀態**：⚠️ **【凍結程式碼開發】**（現階段專注於商業模式、架構論證與日誌推演，尚未進入應用開發階段）
 > - **Git 狀態**：Monorepo 初始化完畢，分支 `main`，第一筆創世 Commit `62e6c3c` 已固化
-> - **最新演進**：請查閱 [`llm-wiki/logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
-> - **AI 協作守則**：請先閱讀 [`AGENT.md`](file:///Users/yuchien/Project/Github/fitmon/AGENT.md) 與 [`llm-wiki/wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
+> - **最新演進**：請查閱 [`llm-wiki/logs/changelog.md`](llm-wiki/logs/changelog.md)
+> - **AI 協作守則**：請先閱讀 [`AGENT.md`](AGENT.md) 與 [`llm-wiki/wiki/00_INDEX.md`](llm-wiki/wiki/00_INDEX.md)
 
 ---
 
@@ -43,7 +43,7 @@ fitmon/
 
 ## 快速導覽
 
-1. **產品與架構知識庫**：請查閱 [`llm-wiki/wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
-2. **LLM 協作與維護規範**：請查閱 [`llm-wiki/ops/wiki_protocol.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/ops/wiki_protocol.md)
-3. **歷史演進與推演脈絡**：請查閱 [`llm-wiki/logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
-4. **技術選型決策記錄 (ADR-0001)**：請查閱 [`llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md)
+1. **產品與架構知識庫**：請查閱 [`llm-wiki/wiki/00_INDEX.md`](llm-wiki/wiki/00_INDEX.md)
+2. **LLM 協作與維護規範**：請查閱 [`llm-wiki/ops/wiki_protocol.md`](llm-wiki/ops/wiki_protocol.md)
+3. **歷史演進與推演脈絡**：請查閱 [`llm-wiki/logs/changelog.md`](llm-wiki/logs/changelog.md)
+4. **技術選型決策記錄 (ADR-0001)**：請查閱 [`llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md`](llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md)

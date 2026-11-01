@@ -7,7 +7,7 @@
 ## [2026-11-01] 創世初始化：LLM Wiki 體系確立與 Web-First 架構定案
 
 ### 1. 原始事件 (Trigger)
-- **輸入來源**：接收首份系統規格與商業模型草案（收錄至 [`raw/20261101_fitmon_prd_original.html`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/raw/20261101_fitmon_prd_original.html)）。
+- **輸入來源**：接收首份系統規格與商業模型草案（收錄至 [`raw/20261101_fitmon_prd_original.html`](../raw/20261101_fitmon_prd_original.html)）。
 - **使用者需求**：
   1. 建立獨立之 Karpathy-style LLM Wiki 目錄體系，作為後續所有產品演進、推演與執行的唯一真相來源 (Single Source of Truth)。
   2. 開發前先完成可供驗證的網頁 Demo 版，待產品驗證成型後能直接無縫轉為 Android 與 iOS 雙原生 App。
@@ -28,17 +28,17 @@
    - 針對 Canvas 迷因壓圖、Vite 快速預覽、代碼 100% 復用至雙端 App 提出 ADR-0001，決定採用 **React + Vite + Tailwind + Capacitor** 路線。
 
 ### 3. 本次產出檔案清單
-- **規範層**：[`ops/wiki_protocol.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/ops/wiki_protocol.md)
-- **導引層**：[`wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
+- **規範層**：[`ops/wiki_protocol.md`](../ops/wiki_protocol.md)
+- **導引層**：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)
 - **提煉知識庫**：
-  - [`wiki/product_vision_and_privacy.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/product_vision_and_privacy.md)
-  - [`wiki/dual_mode_experience.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md)
-  - [`wiki/game_mechanics_and_science.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/game_mechanics_and_science.md)
-  - [`wiki/meme_and_social.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)
-  - [`wiki/tech_architecture.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)
-  - [`wiki/business_model.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/business_model.md)
-  - [`wiki/roadmap.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/roadmap.md)
-- **架構決策**：[`adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md)
+  - [`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)
+  - [`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)
+  - [`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)
+  - [`wiki/meme_and_social.md`](../wiki/meme_and_social.md)
+  - [`wiki/tech_architecture.md`](../wiki/tech_architecture.md)
+  - [`wiki/business_model.md`](../wiki/business_model.md)
+  - [`wiki/roadmap.md`](../wiki/roadmap.md)
+- **架構決策**：[`adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md`](../adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md)
 - **工程專案框架預留**：`apps/web-demo/`、`packages/engine/`、`apps/mobile/`、`supabase/migrations/`。
 
 
@@ -56,9 +56,9 @@
   2. 於專案根目錄建立 `fitmon/AGENT.md` 軟連結，確保任何自根目錄啟動的 Agent 皆能自動掛載該指令守則。
 
 ### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
-- 新增：[`llm-wiki/AGENT.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/AGENT.md)
-- 新增：[`AGENT.md (根目錄 Symlink)`](file:///Users/yuchien/Project/Github/fitmon/AGENT.md)
-- 更新：[`llm-wiki/README.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/README.md)、[`llm-wiki/wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
+- 新增：[`llm-wiki/AGENT.md`](../AGENT.md)
+- 新增：[`AGENT.md (根目錄 Symlink)`](../../AGENT.md)
+- 更新：[`llm-wiki/README.md`](../README.md)、[`llm-wiki/wiki/00_INDEX.md`](../wiki/00_INDEX.md)
 
 
 ---
@@ -101,10 +101,10 @@
   增設 `PROJECT_STATE.md` 作為即時狀態看板，與高階規格檔案解耦。
 
 ### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
-- 新增：[`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)（即時狀態與 Kanban 待辦系統）
-- 新增：[`ops/collaboration_sop.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/ops/collaboration_sop.md)（4 大標準作業程序）
-- 更新：[`AGENT.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/AGENT.md)（納入 SOP-1 開局對齊卡強制規則）
-- 更新：[`README.md`](file:///Users/yuchien/Project/Github/fitmon/README.md)、[`wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
+- 新增：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（即時狀態與 Kanban 待辦系統）
+- 新增：[`ops/collaboration_sop.md`](../ops/collaboration_sop.md)（4 大標準作業程序）
+- 更新：[`AGENT.md`](../AGENT.md)（納入 SOP-1 開局對齊卡強制規則）
+- 更新：[`README.md`](../../README.md)、[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)
 
 
 ---
@@ -134,8 +134,8 @@
 
 ### 3. 影響範圍與產出檔案清單 (Impact & Modified Files)
 - 產出戰略對齊書：[`alignment_fitmon_v2_strategy.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/alignment_fitmon_v2_strategy.md)
-- 更新狀態看板：[`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)（版本演進至 `v0.2.0-pivot-aligned`，調整 Backlog 任務池）
-- 歷史日誌追加：[`logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
+- 更新狀態看板：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（版本演進至 `v0.2.0-pivot-aligned`，調整 Backlog 任務池）
+- 歷史日誌追加：[`logs/changelog.md`](changelog.md)
 
 
 ---
@@ -156,4 +156,4 @@
 8. **`wiki/roadmap.md`**：重構三大里程碑檢核標準，聚焦於「具有遊戲引擎質感的 Web Demo MVP」。
 
 ### 3. 異動檔案清單 (Impact & Modified Files)
-- 全面更新：[`wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)、[`wiki/product_vision_and_privacy.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/product_vision_and_privacy.md)、[`wiki/dual_mode_experience.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md)、[`wiki/game_mechanics_and_science.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/game_mechanics_and_science.md)、[`wiki/meme_and_social.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)、[`wiki/tech_architecture.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)、[`wiki/business_model.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/business_model.md)、[`wiki/roadmap.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/roadmap.md)
+- 全面更新：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)、[`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)、[`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)、[`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)、[`wiki/meme_and_social.md`](../wiki/meme_and_social.md)、[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)、[`wiki/business_model.md`](../wiki/business_model.md)、[`wiki/roadmap.md`](../wiki/roadmap.md)

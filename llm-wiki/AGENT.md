@@ -10,9 +10,9 @@
 > [!IMPORTANT]
 > - **專案當前階段**：`Phase 0 - 規劃與 LLM-Wiki 知識庫深耕期`
 > - **核心行為約束**：⚠️ **現階段【嚴禁擅自啟動程式開發】**。專案尚未進入應用編碼階段，所有互動重心均為：收錄商業/技術文件、提煉主題 Wiki、論證數值模型、撰寫 ADR 與追加 Changelog。
-> - **即時狀態與待辦看板**：一律查閱並維護 [`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)。
-> - **長效協作 SOP 依歸**：所有對話交互嚴格執行 [`ops/collaboration_sop.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/ops/collaboration_sop.md)。
-> - **進度追溯源**：每次執行任務前，必須先查看 [`logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md) 的最後一筆紀錄。
+> - **即時狀態與待辦看板**：一律查閱並維護 [`PROJECT_STATE.md`](PROJECT_STATE.md)。
+> - **長效協作 SOP 依歸**：所有對話交互嚴格執行 [`ops/collaboration_sop.md`](ops/collaboration_sop.md)。
+> - **進度追溯源**：每次執行任務前，必須先查看 [`logs/changelog.md`](logs/changelog.md) 的最後一筆紀錄。
 
 ---
 
@@ -55,11 +55,11 @@
 
 當 Agent 被指派任務、回答問題或撰寫程式時，必須遵守以下讀取先後順序：
 
-1. **入口索引**：優先讀取 [`wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)，取得全域架構地圖與主題劃分。
-2. **主題深探**：依據任務主題跳轉至相應頁面（如討論公式看 [`wiki/game_mechanics_and_science.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/game_mechanics_and_science.md)，討論前端看 [`wiki/tech_architecture.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)）。
+1. **入口索引**：優先讀取 [`wiki/00_INDEX.md`](wiki/00_INDEX.md)，取得全域架構地圖與主題劃分。
+2. **主題深探**：依據任務主題跳轉至相應頁面（如討論公式看 [`wiki/game_mechanics_and_science.md`](wiki/game_mechanics_and_science.md)，討論前端看 [`wiki/tech_architecture.md`](wiki/tech_architecture.md)）。
 3. **歷史脈絡審查**：
-   - 在建議技術架構或重大變更前，**必須先檢查 [`adr/`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/adr/) 與 [`logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)**，避免推翻過往已決策且記錄之重要約束。
-4. **原始查證**：若發現 `wiki/` 內容語意模糊或與現實需求產生歧異，回溯檢索 [`raw/`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/raw/) 內的原始文件求證。
+   - 在建議技術架構或重大變更前，**必須先檢查 [`adr/`](adr) 與 [`logs/changelog.md`](logs/changelog.md)**，避免推翻過往已決策且記錄之重要約束。
+4. **原始查證**：若發現 `wiki/` 內容語意模糊或與現實需求產生歧異，回溯檢索 [`raw/`](raw) 內的原始文件求證。
 
 ---
 

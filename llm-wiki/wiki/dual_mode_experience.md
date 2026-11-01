@@ -1,6 +1,6 @@
 # 雙軌紙娃娃與雙模式運行機制 (Dual Customization & Experience)
 
-> **鏈結索引**：[返回索引](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md) ｜ [遊戲機制與數值](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/game_mechanics_and_science.md) ｜ [迷因與社交](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)
+> **鏈結索引**：[返回索引](00_INDEX.md) ｜ [遊戲機制與數值](game_mechanics_and_science.md) ｜ [迷因與社交](meme_and_social.md)
 
 ---
 

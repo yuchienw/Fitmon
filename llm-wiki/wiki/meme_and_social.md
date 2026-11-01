@@ -1,6 +1,6 @@
 # 拍立得社群與迷因拍貼工坊 (Polaroid Plaza & Meme Studio)
 
-> **鏈結索引**：[返回索引](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md) ｜ [隱私原則](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/product_vision_and_privacy.md) ｜ [雙軌紙娃娃](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md)
+> **鏈結索引**：[返回索引](00_INDEX.md) ｜ [隱私原則](product_vision_and_privacy.md) ｜ [雙軌紙娃娃](dual_mode_experience.md)
 
 ---
 

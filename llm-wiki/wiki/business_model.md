@@ -1,6 +1,6 @@
 # 商業策略與長期變現路徑 (Business Strategy & Monetization)
 
-> **鏈結索引**：[返回索引](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md) ｜ [遊戲機制](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/game_mechanics_and_science.md) ｜ [里程碑](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/roadmap.md)
+> **鏈結索引**：[返回索引](00_INDEX.md) ｜ [遊戲機制](game_mechanics_and_science.md) ｜ [里程碑](roadmap.md)
 
 ---
 

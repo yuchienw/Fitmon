@@ -10,7 +10,7 @@
 每次開立新對話、重啟上下文，或使用者輸入「我們繼續」、「目前進度到哪」、「今天討論 X」時。
 
 ### AI 執行動作
-1. 主動讀取 [`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)。
+1. 主動讀取 [`PROJECT_STATE.md`](../PROJECT_STATE.md)。
 2. 回覆時**第一段一律輸出「狀態對齊摘要卡」**，格式如下：
 
 ```markdown
@@ -43,7 +43,7 @@ flowchart TD
 
 ## SOP-3：待辦事項流轉與閉環 (Task Lifecycle SOP)
 
-待辦事項統一由 [`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md) 驅動，流轉規則如下：
+待辦事項統一由 [`PROJECT_STATE.md`](../PROJECT_STATE.md) 驅動，流轉規則如下：
 
 1. **認領任務**：將項目自 `🟡 待討論清單 (Backlog)` 移至 `🔴 進行中 (In Progress)`，同一時間保持 1~2 項焦點，嚴禁多頭並進。
 2. **產出交付**：完成討論、文件提煉或規範編寫。
@@ -64,6 +64,6 @@ flowchart TD
 1. **輸出本次總結**：
    - 本次拍板之核心結論（2~3 點）。
    - 產出/修改之文檔清單。
-2. **維護狀態板**：更新 [`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md) 之時間戳與 Kanban。
+2. **維護狀態板**：更新 [`PROJECT_STATE.md`](../PROJECT_STATE.md) 之時間戳與 Kanban。
 3. **執行 Git Commit**：將本次所有變更一併存檔固化。
 4. **提供下次啟動入口**：給出 1~2 個建議的下次討論題目，讓下一次對話無縫開局。

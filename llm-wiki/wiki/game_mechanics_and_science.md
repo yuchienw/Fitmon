@@ -1,6 +1,6 @@
 # 遊戲機制與任務數值引擎 (Game Mechanics & Quest Economy)
 
-> **鏈結索引**：[返回索引](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md) ｜ [雙軌紙娃娃](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md) ｜ [社群與迷因](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)
+> **鏈結索引**：[返回索引](00_INDEX.md) ｜ [雙軌紙娃娃](dual_mode_experience.md) ｜ [社群與迷因](meme_and_social.md)
 
 ---
 

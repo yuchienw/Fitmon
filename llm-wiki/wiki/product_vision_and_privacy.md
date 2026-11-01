@@ -1,6 +1,6 @@
 # 產品定位與零個資隱私原則 (Product Vision & Zero-PII)
 
-> **鏈結索引**：[返回索引](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md) ｜ [雙模式架構](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md) ｜ [技術架構](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)
+> **鏈結索引**：[返回索引](00_INDEX.md) ｜ [雙模式架構](dual_mode_experience.md) ｜ [技術架構](tech_architecture.md)
 
 ---
 

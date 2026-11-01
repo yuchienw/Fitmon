@@ -24,7 +24,7 @@
 
 ### 步驟二：知識提煉與頁面更新 (Synthesize & Cross-link)
 1. 評估資料是否對既有概念產生「增補」、「修正」或「衝突」：
-   - 若為新增領域：建立新主題 Markdown，並更新 [`wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)。
+   - 若為新增領域：建立新主題 Markdown，並更新 [`wiki/00_INDEX.md`](../wiki/00_INDEX.md)。
    - 若為細節調整：編輯對應的主題頁面，保留權威性定義。
 2. 保持**語意高密度**與**Markdown 互相連結**（使用標準 `[標題](file://...)` 語法）。
 
