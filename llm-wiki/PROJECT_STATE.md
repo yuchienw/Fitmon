@@ -9,29 +9,27 @@
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、Meme 拍貼、開源科學動作庫 |
-| **目前階段** | **Phase 1：MVP 核心實作期 (Execution Phase)** | 🚀 **【正式解除程式碼開發凍結】** |
-| **當前版本** | `v1.6.0-analytics-facade-aligned` | 納入產品行為遙測與漏斗分析模組 (Facade Pattern) 定案版本 |
-| **最後更新時間** | `2026-11-01 20:30 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `857ef28` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 21 大模組全數對齊收斂完畢，正式啟動 Sprint 1.1 前端工程初始化 | 像素示範 ＋ 本機健康圖表 ＋ 雲端防作弊金幣 ＋ 產品行為遙測 |
+| **目前階段** | **Phase 0：產品規劃與深度論證期 (Planning Phase)** | ⚠️ **【程式碼開發完全凍結，專注架構推演與客觀風險評估】** |
+| **當前版本** | `v1.7.0-critical-thinking-aligned` | 確立批判性思維與非迎合評估原則定案版本 |
+| **最後更新時間** | `2026-11-01 20:34 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `9849a6e` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 深度規劃討論：主動揭露潛在風險、缺點與摩擦成本，提供務實平衡評估 | 拒絕一昧認同 ＋ 拒絕刻意反駁 ＋ 建設性建議 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [ ] **SPRINT-1.1**：初始化 `apps/web-demo` 前端專案環境 (Vite + React + TypeScript + Tailwind + PixiJS + Zustand)
-- [ ] **SPRINT-1.2**：實作 `PixiGameApp` 核心畫布容器（180x320 虛擬低解析度 + NEAREST 無損放大）
-- [ ] **SPRINT-1.3**：建立初始預置像素圖集（Starter Spritesheet），渲染 32x32 角色與房間家具
-- [ ] **SPRINT-1.4**：實作小人自主遊蕩 AI（漫遊器材、使用跑步機/深蹲架、頭頂情境對話氣泡輪播）
+- [ ] **PLAN-CRITICAL**：全域產品規劃檢視與風險盤點（商業閉環、用戶抗拒心理、技術債與長效留存隱患）
 
 ### 🟡 待討論與規劃清單 (Backlog / To-Do)
-- [ ] **SPRINT-2**：頂部 HUD、課表模板庫、運動打卡雙模式與「VICTORY」街機金幣噴發結算
-- [ ] **SPRINT-3**：雙軌換裝商城 (衣櫃+房間) 與 Meme 拍貼工坊 (雙指手勢、自嘲梗庫、右下貼邊宣傳浮水印)
-- [ ] **SPRINT-4**：本機健康沙盒圖表 (IndexedDB 身高/體重/BMR/TDEE)、Supabase 雲端防作弊金幣與純像素社群牆
-- [ ] **SPRINT-5**：線上小規模試玩部署 (Cloudflare/Vercel) 與 Capacitor 原生跨端相容驗證
+- [ ] **DISCUSS-MONETIZATION**：商業變現與付費邊界論證（外觀 IAP vs 訂閱制 vs 去中心化品牌聯名之利弊）
+- [ ] **DISCUSS-NUMERICS**：百位數金幣與數值通膨防線（避免玩家後期金幣氾濫或初期挫折）
+- [ ] **DISCUSS-FRIEND-LOOP**：好友社交互動深化與反作弊（雙人契約 vs 幽靈好友洗錢風險評估）
+- [ ] **SPRINT-1 ~ SPRINT-5**：Phase 1 工程實作（待規劃與風險評估全數完畢後再行解凍）
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261101-17**：確立「批判性思維與非迎合溝通原則」寫入 `AGENT.md` 與 `collaboration_sop.md`，全面凍結程式碼開發 (TASK-011)
 - [x] **DONE-20261101-16**：確立產品行為遙測與漏斗分析模組（Facade Pattern 支援 PostHog/GA4，零生理個資埋點原則）(TASK-010)
 - [x] **DONE-20261101-15**：確立本機健康沙盒 (Local Biometrics Sandbox) 與 Apple Health / Google Health Connect 串接原則；數據 100% 留存本地，雲端僅驗證防作弊資產 (TASK-009)
 - [x] **DONE-20261101-14**：納入 `free-exercise-db` 開源動作庫、雙軌圖解與玩中學每日科普問答 (TASK-008)

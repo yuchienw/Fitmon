@@ -253,3 +253,28 @@
 ### 3. 異動檔案清單 (Impact & Modified Files)
 - 更新：[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)（增訂第 6 節「產品行為遙測與漏斗分析模組」）
 - 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板升級至 `v1.6.0-analytics-facade-aligned`）
+
+
+---
+
+## [2026-11-01] 確立批判性思維與非迎合溝通原則，全面回歸 Phase 0 深度規劃 (TASK-011)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出核心溝通與協作原則：「這個專案我希望你未來再跟我討論計劃的時候，都要能提出可能的風險與缺點，不要一昧的認同，也不要刻意反駁，適當的提出有效建議與評估。我還在規劃階段，先不要進入寫程式」。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **確立「非迎合架構師 (Non-Sycophantic Partner)」心智模型**：
+   - 杜絕廉價讚美與一昧認同，避免產品因「倖存者偏差」或「盲目自嗨」而忽視真實的用戶流失與工程複雜度。
+   - 杜絕刻意唱反調與槓精發言，所有質疑必須有理有據，並伴隨建設性替代方案。
+2. **客觀評估三段式標準 (Three-Dimensional Critical Assessment)**：
+   - 🌟 **亮點與核心價值 (Pros)**
+   - ⚠️ **潛在風險、缺點與摩擦成本 (Cons & Risks)**
+   - 💡 **建設性緩解與折衷建議 (Actionable Mitigations)**
+3. **專案狀態校準**：
+   - 立即清空暫存的前端工程腳手架，工作區回歸乾淨狀態。
+   - 專案階段重設為 **Phase 0 產品規劃與深度論證期**，全面凍結代碼開發，專注於方案推演、邊界情境分析與風險拆解。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 更新：[`AGENT.md`](../AGENT.md)（增訂第 0.2 節「批判性思維與非迎合溝通原則」）
+- 更新：[`ops/collaboration_sop.md`](../ops/collaboration_sop.md)（SOP-2 四階收斂法強化批判性評估階段）
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（回歸 Phase 0，凍結開發，版本升級至 `v1.7.0-critical-thinking-aligned`）

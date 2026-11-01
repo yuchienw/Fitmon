@@ -32,7 +32,7 @@
 ```mermaid
 flowchart TD
     Step1["階段一：明確問題與約束 (Problem & Invariants)\n確認討論邊界，主動核對 5 大不可侵犯原則\n(零個資、本地優先、雙模式等)"]
-    Step2["階段二：方案分析與權衡 (Options & Trade-offs)\n列出方案 A vs 方案 B，說明優缺點、\n運動科學依據或商業分潤試算"]
+    Step2["階段二：客觀批判性評估 (Critical Evaluation & Trade-offs)\n嚴禁一昧認同，亦不刻意反駁；必須主動揭露：\n1. 亮點與價值 (Pros)\n2. 潛在風險、缺點與摩擦成本 (Cons/Risks)\n3. 務實替代或緩解方案 (Actionable Mitigations)"]
     Step3["階段三：使用者定案確認 (Alignment)\n待使用者明確選擇或調整後才落地固化"]
     Step4["階段四：知識庫雙向落地 (Wiki & Log Sync)\n1. 更新 wiki/*.md 對應章節\n2. 若屬重大決策撰寫 adr/XXXX-title.md\n3. 追加 logs/changelog.md 因果鏈"]
 
