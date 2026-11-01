@@ -1,0 +1,505 @@
+<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8">
+<title>FitMon 系統規格書與商業模型</title>
+<style>
+@page { size: 210mm 297mm; margin: 0; }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { background-color: #ffffff; }
+@media (prefers-color-scheme: dark) {
+html { background-color: #1f1f1f; }
+}
+body {
+padding: 24px 0;
+margin: 0 auto;
+max-width: 1160px !important;
+border: none !important;
+background: transparent !important;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Hiragino Sans GB", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+color: #1e293b;
+-webkit-font-smoothing: antialiased;
+}
+.page {
+width: 210mm;
+height: 297mm;
+margin: 0 auto 12px auto;
+padding: 18mm 18mm 12mm 18mm;
+background-color: #ffffff;
+border: 1px solid rgba(0, 0, 0, 0.12);
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+position: relative;
+overflow: hidden;
+}
+@media screen and (max-width: 600px) {
+body {
+padding: 16px 0;
+}
+.page {
+width: 100%;
+margin: 0 auto 8px auto;
+border: none;
+padding: 12px 20px;
+}
+}
+.page-content {
+flex: 1 1 0;
+min-height: 0;
+overflow: hidden;
+}
+.page-content > * + * {
+margin-top: 20px;
+}
+.page-content > :is(h1, h2, h3, h4) + * {
+margin-top: 8px;
+}
+.page-footer {
+flex-shrink: 0;
+margin-top: auto;
+padding-top: 4mm;
+display: flex;
+justify-content: space-between;
+align-items: center;
+font-size: 8.5pt;
+color: #64748b;
+border-top: 1px solid #e2e8f0;
+}
+@media print {
+*, *::before, *::after {
+box-shadow: none !important;
+text-shadow: none !important;
+-webkit-print-color-adjust: exact;
+print-color-adjust: exact;
+}
+body { padding: 0; background: none; }
+.page {
+margin: 0;
+border: none;
+break-after: page;
+page-break-after: always;
+}
+.page:last-child { break-after: auto; page-break-after: auto; }
+}
+[contenteditable]:focus { outline: none; }
+
+/* Custom Document Typography & Styling */
+.doc-header {
+border-bottom: 2px solid #0f172a;
+padding-bottom: 12px;
+}
+.doc-tag {
+font-size: 9.5pt;
+font-weight: 700;
+color: #0284c7;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+margin-bottom: 4px;
+}
+.doc-title {
+font-size: 21pt;
+font-weight: 800;
+color: #0f172a;
+line-height: 1.2;
+margin: 0 0 6px 0;
+}
+.doc-subtitle {
+font-size: 11pt;
+color: #475569;
+line-height: 1.5;
+margin: 0;
+}
+
+h2 {
+font-size: 14pt;
+font-weight: 700;
+color: #0f172a;
+border-left: 4px solid #0284c7;
+padding-left: 8px;
+margin-bottom: 8px;
+}
+
+h3 {
+font-size: 11.5pt;
+font-weight: 700;
+color: #1e293b;
+margin-top: 14px;
+margin-bottom: 6px;
+}
+
+p, li {
+font-size: 10.5pt;
+line-height: 1.55;
+color: #334155;
+}
+
+ul {
+margin: 0;
+padding-left: 20px;
+}
+
+li {
+margin-bottom: 4px;
+}
+
+.table-container {
+width: 100%;
+margin-top: 10px;
+margin-bottom: 10px;
+}
+
+table {
+width: 100%;
+border-collapse: collapse;
+font-size: 9.5pt;
+line-height: 1.45;
+}
+
+th, td {
+padding: 7px 10px;
+text-align: left;
+border-bottom: 1px solid #e2e8f0;
+vertical-align: top;
+}
+
+th {
+background-color: #f8fafc;
+color: #0f172a;
+font-weight: 700;
+border-top: 1px solid #cbd5e1;
+border-bottom: 2px solid #cbd5e1;
+}
+
+.code-box {
+background-color: #f8fafc;
+border: 1px solid #e2e8f0;
+border-radius: 4px;
+padding: 10px 12px;
+font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+font-size: 8.5pt;
+line-height: 1.4;
+color: #0f172a;
+white-space: pre-wrap;
+overflow-wrap: break-word;
+}
+
+.formula-card {
+background-color: #f0fdf4;
+border: 1px solid #bbf7d0;
+border-left: 4px solid #16a34a;
+padding: 8px 12px;
+font-size: 9.5pt;
+color: #166534;
+}
+
+.info-banner {
+background-color: #f0f9ff;
+border: 1px solid #bae6fd;
+border-left: 4px solid #0284c7;
+padding: 8px 12px;
+font-size: 9.5pt;
+color: #0369a1;
+}
+</style>
+<style data-bard-injected="true">
+@media screen {
+html {
+background-color: #ffffff;
+}
+body {
+padding: 8px 0 24px 0;
+}
+}
+@media screen and (prefers-color-scheme: dark) {
+html {
+background-color: #1f1f1f;
+}
+}
+@media screen and (max-width: 600px) {
+body {
+padding: 4px 0 16px 0;
+margin: 0 auto;
+}
+}
+</style></head>
+<body>
+<div contenteditable="true">
+<section class="page">
+<div class="page-content">
+
+<header class="doc-header">
+<div class="doc-tag">Product Requirements & Business Model</div>
+<h1 class="doc-title">FitMon 系統規格書與商業模型架構</h1>
+<p class="doc-subtitle">以運動科學為基底的像素 RPG 養成、專業訓練紀錄與無個資社交生態系統</p>
+</header>
+
+<div class="info-banner">
+<strong>核心架構準則：</strong>私密訓練紀錄留本地（Local-First），公開榮譽與連擊數據放雲端；訓練當下維持無干擾專業工具，多巴胺與社交反饋留至練後結算。
+</div>
+
+<section>
+<h2>一、 產品定位與個資零接觸原則（Zero-PII）</h2>
+<p>FitMon 旨在解決傳統健身工具過於嚴肅無趣、以及既有遊戲化健身 App 缺乏專業度的兩難。透過雙模式架構與去中心化設計，同時兼顧高規格專業記錄與強大的病毒式社交擴散能力。</p>
+<ul>
+<li><strong>零個資儲存（Zero PII）</strong>：不收集自然人姓名、手機電話、通訊錄名單與信用卡號。第三方登入僅接受 Apple ID（Private Relay）與 Google Sign-In，伺服器僅儲存匿名雜湊碼（OAuth UID）。</li>
+<li><strong>本地與雲端物理隔離</strong>：用戶詳細訓練公斤數、次數與私人備忘錄 100% 儲存於手機端本地沙盒；雲端資料庫僅存放公開暱稱、連擊週數與外觀部件代碼（Asset Code）。即使資料庫遭到脫庫，攻擊者亦無法獲取任何法律定義之個人資料。</li>
+</ul>
+</section>
+
+<section>
+<h2>二、 雙模式運行機制（Dual-Mode Architecture）</h2>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th style="width: 20%;">狀態模組</th>
+<th style="width: 35%;">介面與功能呈現</th>
+<th style="width: 25%;">體驗核心原則</th>
+<th style="width: 20%;">適用目標客群</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>訓練當下
+(專業模式)</strong></td>
+<td>純黑背景、大字體單手盲操 UI、智慧帶入歷史組數、自動組間倒數計時、頂部微動態像素陪練小人（繫腰帶、喝水動態）。</td>
+<td><strong>零干擾、最高輸入效率</strong>
+不彈窗、無吵鬧音效，保持心率與專注。</td>
+<td>硬核重訓者、中高階課表執行者。</td>
+</tr>
+<tr>
+<td><strong>練後返家
+(養成模式)</strong></td>
+<td>訓練容量一鍵轉換經驗值、體態動態演化、金幣商城、紙娃娃換裝、迷因產生器、好友送禮與週連擊天梯。</td>
+<td><strong>最大化成就反饋</strong>
+將肉體汗水轉化為具象的遊戲虛榮心。</td>
+<td>追求體態成長、需要自律動力的普羅大眾。</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section>
+<h2>三、 核心功能規格細節</h2>
+<h3>1. 專業訓練模組（本機端運行）</h3>
+<ul>
+<li><strong>動作庫速查</strong>：內建 40+ 核心自由重量與機械式動作，支援單手遞增重量（+1.25kg / +2.5kg）。</li>
+<li><strong>組間計時與陪伴微動態</strong>：完成組數後自動啟動倒數，頂部小人同步執行擦汗喝水動作；倒數最後 5 秒起身握槓並震動提示。</li>
+</ul>
+
+<h3>2. 數值引擎與防作弊運動科學</h3>
+<div class="formula-card">
+<strong>經驗值結算公式：</strong> Exp = ∑ (重量 × 次數) × 動作神經加權 × 疲勞衰減係數
+</div>
+<ul>
+<li><strong>動作加權</strong>：深蹲、硬舉、臥推三大複合動作享 ×2.0 ~ ×2.5 暴擊倍率；單關節孤立動作（如側平舉）固定為 ×0.8。</li>
+<li><strong>防止垃圾容量</strong>：單一部位單日超過 8 組經驗遞減，超過 12 組經驗歸零，避免玩家以極低重量狂刷次數。</li>
+</ul>
+
+<h3>3. 虛擬補劑 Buff 與金幣經濟</h3>
+<ul>
+<li><strong>食用肌酸</strong>：角色每日體力上限 +1 組，解鎖額外極限打卡額度。</li>
+<li><strong>乳清蛋白</strong>：訓練完成後食用，當日結算經驗與金幣 +20%。</li>
+<li><strong>預釀氮泵</strong>：限時 60 分鐘內打卡，動作經驗享 30% 機率暴擊翻倍。</li>
+</ul>
+
+<h3>4. 迷因工作室（Meme Studio）與課表卡牌</h3>
+<ul>
+<li><strong>本機 Canvas 壓圖</strong>：一鍵將當前穿搭的像素小人嵌入經典模板（「練腿日軟腳」、「被槓鈴封印」），右下角自帶連擊週數浮水印，支援一鍵發布至 Instagram 限時動態。</li>
+<li><strong>訓練捲軸分享</strong>：透過 Deep Link 或 QR Code 分享課表，好友可一鍵匯入並根據個人歷史力量等比例縮放重量。</li>
+</ul>
+</section>
+
+<section>
+<h2>四、 雲端資料庫綱要（Supabase 零個資設計）</h2>
+<div class="code-box">-- 玩家公開榮譽表 (完全無個人可識別身分資料)
+create table public_profiles (
+id uuid primary key references auth.users(id),    -- OAuth 匿名 UID
+nickname text not null,                           -- 玩家隨意輸入的公開暱稱
+streak_weeks int default 0,                       -- 連擊維持週數
+contract_days_per_week int not null,              -- 週契約天數 (2-5)
+avatar_code text not null,                        -- 外觀部件代碼 (例: "b2:h01:t04:belt02")
+title text default '健身新秀',                     -- 解鎖稱號
+updated_at timestamp with time zone default now()
+);
+
+-- 公開課表秘笈工坊 (社群共享)
+create table community_routines (
+id uuid primary key default gen_random_uuid(),
+author_id uuid references public_profiles(id),
+title text not null,                              -- 課表標題
+routine_json jsonb not null,                      -- 動作序列與組次結構
+downloads_count int default 0,
+created_at timestamp with time zone default now()
+);
+
+-- 社交送禮兌換代碼表 (無好友關聯圖譜)
+create table gift_tokens (
+token text primary key,                           -- 隨機生成的兌換代碼
+item_type text not null,                          -- 補劑或裝扮類型
+created_by uuid references public_profiles(id),
+is_redeemed boolean default false,
+created_at timestamp with time zone default now()
+);</div>
+</section>
+
+<section>
+<h2>五、 商業變現模型（Monetization Framework）</h2>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th style="width: 22%;">收益模式</th>
+<th style="width: 38%;">具體實施形式</th>
+<th style="width: 22%;">定價 / 分潤比例</th>
+<th style="width: 18%;">實施階段</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>原生聯盟導購
+(Affiliate)</strong></td>
+<td>點擊虛擬肌酸或乳清補劑時，彈出「領取品牌專屬 9 折碼」外跳知名補劑電商。</td>
+<td>每筆交易抽成
+<strong>5% ~ 15% 現金</strong></td>
+<td>V1.0 首發版本</td>
+</tr>
+<tr>
+<td><strong>外觀微內購
+(Micro-IAP)</strong></td>
+<td>限定主題外觀包（賽博龐克、復古裝備），完全不販售任何數值加成。</td>
+<td>新台幣 <strong>30 ~ 90 元</strong>
+(買斷單品)</td>
+<td>V1.0 首發版本</td>
+</tr>
+<tr>
+<td><strong>實體代客送禮
+(Gift Commerce)</strong></td>
+<td>好友送禮時可勾選加購「真實乳清威化餅/能量棒直送好友指定超商」。</td>
+<td>賺取實體商品
+導購差價分潤</td>
+<td>V2.0 社交成熟期</td>
+</tr>
+<tr>
+<td><strong>品牌冠名贊助
+(B2B Sponsorship)</strong></td>
+<td>與健身服飾或專業護具品牌聯名推出虛擬像素同款裝飾。</td>
+<td>每月固定刊登與
+曝光贊助費用</td>
+<td>月活破萬用戶後</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section>
+<h2>六、 開發里程碑與技術落地路徑</h2>
+<ul>
+<li><strong>里程碑 1：核心驗證 MVP（2 週內）</strong>：完成純本機專業記錄流、頂部微動態小人、3 檔體態演化與 5 款像素裝備，驗證連續使用 7 天的流暢度。</li>
+<li><strong>里程碑 2：社群裂變與導購（4 週內）</strong>：上線週契約引擎、HTML5 Canvas 迷因圖產生器、匿名全服連擊榜與補劑電商導購連結。</li>
+<li><strong>里程碑 3：深度社交與商業閉環（第 2～3 個月）</strong>：加入 QR Code 課表分享工坊、不記名禮物代碼發放與 Apple/Google 官方 IAP 外觀微交易。</li>
+</ul>
+</section>
+
+</div>
+<footer class="page-footer">
+<span>FitMon 系統規格書與商業模型 (System PRD & Monetization Plan)</span>
+<span>Page 1 of 1</span>
+</footer>
+</section>
+</div>
+
+<script data-bard-injected="true" data-bard-page-paginator="true">'use strict';(function(){function E(a){return a.classList&&a.classList.contains("page")&&!(a.parentElement&&a.parentElement.closest(".page"))}function u(){return Array.from(r.querySelectorAll(".page")).filter(E)}function v(a){return a.querySelector(":scope > .page-content")}function t(a){return a.scrollHeight-a.clientHeight<=1}function F(a){return a&&a.children.length&&a.clientHeight?(a.lastElementChild.getBoundingClientRect().bottom-a.getBoundingClientRect().top)/a.clientHeight:0}function Q(a,b){var c=
+[[1E3,"m"],[900,"cm"],[500,"d"],[400,"cd"],[100,"c"],[90,"xc"],[50,"l"],[40,"xl"],[10,"x"],[9,"ix"],[5,"v"],[4,"iv"],[1,"i"]],d="";for(let [e,f]of c)for(;a>=e;)d+=f,a-=e;return b?d.toUpperCase():d}function R(a){var b=[];a=[...a];var c=0,d=0,e=[];for(var f of a)e.push(d),d+=f.length;for(e.push(d);c<a.length;)if(f=x.get(a[c])){d=c;for(var g=0;d<a.length&&x.get(a[d])&&x.get(a[d]).nu===f.nu;)g=g10+x.get(a[d]).v,d++;b.push({start:e[c],end:e[d],value:g,kind:"dec",nu:f.nu});c=d}else if(!/[ivxlcdm]/i.test(a[c])||
+c!==0&&/\p{L}/u.test(a[c-1]))c++;else{for(g=c;g<a.length&&/[ivxlcdm]/i.test(a[g]);)g++;let h=a.slice(c,g).join("");if((g===a.length||!/\p{L}/u.test(a[g]))&&S.test(h)&&h.length>0){f=b;d=f.push;c=e[c];var k=e[g];let m={i:1,v:5,x:10,l:50,c:100,d:500,m:1E3},l=0,n=h.toLowerCase();for(let q=0;q<n.length;q++){let p=m[n[q]];l+=p<(m[n[q+1]]||0)?-p:p}d.call(f,{start:c,end:k,value:l,kind:"roman",upper:h===h.toUpperCase()})}c=g}return b}function z(a){return a.querySelector(":scope > .page-footer, :scope > footer")}
+function G(a){a=r.createTreeWalker(a,NodeFilter.SHOW_TEXT);for(var b=[],c="",d;d=a.nextNode();){let e=d.nodeValue,f=0;for(let g of R(e))c+=e.slice(f,g.start)+"#",f=g.end,b.push(Object.assign(g,{node:d}));c+=e.slice(f)}return{toks:b,skeleton:c.replace(/\s+/g," ").trim()}}function A(a,b,c){return b==="right"?a.length-1-c:c}function H(a,b){if(!b||b.node!==a.node)return null;var c=a.node.nodeValue;return a.start<b.start?c.slice(a.end,b.start):c.slice(b.end,a.start)}function I(a){return a!==null&&a.length<=
+12&&!/[\u2014\u2013\u2022|]|page|p\u00e1g|seite|sec|part/i.test(a)}function T(a){var b=[];a.forEach((f,g)=>{(f=z(f))&&b.push(Object.assign({pos:g},G(f)))});if(!b.length||b.some(f=>f.toks.length===0))return null;var c=Math.min(...b.map(f=>f.toks.length)),d=b.length===1?[1]:[1,-1];for(let f of["right","left"])for(let g=0;g<c;g++){let k=b.map(l=>l.toks[A(l.toks,f,g)]);if(!k.every(l=>l.kind===k[0].kind&&l.nu===k[0].nu))continue;let h=k.map((l,n)=>l.value-(b[n].pos+1));if(!h.every(l=>l===h[0]))continue;
+let m=h[0];if(b.length===1&&m!==0)continue;if(b.length===1){var e=A(b[0].toks,f,g);let l=b[0].toks[e-1],n=b[0].toks[e+1];if(l&&l.value===1&&(!n||n.value!==1)&&I(H(l,b[0].toks[e])))continue}c=0;e=null;for(let l of d){if(!b.every(q=>{var p=A(q.toks,f,g)+l;return(q=q.toks[p])&&q.value===a.length+m}))continue;let n=b.map(q=>{var p=A(q.toks,f,g);return H(q.toks[p],q.toks[p+l])});if(n.every(q=>q!==null&&q===n[0])&&I(n[0])){c=l;e=n[0];break}}return{align:f,r:g,totalRel:c,k:m,sep:e,kind:k[0].kind,nu:k[0].nu||
+null}}return null}function U(a){var b=u(),c=b.length+a.k,d=0;b.forEach((e,f)=>{if(e=z(e)){({toks:e}=G(e));var g=A(e,a.align,a.r);if(e[g]){f=[[e[g],f+1+a.k]];a.totalRel&&e[g+a.totalRel]&&f.push([e[g+a.totalRel],c]);f.sort((k,h)=>h[0].start-k[0].start);for(let [k,h]of f)f=k.node.nodeValue,e=f.slice(0,k.start),g=k.kind==="roman"?Q(h,k.upper):(new Intl.NumberFormat("en-u-nu-"+k.nu,{useGrouping:!1})).format(h),e=e+g+f.slice(k.end),e!==f&&(k.node.nodeValue=e,d++)}}});return d}function V(a){return a.tHead?
+a.tHead:(a=(a=a.tBodies[0])&&a.rows[0])&&Array.from(a.cells).every(b=>b.tagName==="TH")?a:null}function W(a){for(var b=0;b<8&&a;b++){if(a.tagName==="TABLE")return(b=a.tBodies[0])&&b.rows.length>1?{kind:"table",table:a,body:b}:null;if(a.children.length>1){b=a.firstElementChild.getBoundingClientRect();if(a.lastElementChild.getBoundingClientRect().top>=b.bottom-4)return{kind:"container",el:a};if(Array.from(a.children).some(c=>{if(c.children.length<=1)return!1;var d=c.firstElementChild.getBoundingClientRect();
+return c.lastElementChild.getBoundingClientRect().top>=d.bottom-4}))return{kind:"multicol",el:a};break}a=a.firstElementChild}return null}function B(a,b,c){for(var d=[];b&&b!==a;b=b.parentElement)d.unshift(b);if(!d.length)return{top:c,inner:c};b=a=null;for(let e of d)d=e.cloneNode(!1),d.removeAttribute("id"),a?b.appendChild(d):(a=d,c.insertBefore(d,c.firstChild)),b=d;return{top:a,inner:b}}function w(a){return a?X.test(a.tagName)?!0:a.children.length<=3&&a.querySelector("h1, h2, h3, h4, h5, h6")?a.getBoundingClientRect().height<=
+64:!1:!1}function Y(a,b,c,d){var e=0;for(let g=0;g<2E3&&!t(c)&&a.children.length>0;g++){let k=a.lastElementChild,h=a.children.length===1;var f;(f=h)||(f=c,f=(k.getBoundingClientRect().top-f.getBoundingClientRect().top)/f.clientHeight<.85);if(f){f=J(a,k,b,c);if(f.m){e+=f.m;if(d&&f.kind)for(let m of f.kind.split("+"))d.add(m);continue}if(h)break}b.insertBefore(k,b.firstChild);e++;for(d&&d.add("nested");a.children.length>1&&w(a.lastElementChild);)b.insertBefore(a.lastElementChild,b.firstChild),e++}return e}
+function J(a,b,c,d){d=d||a;var e=W(b);if(!e)return{m:0};if(e.kind==="table"){var f=V(e.table),g=f&&f.parentElement===e.body?2:1;let {top:n,inner:q}=B(a,e.table.parentElement,c);var k=e.table.cloneNode(!1);k.removeAttribute("id");e.table.tHead&&k.appendChild(e.table.tHead.cloneNode(!0));b=e.body.cloneNode(!1);var h=null;f&&f.parentElement===e.body&&(h=f.cloneNode(!0),b.appendChild(h));k.appendChild(b);for(f=0;!t(d)&&e.body.rows.length>g;)b.insertBefore(e.body.rows[e.body.rows.length-1],h?h.nextSibling:
+b.firstChild),f++;if(f&&(t(d)||a.children.length===1))return q.insertBefore(k,q.firstChild),{m:f,kind:"table-rows"};if(f)for(d=h?1:0;b.rows.length>d;)e.body.appendChild(b.rows[d]);n!==c&&n.remove();return{m:0}}if(e.kind==="multicol"){b=Array.from(e.el.children);let {top:n,inner:q}=B(a,e.el,c);e=b.map(p=>{p=p.cloneNode(!1);p.removeAttribute("id");q.appendChild(p);return p});g=0;a=a.children.length===1||Array.from(a.children).slice(0,-1).every(w);for(k=0;k<2E3&&!t(d);k++){h=-1;f=-Infinity;for(let p=
+0;p<b.length;p++){if(b[p].children.length<=(a?1:0))continue;let K=b[p].lastElementChild.getBoundingClientRect().bottom;K>f&&(f=K,h=p)}if(h<0)break;f=b[h];h=e[h];h.insertBefore(f.lastElementChild,h.firstChild);for(g++;f.children.length>0&&w(f.lastElementChild);)h.insertBefore(f.lastElementChild,h.firstChild),g++}k=b.some(p=>p.children.length>0);if(g&&k&&(t(d)||a))return{m:g,kind:"multicol"};if(g)for(d=0;d<b.length;d++)for(;e[d].firstElementChild;)b[d].appendChild(e[d].firstElementChild);n!==c&&n.remove();
+return{m:0}}var {top:m,inner:l}=B(a,e.el,c);g=new Set;b=Y(e.el,l,d,g);a=a.children.length===1||Array.from(a.children).slice(0,-1).every(w);if(b&&(t(d)||a))return e.el.tagName==="OL"&&(c=parseInt(e.el.getAttribute("start")||"1",10),l.setAttribute("start",String(c+e.el.children.length))),c=g.size?Array.from(g).join("+"):"nested",{m:b,kind:c};if(b)for(;l.firstElementChild;)e.el.appendChild(l.firstElementChild);m!==c&&m.remove();return{m:0}}function Z(a){var b=v(a),c=a.cloneNode(!1);c.removeAttribute("id");
+c.setAttribute("data-paginated","true");var d=b.cloneNode(!1);d.removeAttribute("id");c.appendChild(d);var e=z(a);e&&c.appendChild(e.cloneNode(!0));a.parentNode.insertBefore(c,a.nextSibling);a=0;e=new Set;for(let f=0;f<2E3&&!t(b)&&b.lastElementChild;f++){let g=b.lastElementChild,k=b.children.length===1||Array.from(b.children).slice(0,-1).every(w);if(k||(g.getBoundingClientRect().top-b.getBoundingClientRect().top)/b.clientHeight<.85){let h=J(b,g,d,b);if(h.m){a+=h.m;for(let m of h.kind.split("+"))e.add(m);
+continue}if(k)break}d.insertBefore(g,d.firstChild);a++;for(e.add("blocks");b.children.length>1&&w(b.lastElementChild);)d.insertBefore(b.lastElementChild,d.firstChild),a++}return a===0||d.childNodes.length===0?(c.remove(),{split:!1,kind:"unsplittable"}):{split:!0,kind:Array.from(e).join("+"),stillOverflowsPx:b.scrollHeight-b.clientHeight}}function L(a,b){var c=v(a);if(!c)return 0;for(var d=0;F(c)<.6;){let f=u()[b+1];var e=a;if(!(e&&f&&e.parentNode===f.parentNode&&e.getAttribute("class")===f.getAttribute("class")&&
+!!z(e)===!!z(f)&&v(e)&&v(f)))break;for(e=v(f);e.firstChild;)c.appendChild(e.firstChild);f.remove();d++}return d}function C(a){var b=v(a);if(!b||b.scrollHeight-b.clientHeight>165)return!1;var c=r.defaultView||window,d=c.getComputedStyle(a),e=a.style.paddingTop,f=a.style.paddingBottom,g=b.style.lineHeight,k=Array.from(b.children).slice(1),h=k.map(l=>l.style.marginTop);parseFloat(d.paddingTop)>46&&(a.style.paddingTop="12mm");parseFloat(d.paddingBottom)>31&&(a.style.paddingBottom="8mm");k.forEach(l=>
+{!w(l.previousElementSibling)&&parseFloat(c.getComputedStyle(l).marginTop)>10&&(l.style.marginTop="10px")});if(t(b))return!0;d=Array.from(b.querySelectorAll("th, td"));var m=d.map(l=>[l.style.paddingTop,l.style.paddingBottom]);b.style.lineHeight="1.32";d.forEach(l=>{var n=c.getComputedStyle(l);parseFloat(n.paddingTop)>4&&(l.style.paddingTop="4px");parseFloat(n.paddingBottom)>4&&(l.style.paddingBottom="4px")});if(t(b))return!0;b.style.lineHeight=g;d.forEach((l,n)=>{l.style.paddingTop=m[n][0];l.style.paddingBottom=
+m[n][1]});a.style.paddingTop=e;a.style.paddingBottom=f;k.forEach((l,n)=>{l.style.marginTop=h[n]});return!1}async function D(){r.fonts&&r.fonts.ready&&await r.fonts.ready;await Promise.all(Array.from(r.images).map(a=>a.complete?null:new Promise(b=>{a.onload=a.onerror=b})))}function aa(){var a=0;for(let b of Array.from(r.querySelectorAll(".page-content"))){let c=b.clientWidth;if(c)for(let d of Array.from(b.querySelectorAll("table"))){let e=!1,f=()=>d.getBoundingClientRect().width>c+1||d.scrollWidth>
+c+1,g=()=>{var k=Array.from(d.querySelectorAll("th"));return k.length<3||!k.some(h=>(r.defaultView||window).getComputedStyle(h).whiteSpace==="nowrap")?!1:Array.from(d.rows[0]?d.rows[0].cells:[]).some(h=>h.getBoundingClientRect().width<130&&h.innerText.trim().length>20)};if(f()||g())d.querySelectorAll("th").forEach(k=>{k.style.whiteSpace="normal"}),e=!0;f()&&(d.querySelectorAll("td").forEach(k=>{(r.defaultView||window).getComputedStyle(k).whiteSpace==="nowrap"&&k.innerText.trim().length>12&&(k.style.whiteSpace=
+"normal")}),e=!0);f()&&(d.style.width="100%",d.style.tableLayout="fixed",d.querySelectorAll("th, td").forEach(k=>{k.style.overflowWrap="break-word";k.style.wordBreak="break-word"}),e=!0);e&&a++}}return a}async function M(a){r=a||document;await D();a=aa();var b=u();a={pagesBefore:b.length,splits:[],merged:0,tablesFitted:a,unsplittable:0,scheme:null,footersRewritten:0};if(!b.length)return a;b=T(b);a.scheme=b;var c=0;for(let f=0;f<u().length&&c<60;f++){let g=u()[f],k=v(g);if(!k)continue;t(k)&&F(k)<.6&&
+(a.merged+=L(g,f));if(t(k))continue;if(f===u().length-1&&C(g)){a.squeezed=(a.squeezed||0)+1;continue}var d=Z(g);if(d.split){c++;a.splits.push({page:f+1,kind:d.kind});if(d=u()[f+1])a.merged+=L(d,f+1);!t(k)&&C(g)&&(a.squeezed=(a.squeezed||0)+1)}else C(g)?a.squeezed=(a.squeezed||0)+1:a.unsplittable++}var e=u();e.forEach((f,g)=>{g===e.length-1?(f.style.breakAfter="auto",f.style.pageBreakAfter="auto"):(f.style.removeProperty("break-after"),f.style.removeProperty("page-break-after"))});a.pagesAfter=e.length;
+(c||a.merged)&&b&&(a.footersRewritten=U(b));return a}function N(a){for(let b of Array.from(a||[])){if(b.type===CSSRule.MEDIA_RULE){a=b.media.mediaText;let c=a.split(",").map(d=>{d=d.trim();return/^(only\s+)?print\b/i.test(d)?d.replace(/^(only\s+)?print/i,"all"):/^(only\s+)?screen\b/i.test(d)||/^not\s+print\b/i.test(d)?"not all":d}).join(", ");c!==a&&(b.media.mediaText=c)}b.cssRules&&N(b.cssRules)}}function ba(a){for(let b of Array.from(a.styleSheets)){let c;try{c=b.cssRules}catch(d){continue}N(c)}}
+async function ca(a=300,b=2E3){r=document;await D();await new Promise(c=>{function d(){clearTimeout(e);clearTimeout(f);g.disconnect();c()}var e=setTimeout(d,a),f=setTimeout(d,b),g=new MutationObserver(()=>{clearTimeout(e);e=setTimeout(d,a)});g.observe(document.documentElement,{subtree:!0,attributes:!0,attributeFilter:["src","style"]})});await D()}function da(a){r=document;var b=u();if(!b.length)return!1;var c=b[0].parentNode;if(!b.every(f=>f.parentNode===c))return!1;a=Array.from(a.querySelectorAll(".page")).filter(E);
+if(!a.length)return!1;var d=b[b.length-1].nextSibling,e=document.createDocumentFragment();for(let f of a)e.appendChild(document.importNode(f,!0));b.forEach(f=>f.remove());c.insertBefore(e,d);return!0}function ea(a){var b=a.querySelector('style[data-bard-print-reset="true"]');b||(b=a.createElement("style"),b.setAttribute("data-bard-injected","true"),b.setAttribute("data-bard-print-reset","true"),b.textContent=":where(table) { font-size: inherit; line-height: inherit; font-weight: inherit; font-style: inherit; font-variant: inherit; } :where(.page) { width: 210mm; height: 297mm; } @media print { html, body { padding: 0 !important; margin: 0 !important; border: none !important; background: none !important; } .page { margin: 0 !important; border: none !important; break-after: page; page-break-after: always; } .page:last-of-type { break-after: auto !important; page-break-after: auto !important; } }",
+(a.head||a.documentElement).appendChild(b))}function O(a){var b=Array.from(a.querySelectorAll("style")).map(e=>e.textContent||"").join("\n").match(/@page\s{[^}]\bsize\s:\s*([^;!}]+)/i);if(b){var c=b[1].trim().replace(/\s+/g," "),d=b="";/^(?:a4\s+)?landscape$/i.test(c)?(b="297mm",d="210mm"):/^(?:a4\s+)?portrait$/i.test(c)||/^a4$/i.test(c)?(b="210mm",d="297mm"):/^letter\s+landscape$/i.test(c)?(b="11in",d="8.5in"):/^letter(?:\s+portrait)?$/i.test(c)?(b="8.5in",d="11in"):(c=c.split(" "),c.length===$
+$2&&/^[\d.]+(mm|cm|in|pt|px)$/i.test(c[0])&&/^[\d.]+(mm|cm|in|pt|px)$/i.test(c[1])&&(b=c[0],d=c[1]));b&&d&&(c=a.querySelector('style[data-bard-page-size-sync="true"]'),c||(c=a.createElement("style"),c.setAttribute("data-bard-injected","true"),c.setAttribute("data-bard-page-size-sync","true"),(a.head||a.documentElement).appendChild(c)),c.textContent=`.page { width: ${b} !important; height: ${d} !important; }`)}}async function fa(){ea(document);O(document);var a=document.createElement("iframe");a.setAttribute("aria-hidden",$
+$"true");a.setAttribute("tabindex","-1");a.style.cssText="position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;visibility:hidden;pointer-events:none;";document.body.appendChild(a);try{let b=null;try{b=a.contentDocument}catch(h){b=null}if(!b){let h=performance.now(),m=await M(document);m.ms=Math.round(performance.now()-h);m.measuredInFrame=!1;m.applied=!!(m.splits.length||m.merged||m.squeezed||m.tablesFitted);return m}let c=document.documentElement.cloneNode(!0);c.querySelectorAll("script").forEach(h=>$
+$h.remove());c.removeAttribute("data-bard-pagination-done");b.replaceChild(b.adoptNode(c),b.documentElement);let d=Array.from(b.querySelectorAll('link[rel="stylesheet"]'));await Promise.all(d.map(h=>h.sheet?Promise.resolve():new Promise(m=>{h.addEventListener("load",m,{once:!0});h.addEventListener("error",m,{once:!0});setTimeout(m,1500)})));ba(b);O(b);let e=b.querySelector(".page");if(e&&b.defaultView){let h=b.defaultView.getComputedStyle(e),m=Math.round(parseFloat(h.width))||794,l=Math.round(parseFloat(h.height))||$
+$1123;m>100&&l>100&&(a.style.width=m+"px",a.style.height=l+"px")}let f=performance.now(),g=await M(b);g.ms=Math.round(performance.now()-f);g.measuredInFrame=!0;(g.splits.length||g.merged||g.squeezed||g.tablesFitted)&&da(b)&&(g.applied=!0);r=document;let k=u();k.forEach((h,m)=>{m===k.length-1?(h.style.breakAfter="auto",h.style.pageBreakAfter="auto"):(h.style.removeProperty("break-after"),h.style.removeProperty("page-break-after"))});return g}finally{a.remove(),r=document}}async function P(){var a=document.documentElement;$
+$try{if(r=document,u().length){await ca();var b=await fa(),c={};for(let e of b.splits)for(let f of e.kind.split("+"))c[f]=(c[f]||0)+1;b.merged&&(c["underflow-merge"]=b.merged);var d={pagesBefore:b.pagesBefore,pagesAfter:b.pagesAfter===void 0?b.pagesBefore:b.pagesAfter,splits:b.splits.length,kinds:c,unsplittable:b.unsplittable,footerScheme:!!b.scheme,footersRewritten:b.footersRewritten,applied:!!b.applied,measuredInFrame:!!b.measuredInFrame,ms:b.ms};window.__bardPagePaginatorReport=d;console.info("[bard-page-paginator]",$
+$JSON.stringify(d));a.setAttribute("data-bard-pagination-done","1")}else a.setAttribute("data-bard-pagination-done","skipped")}catch(e){console.error("[bard-page-paginator] failed",e),a.setAttribute("data-bard-pagination-done","error")}}if(!window.__bardPagePaginatorStarted){window.__bardPagePaginatorStarted=!0;var r=document,X=/^H[1-6]$/,y="latn arab arabext beng deva fullwide gujr guru khmr knda laoo mlym mymr orya tamldec telu thai tibt hanidec".split(" "),x=new Map;for(let a of y){let b;try{b=
+new Intl.NumberFormat("en-u-nu-"+a,{useGrouping:!1})}catch(c){continue}for(y=0;y<=9;y++){let c=b.format(y);[...c].length!==1||x.has(c)||x.set(c,{nu:a,v:y})}}var S=/^(m{0,3})(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/i;document.readyState==="complete"?P():window.addEventListener("load",P,{once:!0})}})();
+</script><script data-bard-injected="true">
+(function() {
+async function fetchFifeImageBlobUsingAlr(urlString) {
+if (urlString.startsWith('blob:') || urlString.startsWith('data:')) {
+throw new Error('Input URL is already a blob or data URL.');
+}
+var url = new URL(urlString, window.location.href);
+url.searchParams.set('alr', 'yes');
+for (var i = 0; i < 5; i++) {
+var response = await fetch(url.toString(), {credentials: 'include'});
+if (!response.ok) {
+throw new Error('Fetch received not OK response: ' + response.status);
+}
+var contentType = response.headers.get('content-type');
+if (!contentType || !contentType.startsWith('text/plain')) {
+var blob = await response.blob();
+if (blob.size > 0 && blob.type.startsWith('image/')) {
+return blob;
+}
+throw new Error('Fetched blob is not a valid image.');
+}
+url = new URL(await response.text());
+}
+throw new Error('Exceeded maximum number of redirects.');
+}
+
+async function updateImageSourcesUsingAlr() {
+var imgs = Array.from(document.querySelectorAll('img'));
+await Promise.all(imgs.map(async function(img) {
+if (img.src && img.src.includes('googleusercontent')) {
+try {
+var blob = await fetchFifeImageBlobUsingAlr(img.src);
+img.src = URL.createObjectURL(blob);
+} catch (e) {}
+}
+}));
+
+var elements = document.querySelectorAll('[style*="googleusercontent"]');
+var urlRegex = /url((['"]?)(https?://.?googleusercontent.?)\1)/;
+await Promise.all(Array.from(elements).map(async function(el) {
+var bg = el.style.backgroundImage;
+var match = bg ? bg.match(urlRegex) : null;
+if (match && match[2]) {
+try {
+var blob = await fetchFifeImageBlobUsingAlr(match[2]);
+var blobUrl = URL.createObjectURL(blob);
+el.style.backgroundImage = bg.replace(match[2], blobUrl);
+} catch (e) {}
+}
+}));
+}
+
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', updateImageSourcesUsingAlr);
+} else {
+updateImageSourcesUsingAlr();
+}
+})();
+</script></body></html>

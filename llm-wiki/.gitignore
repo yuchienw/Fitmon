@@ -1,0 +1,8 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary & Cache
+*.tmp
+*.bak
+.cache/

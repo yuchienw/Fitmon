@@ -1,0 +1,13 @@
+{
+  "name": "@fitmon/engine",
+  "version": "0.1.0",
+  "description": "FitMon 數值引擎：運動科學加權、疲勞衰減係數與經驗值結算",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": ["fitness", "gamification", "rpg", "exercise-science"],
+  "author": "FitMon Team",
+  "license": "MIT"
+}
