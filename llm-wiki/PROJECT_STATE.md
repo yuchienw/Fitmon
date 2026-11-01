@@ -10,24 +10,27 @@
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、Meme 拍貼、開源科學動作庫 |
 | **目前階段** | **Phase 0：產品規劃與深度論證期 (Planning Phase)** | ⚠️ **【程式碼開發完全凍結，專注架構推演與客觀風險評估】** |
-| **當前版本** | `v2.0.0-f2p-stamina-celebrity-aligned` | 5 大 Tab、名人認證、體力值防刷與消耗型道具 IAP 定案版本 |
-| **最後更新時間** | `2026-11-01 21:20 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `b635993` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 深度規劃討論：5 大 Tab、名人認證特展、體力值防刷與高頻 IAP 商業閉環 | 拒絕一昧認同 ＋ 拒絕刻意反駁 ＋ 建設性建議 |
+| **當前版本** | `v2.1.0-web-mvp-spec-ready` | 完成 Web Demo MVP 系統規格書，準備受控解凍進入 Sprint 1 |
+| **最後更新時間** | `2026-11-01 21:28 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `da1f58d` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 審查 Web Demo MVP 系統規格書，確認「5 大 Tab ＋ 局部像素島」體感是否符合頭腦所想 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [ ] **PLAN-CRITICAL**：全域產品規劃檢視與風險盤點（商業閉環、用戶抗拒心理、技術債與長效留存隱患）
+- [ ] **SPEC-REVIEW**：使用者審查 [`fitmon_web_mvp_system_spec.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/b77c49d1-831b-4f6e-abb3-2c56e8683b35/fitmon_web_mvp_system_spec.md)，確認體感與系統邊界後正式解凍 Sprint 1
 
 ### 🟡 待討論與規劃清單 (Backlog / To-Do)
-- [ ] **DISCUSS-NUMERICS**：百位數金幣與數值通膨防線（避免玩家後期金幣氾濫或初期挫折）
-- [ ] **DISCUSS-FRIEND-LOOP**：好友社交互動深化與反作弊（雙人契約 vs 幽靈好友洗錢風險評估）
-- [ ] **SPRINT-1 ~ SPRINT-5**：Phase 1 工程實作（待規劃與風險評估全數完畢後再行解凍）
+- [ ] **SPRINT-1**：初始化 `apps/web-demo`、搭建 5 大 Tab App 外殼、首頁 PixiJS 局部嵌入畫布與休眠機制
+- [ ] **SPRINT-2**：打卡記錄器、疲勞加權、體力防刷與街機 VICTORY 結算
+- [ ] **SPRINT-3**：商城試穿更衣室、消耗道具模擬購買、Meme 拍貼工坊
+- [ ] **DISCUSS-NUMERICS**：百位數金幣與數值通膨防線
+- [ ] **DISCUSS-FRIEND-LOOP**：好友社交互動深化與反作弊
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261101-21**：完成 Web Demo MVP 完整系統規格書 ([`fitmon_web_mvp_system_spec.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/b77c49d1-831b-4f6e-abb3-2c56e8683b35/fitmon_web_mvp_system_spec.md))，對齊 ADR-0002 現代 App 外殼與 5 大 Tab 佈局 (TASK-015)
 - [x] **DONE-20261101-20**：確立 5 大 Tab 導覽列（加入商城 Tab）、頂部常駐 Header [⚙️]、名人認證特展、體力值 (Stamina) 防刷與消耗型道具 IAP 商業閉環 (TASK-014)
 - [x] **DONE-20261101-19**：通過重大架構決策 [`ADR-0002`](adr/0002-app-shell-with-embedded-pixel-canvas.md)：從全螢幕遊戲引擎轉向「現代 App 外殼 ＋ 局部嵌入像素畫布」架構，確立畫布休眠機制 (TASK-013)
 - [x] **DONE-20261101-18**：確立品牌名稱動態解耦 (Brand Decoupling) 與多國語系 (i18n: en / zh-TW) 架構，定案繁中像素字型選型與防爆版佈局規則 (TASK-012)
