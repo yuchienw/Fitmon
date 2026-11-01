@@ -10,24 +10,33 @@ import { AnalyticsTab } from './components/tabs/AnalyticsTab';
 import { VictoryModal } from './components/modals/VictoryModal';
 import { MemeStudioModal } from './components/studio/MemeStudioModal';
 import { SettingsModal } from './components/modals/SettingsModal';
+import { WardrobeModal } from './components/modals/WardrobeModal';
+import { UserProfileModal } from './components/modals/UserProfileModal';
+import { SessionDetailModal } from './components/modals/SessionDetailModal';
 
 export const App: React.FC = () => {
-  const { activeTab, isRestRunning, tickRestTimer, toastMessage } = useGameStore();
+  const {
+    activeTab,
+    isRestRunning,
+    isWorkoutFocusActive,
+    tickGlobalTimers,
+    toastMessage,
+  } = useGameStore();
 
-  // Global Keep-Alive Rest Timer (continues ticking even when user switches tabs!)
+  // Global Keep-Alive Timer (ticks rest timer & workout focus elapsed timer across all tabs!)
   useEffect(() => {
-    if (!isRestRunning) return;
+    if (!isRestRunning && !isWorkoutFocusActive) return;
     const timer = setInterval(() => {
-      tickRestTimer();
+      tickGlobalTimers();
     }, 1000);
     return () => clearInterval(timer);
-  }, [isRestRunning, tickRestTimer]);
+  }, [isRestRunning, isWorkoutFocusActive, tickGlobalTimers]);
 
   return (
     <div className="min-h-[100dvh] w-full bg-[#06080d] flex justify-center items-center">
       {/* Mobile-First App Shell Container (430px max width on desktop, full screen on mobile) */}
       <div className="w-full max-w-[430px] h-[100dvh] bg-[#0b0d13] flex flex-col border-x border-slate-800/80 shadow-2xl relative overflow-hidden">
-        {/* Top Persistent Header */}
+        {/* Top Persistent Header + Cross-Tab Workout Focus Dynamic Island */}
         <TopHeader />
 
         {/* Toast Notification Pill */}
@@ -55,6 +64,9 @@ export const App: React.FC = () => {
         <VictoryModal />
         <MemeStudioModal />
         <SettingsModal />
+        <WardrobeModal />
+        <UserProfileModal />
+        <SessionDetailModal />
       </div>
     </div>
   );

@@ -1,348 +1,1164 @@
 import React, { useState } from 'react';
 import {
   Dumbbell,
+  Flame,
+  Zap,
   Timer,
   Check,
   Trophy,
   Plus,
   Minus,
-  ClipboardList,
-  Zap,
-  Lightbulb,
+  Sparkles,
+  Play,
+  Star,
+  Search,
+  RefreshCw,
+  Eye,
+  X,
+  FolderHeart,
+  Bookmark,
+  Award,
+  Trash2,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import {
   EXERCISE_LIBRARY,
-  WORKOUT_TEMPLATES,
-  CELEBRITY_SHOWCASES,
+  ExerciseItem,
+  RoutineExerciseConfig,
+  SportType,
+  WorkoutTemplate,
 } from '../../config/catalogConfig';
+import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
+
+type RoutineCategoryTab = 'favorite' | 'my_custom' | 'referenced' | 'recommended';
 
 export const WorkoutTab: React.FC = () => {
   const store = useGameStore();
-  const [subMode, setSubMode] = useState<'logger' | 'templates' | 'quick3s'>('logger');
-  const [muscleFilter, setMuscleFilter] = useState<string>('all');
-  const [showTips, setShowTips] = useState<boolean>(false);
+  const [routineTab, setRoutineTab] = useState<RoutineCategoryTab>('favorite');
+  const [detailRoutine, setDetailRoutine] = useState<WorkoutTemplate | null>(null);
+  const [quickEditRoutine, setQuickEditRoutine] = useState<WorkoutTemplate | null>(null);
+  const [quickEditExercises, setQuickEditExercises] = useState<RoutineExerciseConfig[]>([]);
 
-  const currentExercise =
+  // Routine Builder Modal state
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [newRoutineName, setNewRoutineName] = useState('');
+  const [newRoutineTag, setNewRoutineTag] = useState('自訂課表');
+  const [builderSportFilter, setBuilderSportFilter] = useState<'all' | SportType>('all');
+  const [builderSearch, setBuilderSearch] = useState('');
+  const [builderItems, setBuilderItems] = useState<RoutineExerciseConfig[]>([
+    { exerciseId: 'barbell_squat', sets: 4, reps: 8, weightKg: 80, restSeconds: 120 },
+  ]);
+
+  // Mid-workout Swap / Add Exercise Modal state
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
+  const [swapSportFilter, setSwapSportFilter] = useState<'all' | SportType>('all');
+  const [swapSearch, setSwapSearch] = useState('');
+
+  const selectedExercise: ExerciseItem =
     EXERCISE_LIBRARY.find((e) => e.id === store.selectedExerciseId) || EXERCISE_LIBRARY[0];
 
-  const filteredExercises =
-    muscleFilter === 'all'
-      ? EXERCISE_LIBRARY
-      : EXERCISE_LIBRARY.filter((e) => e.muscleGroup === muscleFilter);
+  const currentPR = store.personalRecords[selectedExercise.id] || 0;
 
-  const personalBest = store.personalRecords[currentExercise.id] || 0;
+  const formatMMSS = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
-  return (
-    <div className="p-3.5 space-y-3.5 pb-10">
-      {/* 1. CLEAN SEGMENTED SWITCHER */}
-      <div className="grid grid-cols-3 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
-        <button
-          onClick={() => setSubMode('logger')}
-          className={`py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition ${
-            subMode === 'logger'
-              ? 'bg-emerald-500 text-slate-950 shadow'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Dumbbell className="w-3.5 h-3.5" />
-          <span>計時打卡</span>
-        </button>
-        <button
-          onClick={() => setSubMode('templates')}
-          className={`py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition ${
-            subMode === 'templates'
-              ? 'bg-emerald-500 text-slate-950 shadow'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <ClipboardList className="w-3.5 h-3.5" />
-          <span>課表模板</span>
-        </button>
-        <button
-          onClick={() => setSubMode('quick3s')}
-          className={`py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition ${
-            subMode === 'quick3s'
-              ? 'bg-amber-400 text-slate-950 shadow'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Zap className="w-3.5 h-3.5" />
-          <span>3秒速記</span>
-        </button>
-      </div>
+  // Filtered routines for current tab
+  const filteredRoutines = store.savedRoutines.filter((r) => r.category === routineTab);
 
-      {/* ================= SUB-MODE A: CLEAN LIVE LOGGER ================= */}
-      {subMode === 'logger' && (
-        <>
-          {/* Rest Timer Bar (Only when active) */}
-          {store.isRestRunning && (
-            <div className="retro-box-emerald rounded-xl px-3.5 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Timer className="w-4 h-4 text-emerald-400 animate-spin" />
-                <span className="text-xs font-bold text-emerald-200">休息倒數</span>
-                <span className="text-lg font-mono font-black text-white">
-                  {Math.floor(store.restSecondsLeft / 60)}:
-                  {String(store.restSecondsLeft % 60).padStart(2, '0')}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => store.setRestTimer(store.restSecondsLeft + 30)}
-                  className="px-2 py-1 rounded-lg bg-slate-800 text-xs font-mono font-bold text-slate-200"
-                >
-                  +30s
-                </button>
-                <button
-                  onClick={() => store.setRestTimer(0)}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-xs font-black"
-                >
-                  跳過
-                </button>
-              </div>
+  // Open Quick-Log / Modify-Before-Log modal
+  const handleOpenQuickLogModal = (routine: WorkoutTemplate) => {
+    setQuickEditRoutine(routine);
+    setQuickEditExercises(routine.exercises.map((e) => ({ ...e })));
+  };
+
+  const handleConfirmQuickLog = () => {
+    if (!quickEditRoutine) return;
+    const modifiedRoutine: WorkoutTemplate = {
+      ...quickEditRoutine,
+      exercises: quickEditExercises,
+    };
+    store.quickLogSavedRoutine(modifiedRoutine);
+    setQuickEditRoutine(null);
+  };
+
+  const handleCreateCustomRoutine = (startImmediately: boolean) => {
+    if (builderItems.length === 0) {
+      store.showToast('請至少加入 1 個動作！');
+      return;
+    }
+    const created: WorkoutTemplate = {
+      id: `custom_${Date.now()}`,
+      nameZh: newRoutineName.trim() || '我的專屬訓練課表',
+      nameEn: 'Custom Workout Routine',
+      category: 'my_custom',
+      authorName: store.nickname,
+      tagZh: newRoutineTag || '自訂課表',
+      exercises: builderItems,
+    };
+    store.saveCustomRoutine(created);
+    setBuilderOpen(false);
+    setNewRoutineName('');
+    if (startImmediately) {
+      store.startWorkoutFocus(created);
+    } else {
+      setRoutineTab('my_custom');
+    }
+  };
+
+  // ============================================================================
+  // MODE A: ACTIVE WORKOUT FOCUS MODE (專注訓練模式 V2-02, V2-06, V2-14, V2-15)
+  // ============================================================================
+  if (store.isWorkoutFocusActive) {
+    return (
+      <div className="p-3.5 space-y-3.5 pb-10">
+        {/* 1. FOCUS TOP BAR (Elapsed Time + Early/Full Settlement) */}
+        <div className="retro-box rounded-2xl p-3 bg-gradient-to-r from-emerald-950/90 via-slate-900 to-slate-900 border-emerald-500/50 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span className="text-[11px] font-black text-emerald-300 uppercase tracking-wider">
+                專注訓練進行中 · {formatMMSS(store.workoutElapsedSeconds)}
+              </span>
             </div>
-          )}
+            <h2 className="text-sm font-black text-white truncate mt-0.5">
+              📋 {store.activeTemplateName || '自由訓練課表'}
+            </h2>
+          </div>
 
-          {/* Exercise Picker */}
-          <div className="retro-box rounded-2xl p-3 space-y-2.5">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-              {[
-                { id: 'all', label: '全部' },
-                { id: 'legs', label: '腿臀' },
-                { id: 'chest', label: '胸部' },
-                { id: 'back', label: '背部' },
-                { id: 'shoulders', label: '肩部' },
-                { id: 'arms', label: '手臂' },
-              ].map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setMuscleFilter(cat.id)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition ${
-                    muscleFilter === cat.id
-                      ? 'bg-emerald-500 text-slate-950 font-black'
-                      : 'bg-slate-900 text-slate-400 border border-slate-800'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => store.discardWorkoutSession()}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 text-[11px] font-bold"
+              title="放棄本次訓練"
+            >
+              放棄
+            </button>
+            <button
+              onClick={() => store.finishWorkoutSession()}
+              disabled={store.sessionSets.length === 0}
+              className={`retro-btn px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 ${
+                store.sessionSets.length > 0
+                  ? 'bg-amber-400 text-slate-950 shadow-md'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>完成結算 ({store.sessionSets.length}組)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 2. ROUTINE EXERCISE QUEUE (Click to switch exercise anytime) */}
+        {store.templateQueue.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between px-0.5">
+              <span className="text-[11px] font-black text-slate-400">
+                課表動作序列 (可隨時點選切換或中途替換器材)
+              </span>
+              <button
+                onClick={() => setSwapModalOpen(true)}
+                className="text-[11px] font-black text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>中途替換 / 新增動作</span>
+              </button>
             </div>
-
-            <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto">
-              {filteredExercises.map((ex) => {
-                const active = ex.id === currentExercise.id;
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              {store.templateQueue.map((q) => {
+                const ex = EXERCISE_LIBRARY.find((e) => e.id === q.exerciseId);
+                if (!ex) return null;
+                const isCurrent = store.selectedExerciseId === q.exerciseId;
+                const isDone = q.completedSets >= q.targetSets;
                 return (
                   <button
-                    key={ex.id}
-                    onClick={() => store.selectExercise(ex.id)}
-                    className={`px-3 py-2 rounded-xl border text-left flex items-center justify-between transition ${
-                      active
-                        ? 'bg-emerald-500/20 border-emerald-400 text-white font-black'
-                        : 'bg-slate-900/90 border-slate-800 text-slate-300 hover:border-slate-700'
+                    key={q.exerciseId}
+                    onClick={() => store.selectExercise(q.exerciseId)}
+                    className={`p-2 rounded-xl border text-left shrink-0 flex items-center gap-2 transition ${
+                      isDone
+                        ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300'
+                        : isCurrent
+                        ? 'bg-cyan-950/80 border-cyan-400 text-white ring-1 ring-cyan-400/50'
+                        : 'bg-slate-900 border-slate-800 text-slate-400'
                     }`}
                   >
-                    <span className="text-xs truncate">{ex.nameZh}</span>
-                    <span className="text-[10px] font-mono text-amber-300 shrink-0 ml-1">
-                      {ex.neuralMultiplier}x
-                    </span>
+                    <ExerciseThumbnail exercise={ex} size={34} />
+                    <div>
+                      <div className="text-xs font-black truncate max-w-[110px]">{ex.nameZh}</div>
+                      <div className="text-[10px] font-mono text-slate-300">
+                        {q.completedSets}/{q.targetSets} 組 · 休{q.restSeconds}s
+                      </div>
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
+        )}
 
-          {/* BIG TACTILE WEIGHT & REPS COUNTER */}
-          <div className="retro-box rounded-2xl p-4 space-y-3.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-white">{currentExercise.nameZh}</h3>
-                <button
-                  onClick={() => setShowTips(!showTips)}
-                  className="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[10px] font-bold flex items-center gap-1"
-                >
-                  <Lightbulb className="w-3 h-3" />
-                  <span>要訣</span>
-                </button>
+        {/* 3. ACTIVE REST TIMER BANNER */}
+        {store.restSecondsLeft > 0 && (
+          <div className="retro-box rounded-2xl p-3 bg-cyan-950/60 border-cyan-400/60 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <Timer className="w-5 h-5 text-cyan-400 animate-spin" />
+              <div>
+                <div className="text-xs font-black text-cyan-200">
+                  組間休息倒數 (切換至其他分頁也會置頂提醒)
+                </div>
+                <div className="text-lg font-mono font-black text-white">
+                  {formatMMSS(store.restSecondsLeft)}
+                </div>
               </div>
-              <span className="text-xs font-mono font-bold text-amber-400 flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5" />
-                PR {personalBest}kg
-              </span>
             </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => store.setRestTimer(store.restSecondsLeft + 30)}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-cyan-300 text-xs font-bold border border-cyan-500/30"
+              >
+                +30s
+              </button>
+              <button
+                onClick={() => store.setRestTimer(0)}
+                className="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/30"
+              >
+                跳過休息
+              </button>
+            </div>
+          </div>
+        )}
 
-            {showTips && (
-              <div className="p-2.5 rounded-xl bg-slate-900 border border-cyan-500/30 space-y-1 text-xs text-slate-300">
-                {currentExercise.safetyCues.map((cue, idx) => (
-                  <div key={idx}>• {cue}</div>
-                ))}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              {/* Weight */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 text-center space-y-2">
-                <span className="text-[11px] font-bold text-slate-400">重量 (KG)</span>
-                <div className="text-3xl font-mono font-black text-white">
-                  {store.currentWeightKg}
+        {/* 4. CURRENT EXERCISE VISUAL CARD + DIRECT NUMBER INPUTS (V2-06, V2-14) */}
+        <div className="retro-box rounded-2xl p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <ExerciseThumbnail exercise={selectedExercise} size={56} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black">
+                    {selectedExercise.muscleLabelZh}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 text-[10px] font-bold">
+                    {selectedExercise.sportType === 'strength'
+                      ? '🏋️ 重訓器材'
+                      : selectedExercise.sportType === 'cardio'
+                      ? '🏃 有氧耐力'
+                      : '🤸 徒手核心'}
+                  </span>
+                  {currentPR > 0 && (
+                    <span className="text-[10px] font-mono text-amber-300 font-bold">
+                      🏆 PR: {currentPR} {selectedExercise.unitLabel}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center justify-center gap-2.5">
-                  <button
-                    onClick={() => store.setCurrentWeight(store.currentWeightKg - 2.5)}
-                    className="p-2 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 active:scale-95"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => store.setCurrentWeight(store.currentWeightKg + 2.5)}
-                    className="p-2 rounded-xl bg-slate-800 text-emerald-400 border border-slate-700 active:scale-95"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Reps */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 text-center space-y-2">
-                <span className="text-[11px] font-bold text-slate-400">次數 (REPS)</span>
-                <div className="text-3xl font-mono font-black text-white">{store.currentReps}</div>
-                <div className="flex items-center justify-center gap-2.5">
-                  <button
-                    onClick={() => store.setCurrentReps(store.currentReps - 1)}
-                    className="p-2 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 active:scale-95"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => store.setCurrentReps(store.currentReps + 1)}
-                    className="p-2 rounded-xl bg-slate-800 text-emerald-400 border border-slate-700 active:scale-95"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
+                <h3 className="text-base font-black text-white mt-1 truncate">
+                  {selectedExercise.nameZh}
+                </h3>
               </div>
             </div>
 
             <button
-              onClick={() => store.logWorkoutSet()}
-              className="retro-btn w-full py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
+              onClick={() => setSwapModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-black flex items-center gap-1 shrink-0"
             >
-              <Check className="w-5 h-5 stroke-[3px]" />
-              <span>完成第 {store.sessionSets.length + 1} 組</span>
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>換動作</span>
             </button>
           </div>
 
-          {/* LOGGED SETS & SETTLEMENT BUTTON */}
-          {store.sessionSets.length > 0 && (
-            <div className="retro-box rounded-2xl p-3.5 space-y-2.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-black text-white">已完成 {store.sessionSets.length} 組</span>
-                <span className="font-mono text-emerald-400 font-bold">
-                  {store.sessionSets
-                    .reduce((acc, s) => acc + s.weightKg * s.reps, 0)
-                    .toLocaleString()}{' '}
-                  kg
-                </span>
+          {/* Direct Keyboard Input + Stepper for Weight/Distance & Reps/Duration */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Weight / Distance / Intensity Input */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col items-center">
+              <span className="text-[11px] text-slate-400 font-bold mb-1.5">
+                {selectedExercise.unitLabel === 'kg'
+                  ? '重量 (kg · 可直接點擊輸入)'
+                  : selectedExercise.unitLabel === 'km'
+                  ? '距離 (km · 可直接輸入)'
+                  : '強度 / 秒數'}
+              </span>
+              <div className="flex items-center justify-between w-full gap-1">
+                <button
+                  onClick={() =>
+                    store.setCurrentWeight(
+                      Math.max(0, Number((store.currentWeightKg - (selectedExercise.unitLabel === 'km' ? 0.5 : 2.5)).toFixed(1)))
+                    )
+                  }
+                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  value={store.currentWeightKg}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    store.setCurrentWeight(Number.isNaN(val) ? 0 : val);
+                  }}
+                  className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-white outline-none"
+                />
+                <button
+                  onClick={() =>
+                    store.setCurrentWeight(
+                      Number((store.currentWeightKg + (selectedExercise.unitLabel === 'km' ? 0.5 : 2.5)).toFixed(1))
+                    )
+                  }
+                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
+            </div>
 
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {store.sessionSets.map((s, i) => (
+            {/* Reps / Minutes Input */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col items-center">
+              <span className="text-[11px] text-slate-400 font-bold mb-1.5">
+                {selectedExercise.sportType === 'cardio'
+                  ? '次數 / 趟數 (可直接輸入)'
+                  : '次數 (Reps · 可直接輸入)'}
+              </span>
+              <div className="flex items-center justify-between w-full gap-1">
+                <button
+                  onClick={() => store.setCurrentReps(Math.max(1, store.currentReps - 1))}
+                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={store.currentReps}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    store.setCurrentReps(Number.isNaN(val) ? 1 : Math.max(1, val));
+                  }}
+                  className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-emerald-400 outline-none"
+                />
+                <button
+                  onClick={() => store.setCurrentReps(store.currentReps + 1)}
+                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Per-Exercise Rest Timer Setting (V2-06) */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Timer className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span className="text-xs font-bold text-slate-300">本動作組間休息 (秒):</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {[60, 90, 120, 180].map((sec) => (
+                <button
+                  key={sec}
+                  onClick={() => store.setCurrentRestConfigSec(sec)}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-mono font-bold transition ${
+                    store.currentRestConfigSec === sec
+                      ? 'bg-cyan-500 text-slate-950 font-black'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {sec}s
+                </button>
+              ))}
+              <input
+                type="number"
+                inputMode="numeric"
+                value={store.currentRestConfigSec}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  store.setCurrentRestConfigSec(Number.isNaN(val) ? 60 : Math.max(10, val));
+                }}
+                className="w-14 text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-xs font-mono font-black text-cyan-300"
+              />
+            </div>
+          </div>
+
+          {/* Primary Log Set Action Button */}
+          <button
+            onClick={() => store.logWorkoutSet()}
+            className="w-full retro-btn py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
+          >
+            <Check className="w-5 h-5 stroke-[3px]" />
+            <span>
+              紀錄本組：{selectedExercise.nameZh} ({store.currentWeightKg}
+              {selectedExercise.unitLabel} × {store.currentReps}次)
+            </span>
+          </button>
+        </div>
+
+        {/* 5. COMPLETED SETS LOG LIST WITH VISUAL EXERCISE THUMBNAILS (V2-14) */}
+        <div className="retro-box rounded-2xl p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-white flex items-center gap-1.5">
+              <Flame className="w-4 h-4 text-amber-400" />
+              本次已完成動作與組數明細 ({store.sessionSets.length} 組)
+            </span>
+            {store.sessionSets.length > 0 && (
+              <span className="text-[11px] font-mono text-emerald-400 font-bold">
+                總容量{' '}
+                {store.sessionSets
+                  .reduce((acc, s) => acc + s.weightKg * s.reps, 0)
+                  .toLocaleString()}{' '}
+                kg
+              </span>
+            )}
+          </div>
+
+          {store.sessionSets.length === 0 ? (
+            <div className="text-center py-6 text-xs text-slate-500">
+              尚未紀錄任何組數，點擊上方「紀錄本組」開始累積獎勵！
+            </div>
+          ) : (
+            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+              {store.sessionSets.map((s, idx) => {
+                const exObj =
+                  EXERCISE_LIBRARY.find((e) => e.id === s.exerciseId) || EXERCISE_LIBRARY[0];
+                return (
                   <div
                     key={s.id}
-                    className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs shrink-0 flex items-center gap-1.5"
+                    className="px-2.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between text-xs gap-2"
                   >
-                    <span className="text-slate-400 font-mono">#{i + 1}</span>
-                    <span className="font-bold text-white">
-                      {s.weightKg}kg×{s.reps}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <ExerciseThumbnail exercise={exObj} size={36} />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
+                            #{idx + 1}
+                          </span>
+                          <span className="font-black text-white truncate">
+                            {s.exerciseNameZh}
+                          </span>
+                          {s.isPR && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black">
+                              🏆 PR!
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] font-mono text-cyan-300 font-bold mt-0.5">
+                          {s.weightKg} {s.unitLabel} × {s.reps} 次{' '}
+                          <span className="text-slate-500">· 休 {s.restSec}s</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <span className="font-mono text-amber-300 font-black shrink-0">
+                      +{s.coinsEarned}🪙
                     </span>
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* MID-WORKOUT SWAP / SELECT EXERCISE MODAL (V2-06, V2-15) */}
+        {swapModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3 border-2 border-cyan-500/40 max-h-[82vh] flex flex-col">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-white">
+                    🔄 切換或中途替換動作 (目前：{selectedExercise.nameZh})
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    器材被佔用？直接替換目前課表動作或切換至重訓/有氧/徒手項目
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSwapModalOpen(false)}
+                  className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Filter & Search */}
+              <div className="flex items-center gap-1.5">
+                {(
+                  [
+                    { id: 'all', label: '全部' },
+                    { id: 'strength', label: '🏋️ 重訓' },
+                    { id: 'cardio', label: '🏃 有氧' },
+                    { id: 'bodyweight', label: '🤸 徒手' },
+                  ] as const
+                ).map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSwapSportFilter(t.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black ${
+                      swapSportFilter === t.id
+                        ? 'bg-cyan-500 text-slate-950'
+                        : 'bg-slate-900 text-slate-400 border border-slate-800'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
                 ))}
               </div>
 
-              <button
-                onClick={() => store.finishWorkoutSession()}
-                className="retro-btn w-full py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2"
-              >
-                <Trophy className="w-4 h-4" />
-                <span>完成訓練・領取獎勵結算</span>
-              </button>
-            </div>
-          )}
-        </>
-      )}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={swapSearch}
+                  onChange={(e) => setSwapSearch(e.target.value)}
+                  placeholder="搜尋動作名稱或部位 (例：深蹲、胸推、慢跑)..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-cyan-400"
+                />
+              </div>
 
-      {/* ================= SUB-MODE B: CLEAN TEMPLATES ================= */}
-      {subMode === 'templates' && (
-        <div className="space-y-2.5">
-          {CELEBRITY_SHOWCASES.map((celeb) => (
-            <div
-              key={celeb.id}
-              className="retro-box-amber rounded-2xl p-3.5 flex items-center justify-between gap-3"
+              <div className="space-y-2 overflow-y-auto pr-1 flex-1">
+                {EXERCISE_LIBRARY.filter((ex) => {
+                  if (swapSportFilter !== 'all' && ex.sportType !== swapSportFilter) return false;
+                  if (
+                    swapSearch.trim() &&
+                    !ex.nameZh.includes(swapSearch.trim()) &&
+                    !ex.muscleLabelZh.includes(swapSearch.trim())
+                  ) {
+                    return false;
+                  }
+                  return true;
+                }).map((ex) => (
+                  <div
+                    key={ex.id}
+                    className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <ExerciseThumbnail exercise={ex} size={42} />
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-white truncate">{ex.nameZh}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {ex.muscleLabelZh} · 預設 {ex.defaultWeightKg}
+                          {ex.unitLabel} × {ex.defaultReps} · 休 {ex.defaultRestSec}s
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => {
+                          store.swapActiveExercise(selectedExercise.id, ex.id);
+                          setSwapModalOpen(false);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-xs font-black"
+                      >
+                        替換此動作
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // MODE B: DEFAULT ROUTINE HUB (課表管理中心 V2-14, V2-15, V2-17)
+  // ============================================================================
+  return (
+    <div className="p-3.5 space-y-3.5 pb-10">
+      {/* 1. HEADER & NEW ROUTINE / FREE WORKOUT CTAs */}
+      <div className="retro-box rounded-2xl p-3.5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-black text-white flex items-center gap-1.5">
+              <Dumbbell className="w-4 h-4 text-emerald-400" />
+              運動課表與打卡中心
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              選擇已儲存課表「3秒速記」或「開始專注訓練」，或建立新課表
+            </p>
+          </div>
+          <span className="px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] font-bold">
+            ⚡ 體力 {store.stamina}/{store.maxStamina}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setBuilderOpen(true)}
+            className="retro-btn py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md"
+          >
+            <Plus className="w-4 h-4 stroke-[3px]" />
+            <span>建立新課表</span>
+          </button>
+          <button
+            onClick={() => store.startWorkoutFocus()}
+            className="retro-btn py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/40 font-black text-xs flex items-center justify-center gap-1.5"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>自由專注訓練</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. FOUR ROUTINE CATEGORY TABS (我的最愛 / 我的課表 / 引用課表 / 官方推薦) */}
+      <div className="grid grid-cols-4 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+        {(
+          [
+            { id: 'favorite', label: '我的最愛', icon: Star },
+            { id: 'my_custom', label: '我的課表', icon: FolderHeart },
+            { id: 'referenced', label: '引用他人', icon: Bookmark },
+            { id: 'recommended', label: '官方推薦', icon: Award },
+          ] as const
+        ).map((tab) => {
+          const Icon = tab.icon;
+          const active = routineTab === tab.id;
+          const count = store.savedRoutines.filter((r) => r.category === tab.id).length;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setRoutineTab(tab.id)}
+              className={`py-2 px-1 rounded-lg text-[11px] font-black flex flex-col items-center gap-0.5 transition ${
+                active
+                  ? 'bg-emerald-500 text-slate-950 shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
+              <div className="flex items-center gap-1">
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </div>
+              <span className={`text-[9px] font-mono ${active ? 'text-slate-900' : 'text-slate-500'}`}>
+                {count} 套
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 3. ROUTINE CARDS LIST */}
+      <div className="space-y-3">
+        {filteredRoutines.length === 0 ? (
+          <div className="retro-box rounded-2xl p-6 text-center space-y-2">
+            <p className="text-xs font-bold text-slate-400">此分類目前沒有課表</p>
+            <button
+              onClick={() => setBuilderOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-black"
+            >
+              ＋ 立即建立新課表
+            </button>
+          </div>
+        ) : (
+          filteredRoutines.map((routine) => (
+            <div
+              key={routine.id}
+              className="retro-box rounded-2xl p-3.5 space-y-3 hover:border-slate-700 transition"
+            >
+              {/* Title + Author + Favorite Star */}
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black">
+                      {routine.tagZh}
+                    </span>
+                    {routine.authorName && (
+                      <span className="text-[10px] text-cyan-300 font-bold">
+                        👤 來源：{routine.authorName}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-black text-white mt-1">{routine.nameZh}</h3>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setDetailRoutine(routine)}
+                    className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
+                    title="檢視完整課表細節"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => store.toggleFavoriteRoutine(routine.id)}
+                    className={`p-1.5 rounded-lg border ${
+                      routine.category === 'favorite'
+                        ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-amber-300'
+                    }`}
+                    title="切換最愛"
+                  >
+                    <Star
+                      className={`w-4 h-4 ${routine.category === 'favorite' ? 'fill-amber-300' : ''}`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Visual Exercise List inside Routine */}
+              <div className="space-y-1.5">
+                {routine.exercises.map((item, idx) => {
+                  const ex = EXERCISE_LIBRARY.find((e) => e.id === item.exerciseId);
+                  if (!ex) return null;
+                  return (
+                    <div
+                      key={`${routine.id}_${item.exerciseId}_${idx}`}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800/90 flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <ExerciseThumbnail exercise={ex} size={32} />
+                        <span className="font-bold text-white truncate">{ex.nameZh}</span>
+                      </div>
+                      <div className="font-mono text-[11px] text-cyan-300 shrink-0">
+                        {item.sets}組 × {item.reps}次 ·{' '}
+                        <span className="text-amber-300 font-bold">
+                          {item.weightKg}
+                          {ex.unitLabel}
+                        </span>{' '}
+                        <span className="text-slate-500">(休{item.restSeconds}s)</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Action Buttons: 3-Sec Quick Log (or Modify & Log) vs Start Focus Workout */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  onClick={() => handleOpenQuickLogModal(routine)}
+                  className="retro-btn py-2.5 px-3 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/50 text-amber-300 font-black text-xs flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span>⚡ 3秒速記課表</span>
+                </button>
+                <button
+                  onClick={() => store.startWorkoutFocus(routine)}
+                  className="retro-btn py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>開始專注訓練</span>
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* =====================================================================
+          MODAL 1: 3-SECOND QUICK LOG / MODIFY BEFORE LOG (V2-14, V2-15)
+         ===================================================================== */}
+      {quickEditRoutine && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3.5 border-2 border-amber-400/60 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between">
               <div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-black">
-                  {celeb.verifiedBadge}
+                <span className="text-[10px] font-black text-amber-300 uppercase">
+                  ⚡ 課表 3 秒速記 (可直接打卡或微調今日重量/組數)
                 </span>
-                <h4 className="text-sm font-black text-white mt-1">
-                  {celeb.routineTemplate.nameZh}
-                </h4>
+                <h3 className="text-base font-black text-white">{quickEditRoutine.nameZh}</h3>
               </div>
               <button
-                onClick={() => {
-                  store.loadWorkoutTemplate(celeb.routineTemplate);
-                  setSubMode('logger');
-                }}
-                className="retro-btn px-3.5 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shrink-0"
+                onClick={() => setQuickEditRoutine(null)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
               >
-                套用
+                <X className="w-4 h-4" />
               </button>
             </div>
-          ))}
 
-          {WORKOUT_TEMPLATES.map((tpl) => (
-            <div
-              key={tpl.id}
-              className="retro-box rounded-2xl p-3.5 flex items-center justify-between gap-3"
-            >
-              <div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
-                  {tpl.tagZh}
-                </span>
-                <h4 className="text-sm font-black text-white mt-1">{tpl.nameZh}</h4>
-              </div>
-              <button
-                onClick={() => {
-                  store.loadWorkoutTemplate(tpl);
-                  setSubMode('logger');
-                }}
-                className="retro-btn px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs shrink-0"
-              >
-                套用
-              </button>
+            <div className="space-y-2 overflow-y-auto pr-1 flex-1">
+              {quickEditExercises.map((cfg, idx) => {
+                const ex =
+                  EXERCISE_LIBRARY.find((e) => e.id === cfg.exerciseId) || EXERCISE_LIBRARY[0];
+                return (
+                  <div
+                    key={`${cfg.exerciseId}_${idx}`}
+                    className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <ExerciseThumbnail exercise={ex} size={36} />
+                      <div>
+                        <div className="text-xs font-black text-white">{ex.nameZh}</div>
+                        <div className="text-[10px] text-slate-400">{ex.muscleLabelZh}</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">組數</label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={cfg.sets}
+                          onChange={(e) => {
+                            const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                            setQuickEditExercises((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, sets: val } : item))
+                            );
+                          }}
+                          className="w-full text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-xs font-mono font-black text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">
+                          重量 ({ex.unitLabel})
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="any"
+                          value={cfg.weightKg}
+                          onChange={(e) => {
+                            const val = Math.max(0, parseFloat(e.target.value) || 0);
+                            setQuickEditExercises((prev) =>
+                              prev.map((item, i) =>
+                                i === idx ? { ...item, weightKg: val } : item
+                              )
+                            );
+                          }}
+                          className="w-full text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-xs font-mono font-black text-amber-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">次數</label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={cfg.reps}
+                          onChange={(e) => {
+                            const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                            setQuickEditExercises((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, reps: val } : item))
+                            );
+                          }}
+                          className="w-full text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-xs font-mono font-black text-emerald-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+
+            <button
+              onClick={handleConfirmQuickLog}
+              className="w-full retro-btn py-3 rounded-xl bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
+            >
+              <Zap className="w-4 h-4 fill-current" />
+              <span>確認一鍵完成打卡結算</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ================= SUB-MODE C: 3-SECOND EXPRESS LOG ================= */}
-      {subMode === 'quick3s' && (
-        <div className="grid grid-cols-1 gap-2.5">
-          {[
-            { title: '🔥 上肢推日 (胸/肩/三頭)', vol: 4500, group: 'chest' as const },
-            { title: '🦅 背部拉日 (引體/划船)', vol: 4800, group: 'back' as const },
-            { title: '♿ 硬派腿日 (深蹲/腿推)', vol: 6200, group: 'legs' as const },
-            { title: '🏃 燃脂有氧與核心', vol: 3000, group: 'core' as const },
-          ].map((item, idx) => (
-            <button
-              key={idx}
-              onClick={() => store.quickLog3SecWorkout(item.title, item.vol, item.group)}
-              className="retro-btn p-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 flex items-center justify-between text-left"
-            >
-              <span className="text-sm font-black text-white">{item.title}</span>
-              <span className="px-3 py-1.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs">
-                一鍵完成
-              </span>
-            </button>
-          ))}
+      {/* =====================================================================
+          MODAL 2: ROUTINE DETAIL VIEW (檢視課表詳情與安全提示 V2-17)
+         ===================================================================== */}
+      {detailRoutine && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3 border-2 border-emerald-500/40 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black text-emerald-400">
+                  {detailRoutine.tagZh}
+                </span>
+                <h3 className="text-base font-black text-white">{detailRoutine.nameZh}</h3>
+              </div>
+              <button
+                onClick={() => setDetailRoutine(null)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 overflow-y-auto pr-1 flex-1">
+              {detailRoutine.exercises.map((cfg, idx) => {
+                const ex =
+                  EXERCISE_LIBRARY.find((e) => e.id === cfg.exerciseId) || EXERCISE_LIBRARY[0];
+                return (
+                  <div
+                    key={`${cfg.exerciseId}_${idx}`}
+                    className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <ExerciseThumbnail exercise={ex} size={42} />
+                        <div>
+                          <div className="text-xs font-black text-white">
+                            {idx + 1}. {ex.nameZh}
+                          </div>
+                          <div className="text-[11px] font-mono text-cyan-300">
+                            {cfg.sets} 組 × {cfg.reps} 次 · {cfg.weightKg} {ex.unitLabel} · 組間休{' '}
+                            {cfg.restSeconds}s
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-slate-400 bg-slate-950/80 p-2 rounded-lg space-y-0.5">
+                      {ex.safetyCues.map((cue, cIdx) => (
+                        <div key={cIdx}>• {cue}</div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  const r = detailRoutine;
+                  setDetailRoutine(null);
+                  handleOpenQuickLogModal(r);
+                }}
+                className="py-2.5 rounded-xl bg-amber-400/20 border border-amber-400/50 text-amber-300 text-xs font-black"
+              >
+                ⚡ 3秒速記此課表
+              </button>
+              <button
+                onClick={() => {
+                  const r = detailRoutine;
+                  setDetailRoutine(null);
+                  store.startWorkoutFocus(r);
+                }}
+                className="py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black"
+              >
+                ▶️ 開始專注執行
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODAL 3: CREATE NEW CUSTOM ROUTINE BUILDER (建立新課表 V2-06, V2-14, V2-15)
+         ===================================================================== */}
+      {builderOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
+          <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3 border-2 border-cyan-500/50 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-cyan-300">
+                ＋ 建立專屬訓練課表 (重訓 / 有氧 / 徒手)
+              </h3>
+              <button
+                onClick={() => setBuilderOpen(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Routine Name & Tag */}
+            <div className="grid grid-cols-3 gap-2">
+              <input
+                type="text"
+                value={newRoutineName}
+                onChange={(e) => setNewRoutineName(e.target.value)}
+                placeholder="輸入課表名稱 (例：週三胸背轟炸)"
+                className="col-span-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-cyan-400"
+              />
+              <input
+                type="text"
+                value={newRoutineTag}
+                onChange={(e) => setNewRoutineTag(e.target.value)}
+                placeholder="標籤 (例：增肌)"
+                className="px-2.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-emerald-300 outline-none"
+              />
+            </div>
+
+            {/* Added Exercises Sequence with Direct Inputs */}
+            <div className="space-y-2 overflow-y-auto max-h-48 pr-1 border-b border-slate-800 pb-2">
+              <div className="text-[11px] font-black text-slate-400">
+                已排入課表動作 ({builderItems.length} 項 · 可設定各動作組間休息秒數)
+              </div>
+              {builderItems.map((item, idx) => {
+                const ex =
+                  EXERCISE_LIBRARY.find((e) => e.id === item.exerciseId) || EXERCISE_LIBRARY[0];
+                return (
+                  <div
+                    key={`${item.exerciseId}_${idx}`}
+                    className="p-2 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ExerciseThumbnail exercise={ex} size={30} />
+                        <span className="text-xs font-black text-white">
+                          {idx + 1}. {ex.nameZh}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() =>
+                          setBuilderItems((prev) => prev.filter((_, i) => i !== idx))
+                        }
+                        className="p-1 text-slate-500 hover:text-rose-400"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 text-center">
+                      <div>
+                        <span className="text-[9px] text-slate-400 block">組數</span>
+                        <input
+                          type="number"
+                          value={item.sets}
+                          onChange={(e) => {
+                            const v = Math.max(1, parseInt(e.target.value, 10) || 1);
+                            setBuilderItems((prev) =>
+                              prev.map((row, i) => (i === idx ? { ...row, sets: v } : row))
+                            );
+                          }}
+                          className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-white"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-400 block">
+                          重量({ex.unitLabel})
+                        </span>
+                        <input
+                          type="number"
+                          step="any"
+                          value={item.weightKg}
+                          onChange={(e) => {
+                            const v = Math.max(0, parseFloat(e.target.value) || 0);
+                            setBuilderItems((prev) =>
+                              prev.map((row, i) => (i === idx ? { ...row, weightKg: v } : row))
+                            );
+                          }}
+                          className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-amber-300"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-400 block">次數</span>
+                        <input
+                          type="number"
+                          value={item.reps}
+                          onChange={(e) => {
+                            const v = Math.max(1, parseInt(e.target.value, 10) || 1);
+                            setBuilderItems((prev) =>
+                              prev.map((row, i) => (i === idx ? { ...row, reps: v } : row))
+                            );
+                          }}
+                          className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-emerald-400"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-400 block">休息(秒)</span>
+                        <input
+                          type="number"
+                          value={item.restSeconds}
+                          onChange={(e) => {
+                            const v = Math.max(10, parseInt(e.target.value, 10) || 60);
+                            setBuilderItems((prev) =>
+                              prev.map((row, i) =>
+                                i === idx ? { ...row, restSeconds: v } : row
+                              )
+                            );
+                          }}
+                          className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-cyan-300"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Search & Add Exercise Library */}
+            <div className="space-y-1.5 flex-1 overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between gap-1">
+                <div className="flex items-center gap-1">
+                  {(
+                    [
+                      { id: 'all', label: '全部' },
+                      { id: 'strength', label: '重訓' },
+                      { id: 'cardio', label: '有氧' },
+                      { id: 'bodyweight', label: '徒手' },
+                    ] as const
+                  ).map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setBuilderSportFilter(f.id)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                        builderSportFilter === f.id
+                          ? 'bg-cyan-500 text-slate-950'
+                          : 'bg-slate-900 text-slate-400'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={builderSearch}
+                  onChange={(e) => setBuilderSearch(e.target.value)}
+                  placeholder="搜尋動作..."
+                  className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] text-white outline-none w-36"
+                />
+              </div>
+
+              <div className="space-y-1.5 overflow-y-auto pr-1 flex-1">
+                {EXERCISE_LIBRARY.filter((ex) => {
+                  if (builderSportFilter !== 'all' && ex.sportType !== builderSportFilter)
+                    return false;
+                  if (
+                    builderSearch.trim() &&
+                    !ex.nameZh.includes(builderSearch.trim()) &&
+                    !ex.muscleLabelZh.includes(builderSearch.trim())
+                  )
+                    return false;
+                  return true;
+                }).map((ex) => (
+                  <div
+                    key={ex.id}
+                    className="p-2 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ExerciseThumbnail exercise={ex} size={32} />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white truncate">{ex.nameZh}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {ex.muscleLabelZh} · 預設 {ex.defaultWeightKg}
+                          {ex.unitLabel}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        setBuilderItems((prev) => [
+                          ...prev,
+                          {
+                            exerciseId: ex.id,
+                            sets: 4,
+                            reps: ex.defaultReps,
+                            weightKg: ex.defaultWeightKg,
+                            restSeconds: ex.defaultRestSec,
+                          },
+                        ])
+                      }
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black shrink-0"
+                    >
+                      ＋ 加入
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                onClick={() => handleCreateCustomRoutine(false)}
+                className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-black border border-slate-700"
+              >
+                💾 儲存至我的課表
+              </button>
+              <button
+                onClick={() => handleCreateCustomRoutine(true)}
+                className="py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-xs font-black"
+              >
+                ▶️ 儲存並開始訓練
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

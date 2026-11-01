@@ -24,7 +24,10 @@ export const HomeTab: React.FC = () => {
   return (
     <div className="p-3.5 space-y-3.5 pb-8">
       {/* 1. HERO: MAPLESTORY CHIBI 2D GYM ROOM */}
-      <PixelRoomCanvas isActive={store.activeTab === 'home'} />
+      <PixelRoomCanvas
+        isActive={store.activeTab === 'home'}
+        onOpenWardrobe={() => store.setWardrobeModalOpen(true)}
+      />
 
       {/* 2. TWO CLEAN VISUAL CTA BUTTONS */}
       <div className="grid grid-cols-2 gap-2.5">

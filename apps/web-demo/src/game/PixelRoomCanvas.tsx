@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Sun, Moon, Volume2, VolumeX } from 'lucide-react';
+import { Sun, Moon, Volume2, VolumeX, Music, Sparkles } from 'lucide-react';
 import { useGameStore } from '../stores/useGameStore';
 import { AvatarBodyStage, EquipSlot, RoomSlot } from '../config/catalogConfig';
-import { drawPixelGymScene } from './pixelSpriteDrawer';
+import { drawPixelGymScene, VisitorAvatarConfig } from './pixelSpriteDrawer';
 
 const SPEECH_LINES = [
   '再一組深蹲就喝乳清！💪',
-  '豆助在看，今天絕不偷懶！🐕',
   '核心繃緊，準備破 PR！🔥',
   '練腿日，明天坐輪椅！♿',
+  '點擊右上角 🎵 開啟 8-Bit BGM！',
 ];
 
 interface PixelRoomCanvasProps {
@@ -20,20 +20,31 @@ interface PixelRoomCanvasProps {
     equipped: Record<EquipSlot, string>;
     room: Record<RoomSlot, string>;
   };
+  customAvatar?: {
+    bodyStage: AvatarBodyStage;
+    equipped: Record<EquipSlot, string>;
+    room: Record<RoomSlot, string>;
+  };
+  visitorAvatar?: VisitorAvatarConfig;
   compact?: boolean;
+  onOpenWardrobe?: () => void;
 }
 
 export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
   isActive,
   customOverride,
+  customAvatar,
+  visitorAvatar,
   compact = false,
+  onOpenWardrobe,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const store = useGameStore();
 
-  const bodyStage = customOverride ? customOverride.bodyStage : store.bodyStage;
-  const equipped = customOverride ? customOverride.equipped : store.equipped;
-  const room = customOverride ? customOverride.room : store.room;
+  const activeCustom = customOverride || customAvatar;
+  const bodyStage = activeCustom ? activeCustom.bodyStage : store.bodyStage;
+  const equipped = activeCustom ? activeCustom.equipped : store.equipped;
+  const room = activeCustom ? activeCustom.room : store.room;
 
   const [aiState, setAiState] = useState<'WALK' | 'SQUAT' | 'CURL' | 'IDLE'>('SQUAT');
   const [speechBubble, setSpeechBubble] = useState<string>(SPEECH_LINES[0]);
@@ -54,8 +65,6 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
   }, [aiState]);
 
   useEffect(() => {
-    if (!isActive) return;
-
     let rafId: number;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -63,6 +72,28 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
     if (!ctx) return;
 
     ctx.imageSmoothingEnabled = false;
+
+    const drawCurrentFrame = () => {
+      const st = animRef.current;
+      drawPixelGymScene(ctx, {
+        bodyStage,
+        equipped,
+        room,
+        isNight: store.isNightModeRoom,
+        frameTick: st.tick,
+        avatarX: st.x,
+        avatarY: st.y,
+        avatarState: st.currentState,
+        facingRight: st.facingRight,
+        petHearts: st.hearts,
+        visitorAvatar,
+      });
+    };
+
+    // Always draw at least one immediate frame even if not actively animating
+    drawCurrentFrame();
+
+    if (!isActive) return;
 
     const renderLoop = () => {
       const st = animRef.current;
@@ -92,38 +123,27 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
         .map((h) => ({ x: h.x, y: h.y - 0.35, alpha: h.alpha - 0.022 }))
         .filter((h) => h.alpha > 0);
 
-      drawPixelGymScene(ctx, {
-        bodyStage,
-        equipped,
-        room,
-        isNight: store.isNightModeRoom,
-        frameTick: st.tick,
-        avatarX: st.x,
-        avatarY: st.y,
-        avatarState: st.currentState,
-        facingRight: st.facingRight,
-        petHearts: st.hearts,
-      });
+      drawCurrentFrame();
 
       rafId = requestAnimationFrame(renderLoop);
     };
 
     rafId = requestAnimationFrame(renderLoop);
     return () => cancelAnimationFrame(rafId);
-  }, [isActive, bodyStage, equipped, room, store.isNightModeRoom]);
+  }, [isActive, bodyStage, equipped, room, store.isNightModeRoom, visitorAvatar]);
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = ((e.clientX - rect.left) / rect.width) * 240;
 
-    if (clickX > 145) {
+    if (clickX > 140) {
       animRef.current.hearts.push({
-        x: 168 + (Math.random() * 10 - 5),
-        y: 92,
+        x: 162 + (Math.random() * 10 - 5),
+        y: 94,
         alpha: 1.0,
       });
       store.interactWithRoomEntity('pet');
-      setSpeechBubble('🐶 豆助開心地搖尾巴！(+互動)');
+      setSpeechBubble('❤️ 開心互動！');
     } else {
       const order: ('SQUAT' | 'CURL' | 'WALK' | 'IDLE')[] = ['SQUAT', 'CURL', 'WALK', 'IDLE'];
       const next = order[(order.indexOf(aiState) + 1) % order.length];
@@ -136,23 +156,39 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
 
   return (
     <div className="relative rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-[#0d111a] shadow-2xl">
-      {/* Top Floating Room Controls (Minimal Icons Only) */}
-      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
-        <div className="bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white shadow">
-          {customOverride ? `🏠 ${customOverride.ownerName}` : `💬 ${speechBubble}`}
+      {/* Top Floating Room Controls */}
+      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none gap-2">
+        <div className="bg-slate-950/85 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white shadow truncate">
+          {customOverride
+            ? `🏠 ${customOverride.ownerName}${visitorAvatar ? ' (與你同框串門中)' : ''}`
+            : `💬 ${speechBubble}`}
         </div>
 
         {!compact && (
-          <div className="flex items-center gap-1.5 pointer-events-auto">
+          <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
+            <button
+              onClick={() => store.toggleBgm()}
+              title="切換 8-Bit 背景音樂 (BGM)"
+              className={`px-2 py-1 rounded-full border text-[11px] font-bold flex items-center gap-1 transition ${
+                store.bgmEnabled
+                  ? 'bg-emerald-500 text-slate-950 border-emerald-300 font-black'
+                  : 'bg-slate-950/85 border-white/15 text-slate-300 hover:text-white'
+              }`}
+            >
+              <Music className="w-3 h-3" />
+              <span>BGM</span>
+            </button>
             <button
               onClick={() => store.toggleNightModeRoom()}
-              className="p-1.5 rounded-full bg-slate-950/80 border border-white/15 text-amber-300 hover:bg-slate-800 active:scale-95 transition"
+              title="切換日夜窗景"
+              className="p-1.5 rounded-full bg-slate-950/85 border border-white/15 text-amber-300 hover:bg-slate-800 active:scale-95 transition"
             >
               {store.isNightModeRoom ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={() => store.toggleSound()}
-              className="p-1.5 rounded-full bg-slate-950/80 border border-white/15 text-emerald-400 hover:bg-slate-800 active:scale-95 transition"
+              title="切換點擊音效 (SFX)"
+              className="p-1.5 rounded-full bg-slate-950/85 border border-white/15 text-emerald-400 hover:bg-slate-800 active:scale-95 transition"
             >
               {store.soundEnabled ? (
                 <Volume2 className="w-3.5 h-3.5" />
@@ -164,21 +200,20 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
         )}
       </div>
 
-      {/* High-Detail 480x300 MapleStory Chibi Scene Canvas */}
+      {/* 480x300 MapleStory Chibi Scene Canvas */}
       <canvas
         ref={canvasRef}
         width={480}
         height={300}
         onClick={handleCanvasInteraction}
         className={`w-full ${
-          compact ? 'h-48' : 'h-64 sm:h-72'
+          compact ? 'h-44 sm:h-48' : 'h-64 sm:h-72'
         } object-cover pixel-canvas cursor-pointer block`}
       />
 
-      {/* Sleek Bottom Action & Body Stage Bar */}
+      {/* Bottom Action & Quick Wardrobe/Room Customize Bar */}
       {!compact && (
         <div className="bg-slate-900/95 border-t border-slate-800 px-3 py-2 flex items-center justify-between gap-2">
-          {/* Action Switcher */}
           <div className="flex items-center gap-1">
             {(
               [
@@ -205,29 +240,15 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
             ))}
           </div>
 
-          {/* Compact Body Evolution Stage Pills */}
-          <div className="flex items-center gap-1">
-            {(
-              [
-                { id: 'beginner', label: '新手' },
-                { id: 'powerlifter', label: '巨力' },
-                { id: 'aesthetic', label: '美學' },
-                { id: 'titan', label: '👑泰坦' },
-              ] as const
-            ).map((st) => (
-              <button
-                key={st.id}
-                onClick={() => store.setBodyStage(st.id)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition ${
-                  store.bodyStage === st.id
-                    ? 'bg-amber-400/20 border border-amber-400 text-amber-300'
-                    : 'bg-slate-800/60 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
-          </div>
+          {onOpenWardrobe && (
+            <button
+              onClick={onOpenWardrobe}
+              className="retro-btn px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>換裝 / 房間佈置</span>
+            </button>
+          )}
         </div>
       )}
     </div>

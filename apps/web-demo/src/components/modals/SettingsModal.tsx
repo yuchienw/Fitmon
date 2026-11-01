@@ -46,7 +46,7 @@ export const SettingsModal: React.FC = () => {
           <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
             <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <Volume2 className="w-4 h-4 text-amber-400" />
-              8-Bit 街機音效合成器
+              8-Bit 街機音效 (SFX)
             </span>
             <button
               onClick={() => store.toggleSound()}
@@ -57,6 +57,23 @@ export const SettingsModal: React.FC = () => {
               }`}
             >
               {store.soundEnabled ? '開啟 ON' : '靜音 OFF'}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
+            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <Volume2 className="w-4 h-4 text-cyan-400" />
+              Chiptune 背景音樂 (BGM)
+            </span>
+            <button
+              onClick={() => store.toggleBgm()}
+              className={`px-3 py-1 rounded-lg text-xs font-black ${
+                store.bgmEnabled
+                  ? 'bg-cyan-500 text-slate-950'
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {store.bgmEnabled ? '播放中 ON' : '關閉 OFF'}
             </button>
           </div>
         </div>
