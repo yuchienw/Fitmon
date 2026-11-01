@@ -231,3 +231,25 @@
 - 更新：[`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)
 - 更新：[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)
 - 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.5.0-biometrics-sandbox-aligned`）
+
+
+---
+
+## [2026-11-01] 確立產品行為遙測與漏斗分析模組：Facade 抽象架構與零個資埋點原則 (TASK-010)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出數據分析需求：「是否需要類似 GA 分析模組，從後台搜集使用者的使用紀錄，以利未來做數據分析？」。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **分析必要性評估**：
+   - 產品需要數據驅動迭代，缺乏埋點將無法洞察 D1/D7/D30 留存率、關鍵漏斗轉化（首頁 ➔ 運動打卡 ➔ 迷因合成 ➔ 分享至 IG）、最受歡迎虛擬裝飾與迷因模板熱度。
+2. **個資防禦與邊界劃分 (Zero-PII Telemetry Guardrail)**：
+   - 行為遙測嚴格限制在**「匿名操作事件 (Anonymous Action Events)」**。
+   - 身高、體重、體脂、睡眠、飲食等生理私密數據**嚴禁作為 Event Properties 上報**，100% 留在本機沙盒中。
+3. **技術架構與工具選型 (Facade Pattern)**：
+   - 前端採用外觀模式（Facade Pattern）建立統一的 `analytics.ts` 介面，業務代碼透過 `analytics.track()` 觸發。
+   - 推薦底層介接 **PostHog**（開源、強大留存與漏斗圖表、100 萬/月免費事件、支援 Web 與 Capacitor），並可無縫切換至 GA4 或內部儲存庫。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 更新：[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)（增訂第 6 節「產品行為遙測與漏斗分析模組」）
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板升級至 `v1.6.0-analytics-facade-aligned`）

@@ -10,10 +10,10 @@
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、Meme 拍貼、開源科學動作庫 |
 | **目前階段** | **Phase 1：MVP 核心實作期 (Execution Phase)** | 🚀 **【正式解除程式碼開發凍結】** |
-| **當前版本** | `v1.5.0-biometrics-sandbox-aligned` | 納入 Local Biometrics Sandbox (本機健康沙盒) 與雙端健康串接定案版本 |
-| **最後更新時間** | `2026-11-01 20:28 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `fa60d3b` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 20 大模組與開源動作庫、本機隱私沙盒對齊完畢，開展 Sprint 1 工程實作 | 像素示範 ＋ 本機健康圖表 ＋ 雲端防作弊金幣 |
+| **當前版本** | `v1.6.0-analytics-facade-aligned` | 納入產品行為遙測與漏斗分析模組 (Facade Pattern) 定案版本 |
+| **最後更新時間** | `2026-11-01 20:30 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `c5f0f8a` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 21 大模組全數對齊收斂完畢，正式啟動 Sprint 1.1 前端工程初始化 | 像素示範 ＋ 本機健康圖表 ＋ 雲端防作弊金幣 ＋ 產品行為遙測 |
 
 ---
 
@@ -32,6 +32,7 @@
 - [ ] **SPRINT-5**：線上小規模試玩部署 (Cloudflare/Vercel) 與 Capacitor 原生跨端相容驗證
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261101-16**：確立產品行為遙測與漏斗分析模組（Facade Pattern 支援 PostHog/GA4，零生理個資埋點原則）(TASK-010)
 - [x] **DONE-20261101-15**：確立本機健康沙盒 (Local Biometrics Sandbox) 與 Apple Health / Google Health Connect 串接原則；數據 100% 留存本地，雲端僅驗證防作弊資產 (TASK-009)
 - [x] **DONE-20261101-14**：納入 `free-exercise-db` 開源動作庫、雙軌圖解與玩中學每日科普問答 (TASK-008)
 - [x] **DONE-20261101-13**：確立 Zero-PII 內容安全防火牆（站內純像素零風控、站外本地合照）、補齊課表模板、行事曆、PR 追蹤、休息日保護與離線同步，全系統收斂為 18 大模組 (TASK-007)

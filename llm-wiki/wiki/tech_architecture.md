@@ -88,3 +88,16 @@ flowchart TB
    * 資料直存本機沙盒，提供最無痛的數據輸入體驗。
 3. **雲端防作弊唯一職責 (Server-Authoritative Economy)**：
    * 雲端唯一保管並在伺服器端驗證的只有：**金幣錢包 (Wallet Ledger)、道具庫存 (Inventory)、純像素社群與打賞紀錄**，確保本機無法透過修改記憶體刷金幣作弊。
+
+---
+
+## 6. 產品行為遙測與漏斗分析模組 (Product Telemetry & Funnel Analytics)
+
+1. **零個資匿名埋點原則 (Zero-PII Telemetry Guardrail)**：
+   * 遙測數據**嚴禁包含任何生理私密數據**（身高、體重、體脂、睡眠、飲食照片 100% 留存在本地沙盒，不得上傳）。
+   * 僅搜集**匿名化產品體驗指標**：D1/D7/D30 留存率、核心功能漏斗轉化（首頁 ➔ 運動打卡 ➔ 迷因合成 ➔ 分享至 IG）、最受歡迎家具/服飾道具、平均單次訓練時長。
+2. **統一外觀模式架構 (Facade Pattern)**：
+   * 前端封裝統一 `analytics.ts` 抽象接口（如 `analytics.track(eventName, properties)`）。
+   * 底層相容支援 **PostHog**（首選：留存熱力圖、漏斗轉化分析、100 萬次/月免費額度）、**Google Analytics 4 (GA4)** 或內部數據表，業務代碼與分析供應商完全解耦。
+3. **跨端支援**：
+   * Web-Demo 階段透過 Web SDK 監聽使用者操作；Capacitor 雙端打包後自動切換至原生相容模式，確保數據完整不中斷。
