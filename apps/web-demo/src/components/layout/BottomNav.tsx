@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Dumbbell, ShoppingBag, Globe, BarChart3 } from 'lucide-react';
+import { Home, Dumbbell, ShoppingBag, Globe, User } from 'lucide-react';
 import { MainTab, useGameStore } from '../../stores/useGameStore';
 import { I18N } from '../../config/economyConfig';
 
@@ -50,7 +50,7 @@ export const BottomNav: React.FC = () => {
     {
       id: 'analytics',
       label: t.tabAnalytics,
-      icon: BarChart3,
+      icon: User,
     },
   ];
 

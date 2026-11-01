@@ -43,22 +43,22 @@ export type Locale = 'zh-TW' | 'en';
 
 export const I18N: Record<Locale, Record<string, string>> = {
   'zh-TW': {
-    tabHome: '訓練室',
-    tabWorkout: '運動打卡',
+    tabHome: '房間',
+    tabWorkout: '運動',
     tabShop: '商城',
     tabPlaza: '廣場',
-    tabAnalytics: '數據',
+    tabAnalytics: '我的',
     staminaLabel: '體力',
     coinsLabel: '金幣',
     streakLabel: '連勝',
     freeLogPromise: '⚡ 體力僅影響金幣掉落，運動日誌與 PR 永遠 100% 免費無上限記錄！',
   },
   'en': {
-    tabHome: 'Gym Room',
+    tabHome: 'Room',
     tabWorkout: 'Workout',
     tabShop: 'Shop',
     tabPlaza: 'Plaza',
-    tabAnalytics: 'Stats',
+    tabAnalytics: 'Me',
     staminaLabel: 'Stamina',
     coinsLabel: 'Coins',
     streakLabel: 'Streak',
