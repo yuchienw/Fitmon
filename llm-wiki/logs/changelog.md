@@ -136,3 +136,24 @@
 - 產出戰略對齊書：[`alignment_fitmon_v2_strategy.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/alignment_fitmon_v2_strategy.md)
 - 更新狀態看板：[`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)（版本演進至 `v0.2.0-pivot-aligned`，調整 Backlog 任務池）
 - 歷史日誌追加：[`logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
+
+
+---
+
+## [2026-11-01] 知識庫全面同頻：GDD 雙軌紙娃娃、PixiJS 渲染、Meme 工坊與宣傳浮水印全面回寫 (TASK-006)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者要求確認：所有近期規劃與拍板定案之架構，是否已全數同步更新至產品知識庫（`llm-wiki/wiki/`），確保 Single Source of Truth 絕對有效。
+
+### 2. 核心成果與架構回寫 (Synthesis & Alignment)
+1. **`wiki/00_INDEX.md`**：全面改寫 7 大主題摘要，指向全新遊戲化、任務制與雙軌紙娃娃系統。
+2. **`wiki/product_vision_and_privacy.md`**：正式更新客群為「泛運動愛好者」，並納入「免註冊試玩 ➔ 漸進式無感綁定」機制。
+3. **`wiki/dual_mode_experience.md`**：升級為「雙軌紙娃娃系統」，定義 32x32 角色 5 層精靈規格與房間 6 大家具卡槽規格。
+4. **`wiki/game_mechanics_and_science.md`**：確立三層階梯任務體系（日常、Streak 暴擊、里程碑）、百位數金幣體系與數值配置化 (Config-Driven) 原則。
+5. **`wiki/meme_and_social.md`**：確立拍立得社群布告欄、Meme 拍貼工坊、三合一底圖、以及非遮蔽式宣傳 APP Logo 浮水印規範。
+6. **`wiki/tech_architecture.md`**：確立即時 2D 像素遊戲引擎架構（React + PixiJS 180x320 虛擬低解析度 + NEAREST 無損放大）、小人自主遊蕩 AI 與 Supabase 遊戲驅動資料庫。
+7. **`wiki/business_model.md`**：確立精益創業節奏，MVP 階段專注好玩度、內部金幣閉環與朋友圈口碑裂變，暫緩外部複雜商業談判。
+8. **`wiki/roadmap.md`**：重構三大里程碑檢核標準，聚焦於「具有遊戲引擎質感的 Web Demo MVP」。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 全面更新：[`wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)、[`wiki/product_vision_and_privacy.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/product_vision_and_privacy.md)、[`wiki/dual_mode_experience.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md)、[`wiki/game_mechanics_and_science.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/game_mechanics_and_science.md)、[`wiki/meme_and_social.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)、[`wiki/tech_architecture.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)、[`wiki/business_model.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/business_model.md)、[`wiki/roadmap.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/roadmap.md)

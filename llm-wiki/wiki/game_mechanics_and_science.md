@@ -1,63 +1,58 @@
-# 遊戲機制與運動科學數值引擎 (Game Mechanics & Exercise Science)
+# 遊戲機制與任務數值引擎 (Game Mechanics & Quest Economy)
 
-> **鏈結索引**：[返回索引](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md) ｜ [雙模式架構](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md) ｜ [商業模式](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/business_model.md)
-
----
-
-## 1. 經驗值結算核心公式 (Experience Engine)
-
-FitMon 將運動科學中的「訓練容量（Volume = Weight × Reps）」升級為兼具中樞神經負荷與防刷機制的數值公式：
-
-$$\text{Exp} = \sum_{i=1}^{N} \left( \text{Weight}_i \times \text{Reps}_i \right) \times \text{Multiplier}_{\text{exercise}} \times \text{DecayFactor}_{\text{fatigue}}(S_m)$$
-
-其中：
-- $\text{Weight}_i$：第 $i$ 組重量（以公斤 kg 計，自體重動作以預設基準計算）。
-- $\text{Reps}_i$：第 $i$ 組有效次數。
-- $\text{Multiplier}_{\text{exercise}}$：動作神經負荷加權係數。
-- $\text{DecayFactor}_{\text{fatigue}}(S_m)$：針對該肌群 $m$ 累積組數 $S_m$ 的疲勞衰減係數。
+> **鏈結索引**：[返回索引](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md) ｜ [雙軌紙娃娃](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md) ｜ [社群與迷因](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)
 
 ---
 
-## 2. 動作神經加權係數 (Neural Multiplier)
+## 1. 核心激勵機制：三層任務體系 (The 3-Tier Quest System)
 
-不同動作對全身神經系統與代謝壓力的消耗懸殊，數值引擎依複合程度給予不同暴擊倍率：
-
-| 動作類別 | 代表動作 | 加權倍率 ($\text{Multiplier}$) | 運動科學考量 |
-|---|---|---|---|
-| **三大複合重量 (The Big 3)** | 槓鈴深蹲、傳統/相撲硬舉、槓鈴臥推 | **× 2.0 ～ × 2.5** | 大量肌群協同、中樞神經系統 (CNS) 負荷極高。 |
-| **次級多關節複合** | 站姿肩推、引體向上、槓鈴划船、雙槓臂屈伸 | **× 1.4 ～ × 1.6** | 上肢核心鏈結多關節動作。 |
-| **固定軌道/機械式** | 腿推機 (Leg Press)、滑輪下拉、胸推機 | **× 1.0** | 軌道固定，神經平衡代償需求較低，為基準線。 |
-| **單關節孤立動作** | 啞鈴側平舉、二頭彎舉、三頭下壓、小腿提踵 | **× 0.8** | 局部泵感強但全身能量消耗低，避免玩家靠單手狂刷彎舉洗分。 |
-
----
-
-## 3. 防作弊防刷：垃圾容量衰減演算法 (Fatigue & Junk Volume Decay)
-
-為了防範玩家用 1kg 啞鈴狂做 100 組刷洗經驗值，數值引擎採用超量恢復理論設計組數邊際效益遞減曲線：
+FitMon 摒棄繁瑣的 RPG 打怪升級與挫折感強烈的數值衰減，改採直觀明快的**「任務制 ＋ 連續運動 (Streak) ＋ 金幣 (Coins) 經濟」**：
 
 ```mermaid
-xychart-beta
-    title "單一部位單日累積組數 vs 經驗值邊際係數"
-    x-axis ["1組", "4組", "6組", "8組", "10組", "12組", "14組以上"]
-    y-axis "經驗邊際係數" 0.0 --> 1.0
-    bar [1.0, 1.0, 1.0, 0.6, 0.2, 0.0, 0.0]
-```
+flowchart TD
+    Tier1["1. 每日日常任務 (Daily Quests)\n• 完成運動打卡滿 15 分鐘 (+50 Coins)\n• 前往社群廣場打賞或送水一次 (+20 Coins)\n• 發布一則今日運動拍立得 (+30 Coins)\n• 每日全勤寶箱 (+20 Coins)\n➔ 每日穩定產出約 100~120 金幣"]
+    
+    Tier2["2. 連續運動暴擊 (Streak Multiplier)\n• 連續 3 天運動：額外獎勵 +50 Coins\n• 連續 7 天運動 (滿週)：解鎖黃金寶箱 +200 Coins + 限定榮譽稱號"]
+    
+    Tier3["3. 長期成就里程碑 (Lifetime Milestones)\n• 首次加入好友、累積跑步 50km、累積打卡 30 天\n• 獲得稀有稱號、傳奇家具與發光飾品"]
 
-- **1 ～ 8 組**：$\text{DecayFactor} = 1.0$（黃金刺激區間，全額經驗結算）。
-- **9 ～ 11 組**：$\text{DecayFactor} = 0.5 \rightarrow 0.2$（過度疲勞區間，組數效益驟減）。
-- **12 組以上**：$\text{DecayFactor} = 0.0$（垃圾容量門檻，不再產生任何經驗值與金幣）。
+    Tier1 --> Tier2 --> Tier3
+```
 
 ---
 
-## 4. 虛擬補劑 Buff 系統 (Supplements & Economy)
+## 2. 數值配置化原則 (Config-Driven Balance)
 
-玩家可於每日訓練前或結算時使用補劑道具，提升遊戲樂趣並深度結合原生聯盟導購：
+為了滿足未來進行數值模擬與動態熱調整，所有經濟常數完全與代碼邏輯解耦，集中維護於資料庫 `game_economy_config` 表中：
 
-| 道具名稱 | 取得途徑 | 遊戲數值 Buff 效果 | 原生商業導購時機 |
-|---|---|---|---|
-| **食用肌酸 (Creatine)** | 金幣購買 / 簽到獎勵 | 角色每日總體力上限 $+1$ 組，解鎖額外極限打卡額度。 | 點擊背包肌酸時，展示知名電商 9 折專屬優惠碼。 |
-| **乳清蛋白 (Whey Protein)** | 金幣購買 / 禮物兌換 | 訓練完成結算時飲用，當次結算經驗值與金幣額外 $+20\%$。 | 練後結算頁面彈出「喝一杯補充蛋白質」連結。 |
-| **預釀氮泵 (Pre-Workout)** | 限量掉落 / 任務解鎖 | 限時 60 分鐘打卡倒數，動作經驗享 $30\%$ 機率觸發「神經暴擊」翻倍。 | 進入專業訓練模式前使用。 |
+| 參數鍵名 (Key) | 初始基準值 (Baseline) | 說明 |
+|---|---|---|
+| `ftue_starter_coins` | `100` | 新手創角首次贈送起跑基金 |
+| `daily_workout_coins` | `50` | 每日單次運動達成獎勵 |
+| `daily_tip_reward_coins` | `20` | 每日打賞好友任務獎勵 |
+| `daily_post_reward_coins` | `30` | 每日發布成果動態獎勵 |
+| `streak_3d_bonus` | `50` | 連續運動 3 天額外獎勵 |
+| `streak_7d_bonus` | `200` | 連續運動 7 天黃金寶箱獎勵 |
+| `tip_single_amount` | `10` | 單次打賞貼文扣除之金幣 |
+| `gift_energy_drink_cost` | `20` | 贈送好友虛擬能量水扣除之金幣 |
+
+---
+
+## 3. 街機風 VICTORY 勝利結算儀式 (Settlement Feedback)
+
+完成運動打卡時，畫面觸發街機級別的全螢幕反饋：
+1. **全螢幕視覺暗化**：中央彈出像素金色大字「**VICTORY! 任務達成**」。
+2. **8-bit 街機音效**：播放短暫激昂的勝利號角（Fanfare）與金幣入袋跳動音效。
+3. **連續打卡火焰**：點亮當前 Streak 火焰天數（如「🔥 連續運動 6 天達成！」）。
+4. **自動產出拍立得**：直接生成當次運動成果卡片，引導玩家進入拍貼工坊或發布廣場。
+
+---
+
+## 4. 運動科學輔助加權（重訓進階模式備查）
+
+針對重訓愛好者，系統底層仍保留神經負荷加權與垃圾容量防刷演算法，作為進階課表與疲勞分析的支撐模組：
+* **多關節複合動作加權**：深蹲、硬舉、臥推享 $1.5 \sim 2.0\times$ 負荷加權。
+* **單一部位超量衰減**：單一部位超過 8 組邊際效益遞減，超過 12 組判定為過度疲勞。
 
 ---
 
