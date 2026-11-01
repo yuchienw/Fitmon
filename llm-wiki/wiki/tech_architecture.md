@@ -59,6 +59,18 @@ flowchart TB
 1. **`profiles`**：儲存 `avatar_config (JSONB)`、`room_config (JSONB)`、金幣餘額與 Streak 天數。
 2. **`items`**：包含角色外觀（`avatar_*`）與房間家具（`room_*`）的統一圖鑑，標註金幣價格與 PixiJS 素材 Key。
 3. **`quests` & `user_daily_quests`**：定義日常任務、打卡連擊暴擊與玩家每日進度。
-4. **`posts`**：儲存拍立得運動成果、自嘲短評、隨拍照 URL 與發文當下的角色/房間外觀快照。
-5. **`tips_and_gifts`**：記錄打賞金額與能量水互贈，由資料庫交易保證防刷。
-6. **`game_economy_config`**：數值配置表，支持未來動態模擬熱更新。
+4. **`posts`**：儲存拍立得運動成果、自嘲短評、發文當下的角色/房間外觀快照（無真人照片，純像素零風控）。
+5. **`routine_templates` & `user_workout_schedules`**：自訂課表模板、每週分化排程與休息日標記。
+6. **`tips_and_gifts`**：記錄打賞金額與能量水互贈，由資料庫交易保證防刷。
+7. **`game_economy_config`**：數值配置表，支持未來動態模擬熱更新。
+
+---
+
+## 4. Local-First 離線優先同步與智慧推播 (Offline-First & Reminders)
+
+1. **地下室無訊號離線打卡 (Offline-First Sync)**：
+   * 在 B1/B2 地下室健身房無收訊環境下，打卡、碼表與換裝依然 100% 順暢存於本地 IndexedDB。
+   * 手機重新偵測連網（`online` 事件）時，系統在背景默默批次同步至 Supabase，完全不產生阻礙彈窗。
+2. **智慧溫和習慣提醒 (Smart Reminder)**：
+   * 玩家可自訂每日提醒時段（如晚上 8:00）。
+   * 當日尚未打卡時，小人或柴犬發出一則幽默短通知；當日已完成則自動靜音，絕不嘮叨。

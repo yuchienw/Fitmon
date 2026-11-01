@@ -157,3 +157,27 @@
 
 ### 3. 異動檔案清單 (Impact & Modified Files)
 - 全面更新：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)、[`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)、[`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)、[`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)、[`wiki/meme_and_social.md`](../wiki/meme_and_social.md)、[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)、[`wiki/business_model.md`](../wiki/business_model.md)、[`wiki/roadmap.md`](../wiki/roadmap.md)
+
+
+---
+
+## [2026-11-01] 確立 Zero-PII 內容安全防火牆與 18 大系統模組終極閉環 (TASK-007)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者深入反思資安、個資保護與 UGC 內容審查風險（廣告/色情/裸露/暴力）：提出「是否乾脆不要在站內儲存個人真實照片？站內一律以純像素遊戲畫面為主，分享到外部 IG/Threads 時才在前端本地合成生活照？」。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **Zero-PII 內容安全防火牆 (Content Firewall)**：
+   - **站內純像素零風控**：站內動態廣場與好友圈**嚴禁上傳真人照片至雲端**。貼文一律為純像素視覺（32x32 小人 + 數據 + 房間裝潢）。徹底杜絕色情裸露風險，省下高額第三方 AI 審核 API，伺服器頻寬與容量消耗趨近於 0，資料庫遭受脫庫也絕無人臉個資。
+   - **站外本地無痕合成**：Meme 拍貼工坊在手機前端記憶體載入生活隨拍照，合成像素小人貼紙後，一鍵直發 IG 限動/Threads，照片 100% 留在前端，絕不上傳至 Supabase 伺服器，由 Meta 自行負責圖片審查。
+2. **擴充並終極收斂 18 大系統模組**：
+   - 補齊「課表模板庫與大神秘笈複製」以及「每週分化行事曆」。
+   - 補齊「個人最佳紀錄 (1RM PR) 追蹤與獎盃館」。
+   - 補齊「排程休息日免打卡保護」與「連擊冰凍卡 (Streak Freeze)」杜絕挫折棄坑。
+   - 補齊「智能單次溫和習慣提醒」與「Local-First 離線優先同步」。
+   - 補齊「發文公開/僅好友隱私開關」與「UGC 檢舉/封鎖機制」（100% 符合 App Store 審查）。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 更新：[`supabase/migrations/20261101_init_fitmon_game_schema.sql`](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)（移除 `posts.photo_url`，新增 `routine_templates` 與 `user_workout_schedules`）
+- 更新：[`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)、[`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)、[`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)、[`wiki/meme_and_social.md`](../wiki/meme_and_social.md)、[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.3.0-firewall-aligned`）

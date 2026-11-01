@@ -117,20 +117,45 @@ CREATE TABLE IF NOT EXISTS public.workouts (
 );
 
 -- ------------------------------------------------------------------------------
--- 7. 拍立得社群動態牆貼文 (posts)
+-- 7. 拍立得社群動態牆貼文 (posts) - 100% 純像素無真人照片 (Zero-PII Firewall)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     workout_id UUID REFERENCES public.workouts(id) ON DELETE SET NULL,
-    caption TEXT, -- 玩家心得或迷因自嘲短評
-    photo_url TEXT, -- 自選附加之現場真實隨拍照 (Supabase Storage URL)
-    avatar_snapshot JSONB NOT NULL, -- 發文時之角色外觀快照
+    caption TEXT, -- 玩家自嘲短評或經典梗
+    avatar_snapshot JSONB NOT NULL, -- 發文時之角色 5 層外觀快照
     room_snapshot JSONB NOT NULL, -- 發文時之房間裝潢快照 (作為拍立得卡片背景)
-    stamp_type TEXT NOT NULL DEFAULT 'streak' CHECK (stamp_type IN ('streak', 'beast_mode', 'victory', 'sweat')),
+    stamp_type TEXT NOT NULL DEFAULT 'streak' CHECK (stamp_type IN ('streak', 'beast_mode', 'victory', 'sweat', 'pr_break')),
     likes_count INTEGER NOT NULL DEFAULT 0 CHECK (likes_count >= 0),
     tips_coins_total INTEGER NOT NULL DEFAULT 0 CHECK (tips_coins_total >= 0),
+    visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'friends_only')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ------------------------------------------------------------------------------
+-- 7.1 運動課表模板 (routine_templates)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.routine_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    title TEXT NOT NULL, -- 例如: '胸肩三頭 Push Day'
+    sport_type TEXT NOT NULL CHECK (sport_type IN ('running', 'weightlifting', 'yoga', 'crossfit', 'calisthenics', 'other')),
+    exercises JSONB NOT NULL DEFAULT '[]'::jsonb, -- 動作清單、組數、預設重量
+    is_public BOOLEAN NOT NULL DEFAULT true, -- 是否允許社群其他玩家一鍵複製
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ------------------------------------------------------------------------------
+-- 7.2 每週分化行事曆與排程 (user_workout_schedules)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.user_workout_schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 1 AND 7), -- 1: 週一 ... 7: 週日
+    routine_template_id UUID REFERENCES public.routine_templates(id) ON DELETE SET NULL,
+    is_rest_day BOOLEAN NOT NULL DEFAULT false, -- 若為休息日，當天自動免除打卡義務保住連擊
+    UNIQUE (user_id, day_of_week)
 );
 
 -- ------------------------------------------------------------------------------
@@ -280,6 +305,8 @@ ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tips_and_gifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.friendships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.game_economy_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.routine_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_workout_schedules ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: 公開可讀 (好友參觀與廣場展示)，僅本人可修改
 CREATE POLICY "Profiles are publicly readable" ON public.profiles FOR SELECT USING (true);
@@ -310,3 +337,10 @@ CREATE POLICY "Users can view related tips" ON public.tips_and_gifts FOR SELECT 
 -- Friendships: 好友雙方可見與維護
 CREATE POLICY "Users can view their friendships" ON public.friendships FOR SELECT USING (auth.uid() = user_id OR auth.uid() = friend_id);
 CREATE POLICY "Users can manage their friendships" ON public.friendships FOR ALL USING (auth.uid() = user_id);
+
+-- Routine Templates: 公開模板全體可讀，私人僅本人可讀寫
+CREATE POLICY "Public routines are readable by all" ON public.routine_templates FOR SELECT USING (is_public = true OR auth.uid() = user_id);
+CREATE POLICY "Users can manage their own routines" ON public.routine_templates FOR ALL USING (auth.uid() = user_id);
+
+-- Workout Schedules: 僅本人可見與維護
+CREATE POLICY "Users can manage their own schedules" ON public.user_workout_schedules FOR ALL USING (auth.uid() = user_id);
