@@ -8,39 +8,39 @@
 
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
-| **專案名稱** | FitMon (健身遊戲化像素 RPG) | 核心：雙模式、Local-First、Zero-PII |
-| **目前階段** | **Phase 0：商業規劃、數值論證與知識庫深耕期** | ⚠️ **【凍結程式開發】** 暫不寫 Code |
-| **當前版本** | `v0.1.0-planning` | 規格與知識庫奠基版本 |
-| **最後更新時間** | `2026-11-01 18:31 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `d83d310` (feat: 建立協作 SOP 與動態看板) | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 確立長期人機協作 SOP 與待辦事項狀態機 | 打造可持續對齊之溝通框架 |
+| **專案名稱** | FitMon (泛運動連續打卡社群 × 像素紙娃娃) | 核心：任務制、金幣打賞、好友圈、Meme 分享 |
+| **目前階段** | **Phase 0：產品大方向對齊完成，進入規格重構期** | ⚠️ **【凍結程式開發】** 待 Schema 與原型定案 |
+| **當前版本** | `v0.2.0-pivot-aligned` | 經 Grill-me 深度對齊後之產品新基準 |
+| **最後更新時間** | `2026-11-01 18:55 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `711fa26` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 完成 Grill-me 戰略重構對齊，展開新版 Schema 與任務規劃 | 以「好玩好用、朋友圈口碑」為核心驅動 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [x] **TASK-001**：建立 Karpathy-style LLM-Wiki 知識庫目錄架構 (`wiki/`, `raw/`, `logs/`, `adr/`, `ops/`)
-- [x] **TASK-002**：建立 AI 模型協同操作指南 (`AGENT.md`) 與 Git Monorepo 初始化
-- [x] **TASK-003**：建立長期人機溝通 SOP、開局對齊握手協議與即時狀態看板 (`ops/collaboration_sop.md`)
-- [ ] **NEXT-FOCUS**：進入待辦清單，選定第一個深入規劃議題（如 PLAN-001 商業變現導購或 PLAN-002 動作庫擴充）
+- [x] **TASK-004**：完成 `/grill-me` 深度對齊訪談，確認 8 大架構支柱（泛運動、任務制、金幣打賞、社群雙軌、像素紙娃娃、PWA）
+- [ ] **NEXT-FOCUS**：依據新藍圖梳理 Supabase 資料庫綱要 (Schema) 與 PWA 原型規格 (PLAN-010)
 
 ### 🟡 待討論與規劃清單 (Backlog / To-Do)
-- [ ] **PLAN-001 (P0)**：商業變現細節拆解——補劑聯盟導購外跳機制、品牌合作商務提案草案
-- [ ] **PLAN-002 (P0)**：運動科學動作庫擴充——40+ 核心動作分類、神經加權倍率與安全防刷邊界微調
-- [ ] **PLAN-003 (P1)**：像素角色體態演化數值線——從「新手學徒」到「重裝泰坦」的等級經驗值曲線設計
-- [ ] **PLAN-004 (P1)**：Canvas 迷因工作室模版設計——IG Story 9:16 排版規格、經典自嘲梗文案庫
-- [ ] **PLAN-005 (P2)**：Supabase 零個資認證架構驗證——Apple Private Relay 匿名登入之 UID 生成與測試流程
+- [ ] **PLAN-010 (P0)**：設計輕量社群與任務資料庫綱要 (`profiles`, `quests`, `workouts`, `posts`, `tips`, `friends`)
+- [ ] **PLAN-011 (P0)**：定義 2D 像素紙娃娃組件規範（部位拆解、裝扮資產層級、Canvas 合成架構）
+- [ ] **PLAN-012 (P1)**：規劃三層階梯任務數值（每日任務池、連續 Streak 倍率、里程碑成就清單與金幣給付率）
+- [ ] **PLAN-013 (P1)**：動態成果卡片與 Meme 梗圖排版工坊設計（含自嘲文案庫與 IG 9:16 轉發規格）
+- [ ] **PLAN-014 (P2)**：漸進式綁定機制與無感註冊實作細節（匿名 Local-First 轉 Supabase Auth 流程）
 
 ### 🟢 最近已完成 (Recently Done)
-- [x] **DONE-20261101-01**：收錄原始 PRD 規格文件至 `raw/20261101_fitmon_prd_original.html`
-- [x] **DONE-20261101-02**：提煉 8 大主題知識庫至 `wiki/*.md`
-- [x] **DONE-20261101-03**：撰寫 ADR-0001 Web-First (React + Vite + Capacitor) 技術選型評估
-- [x] **DONE-20261101-04**：以 TypeScript 實作核心運動科學公式與疲勞衰減引擎 (`packages/engine`)
+- [x] **DONE-20261101-06**：完成 Grill-me 戰略收斂訪談，產出 [`alignment_fitmon_v2_strategy.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/alignment_fitmon_v2_strategy.md)
 - [x] **DONE-20261101-05**：在 `README.md` 與 `AGENT.md` 增設即時狀態看板
+- [x] **DONE-20261101-04**：以 TypeScript 實作核心運動科學公式與疲勞衰減引擎 (`packages/engine`)
+- [x] **DONE-20261101-03**：撰寫 ADR-0001 Web-First 技術選型評估
+- [x] **DONE-20261101-02**：建立初始 8 大主題知識庫至 `wiki/*.md`
+- [x] **DONE-20261101-01**：收錄原始 PRD 規格文件至 `raw/`
 
-### ⏸️ 擱置 / 外部阻礙 (Blocked / On Hold)
-- *暫無阻礙*
+### ⏸️ 擱置 / 暫不考慮 (Parked / Post-MVP)
+- **PARK-001**：外部補劑/品牌電商導購商務（俟社群人氣積累後再行考慮）
+- **PARK-002**：複雜 RPG 怪物對戰與數值打怪數值（改採直觀任務與金幣制）
 
 ---
 
