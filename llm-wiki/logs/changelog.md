@@ -278,3 +278,32 @@
 - 更新：[`AGENT.md`](../AGENT.md)（增訂第 0.2 節「批判性思維與非迎合溝通原則」）
 - 更新：[`ops/collaboration_sop.md`](../ops/collaboration_sop.md)（SOP-2 四階收斂法強化批判性評估階段）
 - 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（回歸 Phase 0，凍結開發，版本升級至 `v1.7.0-critical-thinking-aligned`）
+
+
+---
+
+## [2026-11-01] 品牌名稱動態解耦 (Brand Decoupling) 與多國語系 (i18n: en / zh-TW) 架構定案 (TASK-012)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出核心品牌與國際化需求：「產品 APP 名稱目前待定，不一定是叫做 FitMon；另外要能支援多國語系，目前至少要能支援英文、繁體中文」。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **批判性風險評估 (Critical Risk Assessment)**：
+   - **字體檔案與缺字風險**：繁中點陣像素字型若字集不全會出現豆腐塊或破版。
+   - **低解析度畫布排版爆炸**：英文詞彙長度約為中文之 2~3 倍，固定 px 按鈕在 180×320 畫布上會嚴重溢出邊界。
+   - **動作庫翻譯成本**：`free-exercise-db` 800+ 動作全英文，生硬機翻會出現「槓鈴死舉」等嚴重不符合運動科學的笑柄。
+   - **迷因在地文化隔閡**：中文健身自嘲梗與歐美文化差異大，直翻失去幽默感。
+2. **建設性落地方案 (Actionable Mitigations)**：
+   - **品牌動態解耦**：保留「FitMon」作為內部工程代號，對外顯示由全域設定與 `i18n` 動態注入，浮水印、標題、通知 100% 抽離硬編碼。
+   - **雙語系引擎 (i18n)**：首發支援英文（預設/Fallback）與繁體中文（台灣/港澳）。
+   - **開源繁中像素字型**：選用 `Fusion Pixel Font` (融合像素體) 或 `Cubic 11` (俐方體 11 號)，100% 覆蓋繁中教育部常用字與 ASCII 英數，12px 乾淨顆粒不破圖。
+   - **動作庫分級翻譯 (Tiered Translation)**：Tier 1 前 60 大核心動作人工專業審定繁中術語；Tier 2 冷門動作保留英文原名搭配中文部位標籤。
+   - **迷因梗圖庫語系標籤分流**：依 `locales` 標籤分流歐美與華語在地迷因。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 更新：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)
+- 更新：[`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)
+- 更新：[`wiki/meme_and_social.md`](../wiki/meme_and_social.md)
+- 更新：[`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)
+- 更新：[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)（增訂第 7 節「多國語系 (i18n)、品牌解耦與像素字型架構」）
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.8.0-i18n-brand-decoupled`）

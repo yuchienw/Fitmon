@@ -101,3 +101,22 @@ flowchart TB
    * 底層相容支援 **PostHog**（首選：留存熱力圖、漏斗轉化分析、100 萬次/月免費額度）、**Google Analytics 4 (GA4)** 或內部數據表，業務代碼與分析供應商完全解耦。
 3. **跨端支援**：
    * Web-Demo 階段透過 Web SDK 監聽使用者操作；Capacitor 雙端打包後自動切換至原生相容模式，確保數據完整不中斷。
+
+---
+
+## 7. 多國語系 (i18n)、品牌解耦與像素字型架構 (Multi-Language & Brand Decoupling)
+
+1. **品牌名稱動態解耦 (Brand Decoupling)**：
+   * 專案代碼內部使用 `FitMon` 作為 Codename，但**所有面向使用者的名稱全面抽離硬編碼**。
+   * 前端由全域設定檔（`APP_CONFIG.brandName`）與語系檔（`locales/{lang}.json` 中的 `common.brandName`）統一注入。
+   * 浮水印、版權聲明、社群分享標題與 App Title 皆由設定檔即時驅動，未來更名或註冊商標時 **0 代碼重構、1 秒全站置換**。
+2. **多語系架構 (i18n Core Engine)**：
+   * 採用 `i18next` ＋ `react-i18next`。
+   * 首發支援：**英文 (`en-US`, 預設/Fallback)** 與 **繁體中文 (`zh-TW`)**。
+   * 自動偵測系統語系 (`navigator.language`)，並在設定中提供手動切換開關。
+3. **繁中/英文統一開源像素字型 (Pixel Font Strategy)**：
+   * 採用 MIT 開源之 **`Fusion Pixel Font` (融合像素體)** 或 **`Cubic 11` (俐方體 11 號)**。
+   * 具備完整繁體中文（台灣常用字集）與 ASCII 英數支援，統一 12px 點陣規格，杜絕缺字破圖或豆腐塊（`□`）。
+4. **低解析度畫布防爆版佈局規則 (Anti-Overflow Layout)**：
+   * 在 180×320 虛擬像素畫布中，嚴禁按鈕與彈窗使用固定寬度（Fixed px）。
+   * 一律採用彈性容器（Flex/Grid + `flex-wrap`），並針對長度較長之英文詞彙預留多行折行或動態間距，避免畫面擠壓出界。
