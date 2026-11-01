@@ -20,6 +20,8 @@
 
 ## 跨層追溯鏈結
 
+- **即時狀態與任務看板**：[`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)
+- **長期人機協作溝通 SOP**：[`ops/collaboration_sop.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/ops/collaboration_sop.md)
 - **Agent 讀寫規範手冊**：[`AGENT.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/AGENT.md)
 - **原始輸入源檔**：[`raw/20261101_fitmon_prd_original.html`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/raw/20261101_fitmon_prd_original.html)
 - **架構決策紀錄 (ADR)**：[`adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md)

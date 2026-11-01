@@ -81,3 +81,27 @@
 ### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
 - 專案開發狀態標記：暫停 `apps/web-demo` 開發任務，凍結程式編寫。
 - 當前活動目錄收斂至：`llm-wiki/` 與 Git 版本控制。
+
+
+---
+
+## [2026-11-01] 確立人機長期協作 SOP 與動態狀態看板體系 (TASK-003)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出核心訴求：建立與 AI 長期持續、可維護的溝通機制。無論是待辦事項（To-Do）流轉或問題討論，都必須具備明確 SOP，使 AI 每次開局能迅速掌握時間戳記、專案版本、當前執行階段、看板進度與討論焦點。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+- **痛點根治**：LLM 本身不具備跨對話的長期記憶，若缺乏標準作業程序，每一次開啟新對話都會陷入「上下文失憶、重複交代背景、待辦混亂、討論發散」的循環。
+- **四大 SOP 設計**：
+  1. **SOP-1 開局握手協議 (Session Handshake)**：AI 每次開局第一段強制輸出「狀態對齊摘要卡」（時間、版本、階段、當前焦點、建議下一步），消除進度斷層。
+  2. **SOP-2 問題討論收斂 (Issue Convergence)**：明確邊界約束 ➔ 多方案權衡 ➔ 使用者拍板 ➔ 提煉至 Wiki 與 ADR。
+  3. **SOP-3 待辦事項流轉 (Task Lifecycle)**：以 Kanban（進行中、待辦、完成、擱置）驅動任務，每次完成皆對應 Git Commit。
+  4. **SOP-4 結尾交接檢查點 (Session Wrap-up)**：總結產出、維護看板時間戳、執行 Git Commit、提示下次開局入口。
+- **單一即時狀態真相源 (Single Source of Live Truth)**：
+  增設 `PROJECT_STATE.md` 作為即時狀態看板，與高階規格檔案解耦。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- 新增：[`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)（即時狀態與 Kanban 待辦系統）
+- 新增：[`ops/collaboration_sop.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/ops/collaboration_sop.md)（4 大標準作業程序）
+- 更新：[`AGENT.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/AGENT.md)（納入 SOP-1 開局對齊卡強制規則）
+- 更新：[`README.md`](file:///Users/yuchien/Project/Github/fitmon/README.md)、[`wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)

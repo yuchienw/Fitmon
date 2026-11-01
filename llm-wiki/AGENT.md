@@ -10,8 +10,23 @@
 > [!IMPORTANT]
 > - **專案當前階段**：`Phase 0 - 規劃與 LLM-Wiki 知識庫深耕期`
 > - **核心行為約束**：⚠️ **現階段【嚴禁擅自啟動程式開發】**。專案尚未進入應用編碼階段，所有互動重心均為：收錄商業/技術文件、提煉主題 Wiki、論證數值模型、撰寫 ADR 與追加 Changelog。
-> - **最新演進摘要**：已完成 LLM-Wiki 目錄、`index.html` 原始 PRD 提煉、Git Monorepo 初始化。
+> - **即時狀態與待辦看板**：一律查閱並維護 [`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)。
+> - **長效協作 SOP 依歸**：所有對話交互嚴格執行 [`ops/collaboration_sop.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/ops/collaboration_sop.md)。
 > - **進度追溯源**：每次執行任務前，必須先查看 [`logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md) 的最後一筆紀錄。
+
+---
+
+## 0.1 開局對齊協定 (Handshake Protocol)
+
+每次新對話開場或收到重啟指令時，Agent **必須在第一段輸出標準「狀態對齊摘要卡」**：
+```markdown
+> 🎯 **【FitMon 狀態對齊卡】**
+> - **時間 / 版本**：`YYYY-MM-DD` ｜ `v0.1.0-planning`
+> - **當前階段**：`Phase 0 規劃期 (⚠️ 程式碼凍結)`
+> - **進行中焦點**：`[TASK-XXX] 任務名稱`
+> - **待辦下一項**：`[PLAN-XXX] 建議主題`
+```
+確認人機狀態完全同步後，再開展實質內容討論。
 
 ---
 
