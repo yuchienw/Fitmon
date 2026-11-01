@@ -307,3 +307,33 @@
 - 更新：[`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)
 - 更新：[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)（增訂第 7 節「多國語系 (i18n)、品牌解耦與像素字型架構」）
 - 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.8.0-i18n-brand-decoupled`）
+
+
+---
+
+## [2026-11-01] 重大架構轉向：從全螢幕遊戲引擎轉向「現代 App 外殼 ＋ 局部嵌入像素畫布」 (TASK-013 / ADR-0002)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出重大架構轉向：「我想改變一個重大決策，應該不是完全使用遊戲引擎製作，我覺得比較像是 web 的操作放入手機 app 中，通常好像都是下方固定會有幾個導覽按鈕，然後跳轉頁也是 loading 就出現，頂多上方導覽列在多個回上一頁的按鈕。是這樣嗎？」。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **批判性評估三段式 (Critical Evaluation)**：
+   - 🌟 **核心效益**：
+     - **符合全球用戶心智模型**：主流習慣養成 App（Duolingo、Strava、Forest）皆採用標準 App 外殼，大眾對底部 Tab 與頂部 Header 的操作極具熟悉感。
+     - **全端工程師人體工學**：90% 的介面回歸 Web DOM (React + Tailwind)，表單輸入、中文文字處理、長列表平滑滾動無需在 Canvas 內手刻，開發速度提升 3~5 倍。
+     - **極致省電無發燙**：非遊戲頁面 GPU 佔用歸零，首頁局部畫布切換至其他 Tab 時自動休眠。
+   - ⚠️ **潛在風險與摩擦防禦**：
+     - **防禦劣質套殼網頁感 (Cheap Web-view)**：嚴禁整頁跳轉重新 Loading，底部 4 大 Tab 必須採用 SPA 毫秒級無感切換，僅非同步載入遠端數據時使用局部骨架屏 (Skeleton)。
+     - **防禦狀態重置 (State Loss)**：打卡秒表與填寫進度提升至全域 Zustand 狀態機，跨 Tab 切換計時不中斷。
+     - **防禦風格割裂**：統一採用 Neo-Retro（現代極簡復古風），深黑底色搭配精緻點陣圖標。
+2. **決策固化 (ADR-0002)**：
+   - 正式通過並撰寫 [`ADR-0002`](../adr/0002-app-shell-with-embedded-pixel-canvas.md)。
+   - 底部固定 4 大 Tab（Home 訓練室、Workout 運動打卡、Plaza 廣場、Analytics 數據）。
+   - PixiJS 畫布縮小為「Tab 1 訓練室」中的嵌入式互動卡片元件 (Embedded Pixel Canvas Widget)。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 新增：[`adr/0002-app-shell-with-embedded-pixel-canvas.md`](../adr/0002-app-shell-with-embedded-pixel-canvas.md)
+- 更新：[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)（全面更新第 1 節與第 2 節之 App 外殼與生命週期）
+- 更新：[`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)（雙模式分流至 Tab 1 與 Tab 2）
+- 更新：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.9.0-app-shell-aligned`）

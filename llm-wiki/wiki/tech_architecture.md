@@ -1,24 +1,60 @@
 # 系統技術架構與數據儲存 (System Architecture & Tech Stack)
 
-> **鏈結索引**：[返回索引](00_INDEX.md) ｜ [架構決策 ADR-0001](../adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md) ｜ [資料庫遷移腳本](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)
+> **鏈結索引**：[返回索引](00_INDEX.md) ｜ [架構決策 ADR-0001](../adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md) ｜ [架構決策 ADR-0002 (App 外殼與嵌入式畫布)](../adr/0002-app-shell-with-embedded-pixel-canvas.md) ｜ [資料庫遷移腳本](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)
 
 ---
 
-## 1. 總體技術棧與分層架構 (React + PixiJS + Supabase + Capacitor)
+## 1. 總體技術棧：現代 App 外殼 ＋ 局部嵌入像素畫布 (ADR-0002)
 
-針對 Web 全端工程師背景，系統採用「**Web-First 遊戲化 ➔ 一鍵跨端 Native**」架構：
+根據 [ADR-0002](../adr/0002-app-shell-with-embedded-pixel-canvas.md)，系統放棄全螢幕封閉遊戲引擎路線，回歸最成熟的「**現代手機 App 外殼架構 (App Shell)**」，並在首頁局部嵌入 2D 像素遊戲小島：
 
+```
++-------------------------------------------------------------+
+| 📱 上方頂部導覽列 (Top Header)                               |
+| [◀ 返回] (二級頁面才出現)   【分頁標題】     [🪙 1,250 金幣] [⚙️] |
++-------------------------------------------------------------+
+|                                                             |
+| 內容滾動區 (Main Content Area - SPA 毫秒瞬間切換，保持狀態):  |
+|                                                             |
+| 【Tab 1: 訓練室 (Home)】                                     |
+|  ┌────────────────────────────────────────────────────────┐ |
+|  │ 👾 局部像素遊戲小島 (Embedded Pixel Canvas Widget)         │ |
+|  │    (小人自主巡邏/跑步機/深蹲/摸狗/情境氣泡/家具佈局)     │ |
+|  └────────────────────────────────────────────────────────┘ |
+|  • 今日任務卡片 (Daily Quests)                              |
+|  • 連擊火焰 🔥 7 天 (Streak Card)                            |
+|                                                             |
+| 【Tab 2: 運動與課表 (Workout)】                              |
+|  • 課表模板庫 (推/拉/腿)、秒表計時器、3 秒極速補登 (Web DOM) |
+|                                                             |
+| 【Tab 3: 社群廣場 (Plaza)】                                  |
+|  • 拍立得動態瀑布流 (純像素卡片)、好友串門、Meme 拍貼按鈕     |
+|                                                             |
+| 【Tab 4: 本機數據 (Analytics)】                              |
+|  • 100% 本機 IndexedDB 體重/體脂/睡眠/TDEE 趨勢曲線圖 (DOM)  |
+|                                                             |
++-------------------------------------------------------------+
+| 📱 底部固定導覽列 (Bottom Navigation Bar)                    |
+|   [ 🏠 訓練室 ]    [ 🏋️ 運動打卡 ]    [ 🌐 廣場 ]    [ 📊 數據 ]  |
++-------------------------------------------------------------+
+```
+
+### 1.1 分層架構圖
 ```mermaid
 flowchart TB
-    subgraph Client ["前端遊戲與應用層 (Web / Mobile PWA)"]
-        PixiCanvas["【底層 Canvas】PixiJS 2D 遊戲渲染引擎\n• 180x320 固定低解析 + NEAREST 無損近鄰放大\n• 32x32 角色 5 層精靈 (身體/表情/髮型/衣服/配件)\n• 房間 6 大家具卡槽 + 小人自主遊蕩 AI\n• 金幣噴發粒子與 8-bit 音效系統"]
+    subgraph Client ["前端應用外殼 (React 18 + Tailwind + SPA)"]
+        AppShell["【外殼模式 App Shell】\n• 底部固定 4 大 Tab 導覽列\n• 頂部通用 Header (標題/返回鍵/金幣/設定)\n• 二級頁面滑動轉場 (Page Transitions)"]
         
-        ReactDOM["【頂層 DOM】React 18 + Tailwind CSS\n• 9-Slice 像素邊框對話框、任務清單彈窗\n• 原生文字輸入、長列表流暢滾動、Meme 拍貼工坊"]
+        EmbeddedCanvas["【Home 局部畫布】PixiJS 2D 像素微小島\n• 180x320 虛擬低解析 + NEAREST 無損放大\n• 32x32 角色 5 層精靈 + 房間 6 家具卡槽\n• 離屏自動休眠 (Zero Battery Drain)"]
+        
+        DOMPages["【標準 Web DOM 頁面】\n• Workout: 課表清單、秒表計時、3秒補登\n• Plaza: 拍立得卡片瀑布流、Meme 拍貼工坊\n• Analytics: 本機圖表、BMI/BMR/TDEE 計算"]
 
-        StateLayer["狀態與儲存轉接層\n• LocalStorage / IndexedDB (未登入試玩沙盒)\n• Zustand / React Context (遊戲世界狀態樹)"]
+        StateLayer["狀態維持層 (Zustand)\n• Tab State Keep-Alive (分頁切換計時器不中斷)\n• LocalStorage / IndexedDB (未登入沙盒 + 本機健康數據)"]
 
-        ReactDOM --> StateLayer
-        PixiCanvas --> StateLayer
+        AppShell --> DOMPages
+        AppShell --> EmbeddedCanvas
+        DOMPages --> StateLayer
+        EmbeddedCanvas --> StateLayer
     end
 
     subgraph NativeWrapper ["Capacitor 原生跨端封裝層"]
@@ -31,7 +67,7 @@ flowchart TB
         Capacitor --> SharePlugin
     end
 
-    subgraph Cloud ["雲端後端層 (Supabase)"]
+    subgraph Cloud ["雲端後端層 (Supabase - 防作弊權威)"]
         Auth["Supabase Auth (Apple / Google OAuth 匿名 UID)"]
         DB[("PostgreSQL 雲端庫\n• profiles (雙軌紙娃娃配置)\n• items & quests (圖鑑與任務)\n• workouts & posts (運動與拍立得)\n• tips_and_gifts (打賞明細)\n• game_economy_config (配置化常數)")]
         RPC["原子交易預存程序\n• rpc_send_tip_or_gift\n• rpc_claim_quest_reward"]
@@ -44,11 +80,16 @@ flowchart TB
 
 ---
 
-## 2. 視口與渲染規格 (Viewport & Rendering)
+## 2. 視口、導覽與渲染規格 (Viewport, Navigation & Canvas Lifecycle)
 
-* **虛擬畫布**：`180 x 320` 經典手持 9:16 像素解析度。
-* **放大採樣**：全域使用 `PIXI.SCALE_MODES.NEAREST`，保證在現代高解析螢幕（Retina）上擁有純粹方塊顆粒感，無模糊、極致省電。
-* **圖集預載**：所有角色部件與家具打包為 Spritesheet Atlas，單次請求載入完畢，換裝秒切零延遲。
+1. **SPA 毫秒級無感切換 (No Full-Page Reload)**：
+   - 底部 4 個主 Tab 切換為單頁內部切換，**零跳頁白屏、零重新載入**。
+   - 僅在遠端拉取新社群動態時使用局部骨架屏 (Skeleton UI)。
+2. **嵌入式像素畫布生命週期 (Smart Canvas Hibernation)**：
+   - 畫布僅在「Tab 1: 訓練室」掛載並渲染。
+   - 當使用者切換至「運動」、「社群」或「數據」Tab 時，PixiJS 的 `ticker` 自動暫停，CPU/GPU 佔用率直接歸零，手機完全不發燙。
+3. **低解析像素顆粒無損採樣**：
+   - 局部畫布內部保持 `180 x 320` 邏輯解析度，全域採用 `NEAREST` 近鄰採樣，無縫融入現代深色 App 外殼中。
 
 ---
 
