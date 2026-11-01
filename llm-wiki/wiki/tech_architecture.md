@@ -74,3 +74,17 @@ flowchart TB
 2. **智慧溫和習慣提醒 (Smart Reminder)**：
    * 玩家可自訂每日提醒時段（如晚上 8:00）。
    * 當日尚未打卡時，小人或柴犬發出一則幽默短通知；當日已完成則自動靜音，絕不嘮叨。
+
+---
+
+## 5. 本機健康沙盒與系統健康串接 (Local Biometrics & HealthKit / Health Connect)
+
+1. **本機審視儀表板 (Local Analytics Charts)**：
+   * 包含年齡、身高、體重、體脂率、睡眠時長、飲水量、歷史訓練總容量 (Tonnage)。
+   * 本機自動計算 BMI、BMR（Mifflin-St Jeor 公式）與動態 TDEE（依當週運動頻率乘上活動係數給予熱量建議）。
+   * 支援 7 天、30 天、90 天平滑趨勢線與柱狀圖，**100% 留存在終端設備 IndexedDB，嚴禁上傳雲端**。
+2. **Apple Health 與 Google 健康串接**：
+   * 透過 Capacitor 官方外掛（`@capawesome-team/capacitor-health`）在用戶授權下自動讀取 Apple Watch / Android 手機之體重、睡眠與步數。
+   * 資料直存本機沙盒，提供最無痛的數據輸入體驗。
+3. **雲端防作弊唯一職責 (Server-Authoritative Economy)**：
+   * 雲端唯一保管並在伺服器端驗證的只有：**金幣錢包 (Wallet Ledger)、道具庫存 (Inventory)、純像素社群與打賞紀錄**，確保本機無法透過修改記憶體刷金幣作弊。

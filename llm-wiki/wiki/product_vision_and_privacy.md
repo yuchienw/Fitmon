@@ -58,6 +58,11 @@ flowchart TD
    * 在「Meme 拍貼工坊」中，玩家可自由選取本機相簿中的健身或飲食照片。
    * **照片 100% 留在玩家手機前端記憶體中，絕不上傳雲端伺服器**。
    * Canvas 在本地合成小人與宣傳浮水印後，一鍵直發至玩家自己的 Instagram 限動或 Threads，由 Meta 自身演算法負責圖片審查，FitMon 伺服器完全不沾鍋！
+3. **本機健康數據沙盒 (Local Biometrics Sandbox)**：
+   * 年齡、身高、體重、體脂率、睡眠時長、飲水量、BMR/TDEE 計算與過往狀態曲線圖表，**100% 儲存於使用者終端設備本地（IndexedDB / SQLite）**。
+   * 支援串接 iOS Apple Health (HealthKit) 與 Android Google Health Connect，數據讀取後僅供本機儀表板展示，**絕對不上傳雲端，雲端伺服器完全零存儲、零知曉**！
+4. **雲端唯一防作弊職責 (Server-Authoritative Economy)**：
+   * 雲端唯一保管並驗證的僅有：**玩家錢包金幣餘額 (Wallet Ledger)、已解鎖道具庫存 (Inventory)、以及純像素社群動態與打賞明細**，徹底杜絕本機竄改作弊，同時捍衛極致個人隱私。
 
 **隱私安全防禦效益**：
 即便雲端資料庫遭遇脫庫攻擊（Database Breach），攻擊者只能取得抽象的暱稱、連擊天數與外觀代碼，完全不包含任何法律定義之自然人個人資料或私密生理訓練足跡。

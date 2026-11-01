@@ -181,3 +181,53 @@
 - 更新：[`supabase/migrations/20261101_init_fitmon_game_schema.sql`](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)（移除 `posts.photo_url`，新增 `routine_templates` 與 `user_workout_schedules`）
 - 更新：[`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)、[`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)、[`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)、[`wiki/meme_and_social.md`](../wiki/meme_and_social.md)、[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)
 - 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.3.0-firewall-aligned`）
+
+
+---
+
+## [2026-11-01] 納入 free-exercise-db 開源動作庫、雙軌圖解與科普問答 (TASK-008)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者要求評估：運動科學上 APP 是否應提供客觀、有效且無爭議之運動與飲食知識？是否有現成、可商用、包含器材動作圖解的資料庫？
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **開源商用動作庫選型**：
+   - 選定 `yuhonas/free-exercise-db`（採用 Public Domain / The Unlicense，100% 允許無限制商業使用、修改與重新分發）。
+   - 包含 800+ 動作詳細步驟說明、主次動肌群、器材類別與運動學標籤。
+2. **雙軌圖解架構 (Dual-Track Visuals)**：
+   - 動作庫預設提供解剖真人示範圖解；遊戲主場景則以 32x32 像素小人示範搞笑/標準動作，達到專業與像素復古趣味的完美平衡。
+3. **玩中學：每日 3 秒科普問答 (FitMon Trivia)**：
+   - 每日派發 1 題無爭議之科普小知識（熱量赤字、漸進式超負荷、蛋白質攝取基準、水份代謝）。
+   - 答對獲取 20 金幣，新手在玩遊戲同時無形學到正確避坑與防受傷知識。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 更新：[`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.4.0-science-db-aligned`）
+
+
+---
+
+## [2026-11-01] 確立本機健康沙盒 (Local Biometrics Sandbox) 與雲端唯一防作弊職責 (TASK-009)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出核心數據治理與個人隱私邊界要求：
+  - APP 應能自我紀錄與審視過往狀態曲線圖表（年齡、身高、體重、體脂、飲水量、睡眠、飲食、BMI、基礎代謝 BMR、TDEE、訓練總容量與運動紀錄等）。
+  - 可串接 iOS 健康 (HealthKit) 或 Android Google 健康 (Health Connect) 等系統服務。
+  - **極致隱私邊界**：上述各項數據屬於極度敏感之私密個資範圍，**一律嚴禁上雲端，絕不對外公開，100% 僅保留於本機 (IndexedDB / SQLite)**。
+  - **雲端唯一職責**：雲端唯一保管並驗證的只有「社交打卡紀錄、購買道具、以及金幣錢包」，以防止本機作弊刷錢，其餘生理私密數據在雲端完全「零儲存、零知曉」。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **數據分流架構 (Data Bifurcation Architecture)**：
+   - **本機沙盒 (Client-Side Local Sandbox)**：
+     - 儲存引擎：瀏覽器端使用 IndexedDB (搭配 `idb-keyval` 或 `Dexie.js`)，原生 App 端透過 Capacitor 直接操作本機 SQLite / Keychain。
+     - 涵蓋範圍：年齡、身高、體重、體脂率、水分、睡眠時長、飲食紀錄、BMI 計算、BMR (Mifflin-St Jeor 公式)、動態 TDEE (依每週訓練頻率動態建議熱量赤字/盈餘)、過往 7/30/90 天趨勢折線圖。
+     - 雙端健康串接：透過 `@capawesome-team/capacitor-health` 授權後一鍵抓取體重、步數與睡眠，無痛寫入本機沙盒，絕不上傳伺服器。
+   - **雲端權威 (Server-Authoritative Ledger)**：
+     - 雲端資料庫（Supabase）：僅保留不可作弊的經濟資產——金幣餘額 (Wallet)、解鎖裝飾 (Inventory)、純像素社群動態 (Pixel Posts)、打賞紀錄 (Tips/Gifts) 與連擊天數 (Streak)。
+     - 即使伺服器被徹底入侵脫庫，駭客完全無法獲取任何自然人的體重、生理特徵或生活隱私，符合全球最高標準之 GDPR / CCPA 零個資設計。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 更新：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)
+- 更新：[`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)
+- 更新：[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.5.0-biometrics-sandbox-aligned`）
