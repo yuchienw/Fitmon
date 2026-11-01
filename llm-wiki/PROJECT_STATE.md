@@ -12,7 +12,7 @@
 | **目前階段** | **Phase 1：Web Demo MVP 交付與實機體驗驗收期 (MVP Ready)** | 🚀 **【已完成 Sprint 1~3 完整可玩 Web Demo MVP】** |
 | **當前版本** | `v2.4.0-mvp-playtest-backlog-logged` | 完成首輪 MVP 實機試玩驗收，收錄 13 項核心體驗與架構優化待辦清單 |
 | **最後更新時間** | `2026-11-01 23:48 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `5a696fc` | 與本地儲存庫保持同步 |
+| **最後 Git Commit** | `e4c71de` | 與本地儲存庫保持同步 |
 | **當前焦點 (Current Focus)** | 盤點並收斂首輪 MVP 試玩之 13 項優化待辦事項（待規劃優先序後分批迭代） |
 
 ---
