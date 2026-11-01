@@ -337,3 +337,39 @@
 - 更新：[`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)（雙模式分流至 Tab 1 與 Tab 2）
 - 更新：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)
 - 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v1.9.0-app-shell-aligned`）
+
+
+---
+
+## [2026-11-01] 確立 5 大 Tab 導覽、名人認證特展、體力值防刷與消耗型道具 IAP 商業變現模型 (TASK-014)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出一系列核心產品導向與商業變現決策：
+  1. 底部導覽列應涵蓋獨立的「🛒 商城 (Shop)」分頁，系統設定則配置於頂部 Header 右上角 `[⚙️]`。
+  2. 產品核心 DNA 定調為「**專業運動打卡 × 復古像素雙軌紙娃娃 × 朋友圈病毒社群**」（非封閉 RPG 遊戲）。
+  3. 規劃大眾現象級產品願景：數位替身、Threads/IG 迷因擴散、冷啟動傳奇種子房間、官方認證運動員/名人特展與一鍵課表複製。
+  4. 確立核心數值與變現規則：**「裝備物件純外觀不影響數值，消耗道具影響數值與收益」**；引入體力值 (Stamina) 扣除機制防止洗幣，並以消耗道具提升獎勵倍率或恢復體力，作為 IAP 內購的主要收入來源。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **批判性評估三段式 (Critical Evaluation)**：
+   - 🌟 **核心效益**：
+     - **確立真金白銀的現金流飛輪**：消耗型道具（體力水、倍率卡、保命卡）具備高頻復購特性，大幅突破純外觀 2%~4% 的低付費率瓶頸。
+     - **名人自發傳播與 B2B2C 贊助**：專屬 32×32 形象刺激名人主動發限動引流；O2O 實體折扣券讓品牌贊助閉環成型。
+     - **防刷幣天花板**：每日 100 點體力值自然恢復，形成健康的每日產幣上限。
+   - ⚠️ **潛在風險與防禦金律**：
+     - **【防運動懲罰感金律】運動記錄永遠 100% 免費無限次**：體力耗盡時，運動記錄、組數、重量、秒表與 PR 100% 永久免費記錄，維護專業運動日誌尊嚴；體力僅卡住「金幣掉落」，徹底杜絕「沒體力就不給運動」的公關災難。
+     - **純外觀守則**：聯名裝備嚴禁附加任何數值加成，維護社群公平性。
+2. **架構升級 (ADR-0002 延伸)**：
+   - 底部導覽定案為 5 大核心 Tab：`[🏠 訓練室]` `[🏋️ 運動]` `[🛒 商城]` `[🌐 廣場]` `[📊 數據]`。
+   - 系統設定收納於頂部常駐 Header 右上角 `[⚙️]`。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 更新：[`adr/0002-app-shell-with-embedded-pixel-canvas.md`](../adr/0002-app-shell-with-embedded-pixel-canvas.md)（升級為 5 大 Tab）
+- 更新：[`wiki/tech_architecture.md`](../wiki/tech_architecture.md)（5 Tab 架構圖與組件劃分）
+- 更新：[`wiki/business_model.md`](../wiki/business_model.md)（增訂第 3 節 IAP 體力與消耗道具、第 4 節 名人認證與聯名贊助）
+- 更新：[`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)（增訂第 9 節 體力值防刷與道具數值）
+- 更新：[`wiki/meme_and_social.md`](../wiki/meme_and_social.md)（增訂第 5 節 名人特展、種子房間與一鍵課表複製）
+- 更新：[`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)（定調核心 DNA）
+- 更新：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)
+- 更新：[`supabase/migrations/20261101_init_fitmon_game_schema.sql`](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)（擴充 stamina, verification, consumables, event fields）
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v2.0.0-f2p-stamina-celebrity-aligned`）

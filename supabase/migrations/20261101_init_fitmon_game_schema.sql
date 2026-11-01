@@ -38,20 +38,32 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     coins INTEGER NOT NULL DEFAULT 100 CHECK (coins >= 0), -- FTUE 新手起跑金幣 100
     streak_days INTEGER NOT NULL DEFAULT 0 CHECK (streak_days >= 0),
     last_workout_date DATE DEFAULT NULL,
+
+    -- 體力值 (Stamina) 與自然恢復機制 (F2P 防洗幣引擎)
+    stamina INTEGER NOT NULL DEFAULT 100 CHECK (stamina >= 0),
+    stamina_updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- 名人/選手官方認證與專屬特展
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_type TEXT CHECK (verification_type IN ('athlete', 'creator', 'brand', 'coach')),
+    verification_badge_label TEXT DEFAULT NULL,
+    exclusive_asset_keys TEXT[] DEFAULT '{}',
+    official_links JSONB DEFAULT '{}'::jsonb,
     
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ------------------------------------------------------------------------------
--- 2. 雙軌紙娃娃圖鑑與商城元資料表 (items)
--- 包含角色裝飾 (avatar_*) 與房間裝潢 (room_*)
+-- 2. 雙軌紙娃娃圖鑑、消耗道具與商城元資料表 (items)
+-- 包含角色裝飾 (avatar_*)、房間裝潢 (room_*) 與消耗道具 (consumable_*)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.items (
-    id TEXT PRIMARY KEY, -- 例如: 'avatar_outfit_tank_red', 'room_eq_power_rack'
+    id TEXT PRIMARY KEY, -- 例如: 'avatar_outfit_tank_red', 'room_eq_power_rack', 'item_bcaa_drink'
     category TEXT NOT NULL CHECK (category IN (
         'avatar_body', 'avatar_face', 'avatar_hair', 'avatar_outfit', 'avatar_prop',
-        'room_floor', 'room_wallpaper', 'room_equipment', 'room_furniture', 'room_wall_decor', 'room_pet'
+        'room_floor', 'room_wallpaper', 'room_equipment', 'room_furniture', 'room_wall_decor', 'room_pet',
+        'consumable_stamina', 'consumable_booster', 'consumable_freeze', 'consumable_gacha'
     )),
     name TEXT NOT NULL,
     description TEXT,
@@ -59,16 +71,25 @@ CREATE TABLE IF NOT EXISTS public.items (
     rarity TEXT NOT NULL DEFAULT 'common' CHECK (rarity IN ('common', 'rare', 'epic', 'legendary')),
     sprite_key TEXT NOT NULL, -- 對應前端 PixiJS Asset 鍵名
     is_default BOOLEAN NOT NULL DEFAULT false, -- 是否為新手預設持有
+
+    -- 品牌贊助與限時活動
+    brand_sponsor TEXT DEFAULT NULL,
+    is_event_limited BOOLEAN NOT NULL DEFAULT FALSE,
+    event_start_at TIMESTAMPTZ DEFAULT NULL,
+    event_end_at TIMESTAMPTZ DEFAULT NULL,
+    real_world_reward_code TEXT DEFAULT NULL,
+
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ------------------------------------------------------------------------------
--- 3. 玩家持有物品庫存 (user_items)
+-- 3. 玩家持有物品與消耗道具庫存 (user_items)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.user_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     item_id TEXT NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0), -- 支援消耗品堆疊
     acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (user_id, item_id)
 );
@@ -78,7 +99,7 @@ CREATE TABLE IF NOT EXISTS public.user_items (
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.quests (
     id TEXT PRIMARY KEY, -- 例如: 'daily_workout_20m', 'daily_tip_friend', 'milestone_streak_7'
-    type TEXT NOT NULL CHECK (type IN ('daily', 'streak', 'milestone')),
+    type TEXT NOT NULL CHECK (type IN ('daily', 'streak', 'milestone', 'event_limited')),
     title TEXT NOT NULL,
     description TEXT,
     target_count INTEGER NOT NULL DEFAULT 1 CHECK (target_count > 0),

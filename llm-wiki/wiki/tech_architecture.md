@@ -27,15 +27,18 @@
 | 【Tab 2: 運動與課表 (Workout)】                              |
 |  • 課表模板庫 (推/拉/腿)、秒表計時器、3 秒極速補登 (Web DOM) |
 |                                                             |
-| 【Tab 3: 社群廣場 (Plaza)】                                  |
+| 【Tab 3: 金幣商城 (Shop)】                                    |
+|  • 雙軌換裝更衣鏡、消耗型道具 (體力水/雙倍卡/冰凍卡)、扭蛋機  |
+|                                                             |
+| 【Tab 4: 社群廣場 (Plaza)】                                  |
 |  • 拍立得動態瀑布流 (純像素卡片)、好友串門、Meme 拍貼按鈕     |
 |                                                             |
-| 【Tab 4: 本機數據 (Analytics)】                              |
+| 【Tab 5: 本機數據與個人 (Analytics & Profile)】              |
 |  • 100% 本機 IndexedDB 體重/體脂/睡眠/TDEE 趨勢曲線圖 (DOM)  |
 |                                                             |
 +-------------------------------------------------------------+
 | 📱 底部固定導覽列 (Bottom Navigation Bar)                    |
-|   [ 🏠 訓練室 ]    [ 🏋️ 運動打卡 ]    [ 🌐 廣場 ]    [ 📊 數據 ]  |
+|   [🏠 訓練室]  [🏋️ 運動]  [🛒 商城]  [🌐 廣場]  [📊 數據]   |
 +-------------------------------------------------------------+
 ```
 
@@ -43,11 +46,11 @@
 ```mermaid
 flowchart TB
     subgraph Client ["前端應用外殼 (React 18 + Tailwind + SPA)"]
-        AppShell["【外殼模式 App Shell】\n• 底部固定 4 大 Tab 導覽列\n• 頂部通用 Header (標題/返回鍵/金幣/設定)\n• 二級頁面滑動轉場 (Page Transitions)"]
+        AppShell["【外殼模式 App Shell】\n• 底部固定 5 大 Tab 導覽列\n• 頂部通用 Header (標題/返回鍵/金幣/設定)\n• 系統設定彈窗 [⚙️] (語言切換/提醒/健康授權/帳號)"]
         
         EmbeddedCanvas["【Home 局部畫布】PixiJS 2D 像素微小島\n• 180x320 虛擬低解析 + NEAREST 無損放大\n• 32x32 角色 5 層精靈 + 房間 6 家具卡槽\n• 離屏自動休眠 (Zero Battery Drain)"]
         
-        DOMPages["【標準 Web DOM 頁面】\n• Workout: 課表清單、秒表計時、3秒補登\n• Plaza: 拍立得卡片瀑布流、Meme 拍貼工坊\n• Analytics: 本機圖表、BMI/BMR/TDEE 計算"]
+        DOMPages["【標準 Web DOM 頁面】\n• Workout: 課表清單、秒表計時、3秒補登\n• Shop: 試穿更衣室、消耗道具、扭蛋機、聯名專櫃\n• Plaza: 拍立得卡片瀑布流、Meme 拍貼工坊\n• Analytics: 本機圖表、BMI/BMR/TDEE 計算"]
 
         StateLayer["狀態維持層 (Zustand)\n• Tab State Keep-Alive (分頁切換計時器不中斷)\n• LocalStorage / IndexedDB (未登入沙盒 + 本機健康數據)"]
 
