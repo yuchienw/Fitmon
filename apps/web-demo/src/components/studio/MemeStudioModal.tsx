@@ -33,10 +33,10 @@ export const MemeStudioModal: React.FC = () => {
       ctx.fillStyle = '#0b0d13';
       ctx.fillRect(0, 0, W, H);
 
-      // Draw offscreen 240x150 pixel scene and scale up crisp
+      // Draw offscreen 480x300 MapleStory Chibi scene
       const off = document.createElement('canvas');
-      off.width = 240;
-      off.height = 150;
+      off.width = 480;
+      off.height = 300;
       const offCtx = off.getContext('2d');
       if (offCtx) {
         offCtx.imageSmoothingEnabled = false;
@@ -46,8 +46,8 @@ export const MemeStudioModal: React.FC = () => {
           room: store.room,
           isNight: store.isNightModeRoom,
           frameTick: 12,
-          avatarX: 100,
-          avatarY: 84,
+          avatarX: 94,
+          avatarY: 78,
           avatarState: 'CURL',
           facingRight: true,
           petHearts: [{ x: 168, y: 90, alpha: 1 }],

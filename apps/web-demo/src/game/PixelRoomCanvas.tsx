@@ -1,16 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Sun, Moon, Sparkles, Volume2, VolumeX, MessageSquare } from 'lucide-react';
+import { Sun, Moon, Volume2, VolumeX } from 'lucide-react';
 import { useGameStore } from '../stores/useGameStore';
 import { AvatarBodyStage, EquipSlot, RoomSlot } from '../config/catalogConfig';
 import { drawPixelGymScene } from './pixelSpriteDrawer';
 
 const SPEECH_LINES = [
-  '💪 再做一組深蹲就喝乳清！',
-  '🔥 脊椎保持中立，核心繃緊！',
-  '🐕 豆助看著我，今天絕不能偷懶！',
-  '⚡ 睡眠充足 8 小時，肌肉正在合成中！',
-  '🏆 離突破個人 PR 只差 2.5 公斤了！',
-  '🦵 今天練腿，明天請幫我叫輪椅！',
+  '再一組深蹲就喝乳清！💪',
+  '豆助在看，今天絕不偷懶！🐕',
+  '核心繃緊，準備破 PR！🔥',
+  '練腿日，明天坐輪椅！♿',
 ];
 
 interface PixelRoomCanvasProps {
@@ -42,21 +40,19 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
 
   const animRef = useRef({
     tick: 0,
-    x: 96,
-    y: 84,
-    vx: 0.45,
+    x: 92,
+    y: 78,
+    vx: 0.4,
     facingRight: true,
     stateTimer: 0,
     currentState: 'SQUAT' as 'WALK' | 'SQUAT' | 'CURL' | 'IDLE',
     hearts: [] as { x: number; y: number; alpha: number }[],
   });
 
-  // Sync manual state trigger
   useEffect(() => {
     animRef.current.currentState = aiState;
   }, [aiState]);
 
-  // ADR-0002: Canvas Resource Lifecycle (Auto-sleep when off-tab!)
   useEffect(() => {
     if (!isActive) return;
 
@@ -73,8 +69,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
       st.tick += 1;
       st.stateTimer += 1;
 
-      // Autonomous AI transitions every ~240 frames (4 seconds)
-      if (st.stateTimer > 240) {
+      if (st.stateTimer > 260) {
         st.stateTimer = 0;
         const states: ('WALK' | 'SQUAT' | 'CURL' | 'IDLE')[] = ['WALK', 'SQUAT', 'CURL', 'IDLE'];
         const next = states[Math.floor(Math.random() * states.length)];
@@ -84,18 +79,17 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
 
       if (st.currentState === 'WALK') {
         st.x += st.vx;
-        if (st.x > 136) {
-          st.vx = -0.45;
+        if (st.x > 124) {
+          st.vx = -0.4;
           st.facingRight = false;
-        } else if (st.x < 58) {
-          st.vx = 0.45;
+        } else if (st.x < 56) {
+          st.vx = 0.4;
           st.facingRight = true;
         }
       }
 
-      // Update floating hearts
       st.hearts = st.hearts
-        .map((h) => ({ x: h.x, y: h.y - 0.35, alpha: h.alpha - 0.02 }))
+        .map((h) => ({ x: h.x, y: h.y - 0.35, alpha: h.alpha - 0.022 }))
         .filter((h) => h.alpha > 0);
 
       drawPixelGymScene(ctx, {
@@ -122,91 +116,115 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = ((e.clientX - rect.left) / rect.width) * 240;
 
-    // Check if clicked near Pet (right side x > 145)
     if (clickX > 145) {
       animRef.current.hearts.push({
-        x: 166 + (Math.random() * 10 - 5),
+        x: 168 + (Math.random() * 10 - 5),
         y: 92,
         alpha: 1.0,
       });
       store.interactWithRoomEntity('pet');
-      setSpeechBubble('🐶 汪！豆助幫你加油！（完成每日互動）');
+      setSpeechBubble('🐶 豆助開心地搖尾巴！(+互動)');
     } else {
-      // Cycle avatar action
       const order: ('SQUAT' | 'CURL' | 'WALK' | 'IDLE')[] = ['SQUAT', 'CURL', 'WALK', 'IDLE'];
       const next = order[(order.indexOf(aiState) + 1) % order.length];
       setAiState(next);
       animRef.current.stateTimer = 0;
-      const randomLine = SPEECH_LINES[Math.floor(Math.random() * SPEECH_LINES.length)];
-      setSpeechBubble(randomLine);
+      setSpeechBubble(SPEECH_LINES[Math.floor(Math.random() * SPEECH_LINES.length)]);
       store.interactWithRoomEntity('avatar');
     }
   };
 
   return (
-    <div className="relative rounded-xl overflow-hidden border-2 border-slate-700/80 bg-[#0d111a] shadow-2xl">
-      {/* Top Floating Room Status Bar */}
-      <div className="absolute top-2 left-2 right-2 z-10 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-slate-700/70 text-[11px] font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-slate-200 font-bold">
-            {customOverride ? `${customOverride.ownerName} 的訓練室` : '2D 像素訓練室'}
-          </span>
-          <span className="text-emerald-400 font-mono text-[10px]">[{aiState}]</span>
+    <div className="relative rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-[#0d111a] shadow-2xl">
+      {/* Top Floating Room Controls (Minimal Icons Only) */}
+      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
+        <div className="bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white shadow">
+          {customOverride ? `🏠 ${customOverride.ownerName}` : `💬 ${speechBubble}`}
         </div>
 
         {!compact && (
           <div className="flex items-center gap-1.5 pointer-events-auto">
             <button
               onClick={() => store.toggleNightModeRoom()}
-              title="切換日夜窗景"
-              className="p-1.5 rounded-lg bg-slate-950/85 border border-slate-700/70 text-amber-400 hover:bg-slate-800 active:scale-95 transition"
+              className="p-1.5 rounded-full bg-slate-950/80 border border-white/15 text-amber-300 hover:bg-slate-800 active:scale-95 transition"
             >
               {store.isNightModeRoom ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={() => store.toggleSound()}
-              title="切換 8-Bit 音效"
-              className="p-1.5 rounded-lg bg-slate-950/85 border border-slate-700/70 text-emerald-400 hover:bg-slate-800 active:scale-95 transition"
+              className="p-1.5 rounded-full bg-slate-950/80 border border-white/15 text-emerald-400 hover:bg-slate-800 active:scale-95 transition"
             >
-              {store.soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5 text-slate-500" />}
+              {store.soundEnabled ? (
+                <Volume2 className="w-3.5 h-3.5" />
+              ) : (
+                <VolumeX className="w-3.5 h-3.5 text-slate-500" />
+              )}
             </button>
           </div>
         )}
       </div>
 
-      {/* Crisp 240x150 Logical Pixel Canvas */}
+      {/* High-Detail 480x300 MapleStory Chibi Scene Canvas */}
       <canvas
         ref={canvasRef}
-        width={240}
-        height={150}
+        width={480}
+        height={300}
         onClick={handleCanvasInteraction}
-        className={`w-full ${compact ? 'h-40' : 'h-56 sm:h-60'} object-cover pixel-canvas cursor-pointer block`}
+        className={`w-full ${
+          compact ? 'h-48' : 'h-64 sm:h-72'
+        } object-cover pixel-canvas cursor-pointer block`}
       />
 
-      {/* Bottom Dialogue Bubble & Quick Action Bar */}
+      {/* Sleek Bottom Action & Body Stage Bar */}
       {!compact && (
         <div className="bg-slate-900/95 border-t border-slate-800 px-3 py-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <MessageSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <p className="text-xs text-slate-200 truncate">{speechBubble}</p>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {(['SQUAT', 'CURL', 'WALK'] as const).map((mode) => (
+          {/* Action Switcher */}
+          <div className="flex items-center gap-1">
+            {(
+              [
+                { id: 'SQUAT', label: '🏋️ 深蹲' },
+                { id: 'CURL', label: '💪 彎舉' },
+                { id: 'WALK', label: '🚶 散步' },
+              ] as const
+            ).map((m) => (
               <button
-                key={mode}
+                key={m.id}
                 onClick={() => {
-                  setAiState(mode);
+                  setAiState(m.id);
                   animRef.current.stateTimer = 0;
                   store.interactWithRoomEntity('avatar');
                 }}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition ${
-                  aiState === mode
-                    ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                  aiState === m.id
+                    ? 'bg-emerald-500 text-slate-950 font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                 }`}
               >
-                {mode === 'SQUAT' ? '深蹲' : mode === 'CURL' ? '彎舉' : '巡邏'}
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Compact Body Evolution Stage Pills */}
+          <div className="flex items-center gap-1">
+            {(
+              [
+                { id: 'beginner', label: '新手' },
+                { id: 'powerlifter', label: '巨力' },
+                { id: 'aesthetic', label: '美學' },
+                { id: 'titan', label: '👑泰坦' },
+              ] as const
+            ).map((st) => (
+              <button
+                key={st.id}
+                onClick={() => store.setBodyStage(st.id)}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition ${
+                  store.bodyStage === st.id
+                    ? 'bg-amber-400/20 border border-amber-400 text-amber-300'
+                    : 'bg-slate-800/60 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {st.label}
               </button>
             ))}
           </div>
