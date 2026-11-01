@@ -11,25 +11,25 @@
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與房間裝潢) | 核心：雙軌紙娃娃(角色+房間)、任務金幣、好友串門 |
 | **目前階段** | **Phase 0：遊戲企劃 GDD 定案 (含房間裝修)，進入技術實作準備期** | ⚠️ **【凍結程式開發】** 待 Schema 與 PixiJS 規格就緒 |
 | **當前版本** | `v1.1.0-gdd-room-decor` | 納入角色與房間雙軌紙娃娃系統定案版本 |
-| **最後更新時間** | `2026-11-01 19:13 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `c031d53` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 完成 Supabase 資料庫綱要設計，下一步開展 PixiJS 2D 像素遊戲渲染器 (PLAN-011) | 遊戲驅動資料庫，原子交易保證 |
+| **最後更新時間** | `2026-11-01 19:32 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `2eea35c` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 完成 PixiJS 2D 像素遊戲渲染器規格 (PLAN-011)，下一步開展迷因拍貼工坊 (PLAN-013) | 雙層混合架構、小人遊蕩 AI 與情境氣泡 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [x] **PLAN-010**：完成 Supabase 資料庫綱要設計 (`supabase/migrations/20261101_init_fitmon_game_schema.sql`)
-- [ ] **NEXT-FOCUS**：規劃 PixiJS 2D 像素遊戲畫布容器與雙軌渲染器規格 (PLAN-011)
+- [x] **PLAN-011**：完成 PixiJS 2D 像素遊戲渲染器規格書 (`fitmon_pixijs_renderer_spec.md`)
+- [ ] **NEXT-FOCUS**：開展 Canvas 拍立得成果卡與 Meme 梗圖拍貼工坊規格 (PLAN-013)
 
 ### 🟡 待討論與規劃清單 (Backlog / To-Do)
-- [ ] **PLAN-011 (P0)**：規劃 PixiJS 2D 像素遊戲畫布容器與雙軌渲染器（角色 5 層精靈 + 房間 6 大家具 Slot 堆疊）
+- [ ] **PLAN-013 (P0)**：設計 Canvas 拍立得成果卡與 Meme 梗圖排版工坊（自由擺拍、貼紙縮放拖曳、自嘲文案庫、IG 9:16 轉發）
 - [ ] **PLAN-012 (P1)**：整合 Web Audio / Howler.js 8-bit BGM（卡帶音響切歌）與街機 SFX 模組
-- [ ] **PLAN-013 (P1)**：設計 Canvas 拍立得成果卡（以玩家專屬裝潢房間為背景）與 Meme 梗圖排版工坊
 - [ ] **PLAN-014 (P2)**：漸進式帳號綁定流程（免註冊本地試玩 ➔ 觸發廣場社交時綁定 Supabase Auth）
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261101-10**：完成 PixiJS 2D 像素遊戲渲染器規格書 ([`fitmon_pixijs_renderer_spec.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/fitmon_pixijs_renderer_spec.md))
 - [x] **DONE-20261101-09**：完成 Supabase 遊戲驅動資料庫綱要與原子打賞 RPC 函數 ([`supabase/migrations/20261101_init_fitmon_game_schema.sql`](file:///Users/yuchien/Project/Github/fitmon/supabase/migrations/20261101_init_fitmon_game_schema.sql))
 - [x] **DONE-20261101-08**：擴充 GDD 雙軌紙娃娃系統（納入 6 大房間裝潢卡槽與好友串門參觀），更新 [`fitmon_game_design_document_v1.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/fitmon_game_design_document_v1.md)
 - [x] **DONE-20261101-07**：完成 GDD 遊戲企劃設計書初版
