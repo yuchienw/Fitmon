@@ -9,27 +9,26 @@
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、Meme 拍貼、開源科學動作庫 |
-| **目前階段** | **Phase 0：產品規劃與深度論證期 (Planning Phase)** | ⚠️ **【程式碼開發完全凍結，專注架構推演與客觀風險評估】** |
-| **當前版本** | `v2.1.0-web-mvp-spec-ready` | 完成 Web Demo MVP 系統規格書，準備受控解凍進入 Sprint 1 |
-| **最後更新時間** | `2026-11-01 21:28 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `89124a9` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 審查 Web Demo MVP 系統規格書，確認「5 大 Tab ＋ 局部像素島」體感是否符合頭腦所想 |
+| **目前階段** | **Phase 1：Web Demo MVP 交付與實機體驗驗收期 (MVP Ready)** | 🚀 **【已完成 Sprint 1~3 完整可玩 Web Demo MVP】** |
+| **當前版本** | `v2.2.0-web-mvp-playable` | 完整實作 5 大 Tab、2D 像素訓練室、運動打卡結算、商城與拍貼工坊 |
+| **最後更新時間** | `2026-11-01 21:52 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `41c9446` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 實機試玩 `apps/web-demo` (`http://localhost:5173`)，體驗 5 大 Tab 與像素養成手感並微調細節 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [ ] **SPEC-REVIEW**：使用者審查 [`fitmon_web_mvp_system_spec.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/b77c49d1-831b-4f6e-abb3-2c56e8683b35/fitmon_web_mvp_system_spec.md)，確認體感與系統邊界後正式解凍 Sprint 1
+- [ ] **MVP-PLAYTEST**：使用者實機體驗 `apps/web-demo` MVP，收集視覺體感、操作流暢度與數值反饋
 
 ### 🟡 待討論與規劃清單 (Backlog / To-Do)
-- [ ] **SPRINT-1**：初始化 `apps/web-demo`、搭建 5 大 Tab App 外殼、首頁 PixiJS 局部嵌入畫布與休眠機制
-- [ ] **SPRINT-2**：打卡記錄器、疲勞加權、體力防刷與街機 VICTORY 結算
-- [ ] **SPRINT-3**：商城試穿更衣室、消耗道具模擬購買、Meme 拍貼工坊
-- [ ] **DISCUSS-NUMERICS**：百位數金幣與數值通膨防線
-- [ ] **DISCUSS-FRIEND-LOOP**：好友社交互動深化與反作弊
+- [ ] **DISCUSS-NUMERICS**：根據實機試玩感受微調 `economyConfig.ts` 商品定價與體力/金幣參數
+- [ ] **MILESTONE-2**：串接 Supabase 雲端資料庫與 OAuth 漸進式綁定
+- [ ] **MILESTONE-3**：Capacitor 封裝 iOS / Android 雙端原生 App
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261101-22**：完成 `apps/web-demo` 完整可玩 Web Demo MVP（涵蓋 Sprint 1~3：5 大 Tab 外殼、240×150 嵌入式 2D 像素訓練室、5層紙娃娃與6卡槽房間、運動打卡與 `@fitmon/engine` 街機 VICTORY 結算、商城試穿/道具/扭蛋/名人特展、拍立得廣場與 Meme 拍貼 PNG 匯出、本機 TDEE 隱私沙盒與 8-bit 音效合成器）(TASK-016)
 - [x] **DONE-20261101-21**：完成 Web Demo MVP 完整系統規格書 ([`fitmon_web_mvp_system_spec.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/b77c49d1-831b-4f6e-abb3-2c56e8683b35/fitmon_web_mvp_system_spec.md))，對齊 ADR-0002 現代 App 外殼與 5 大 Tab 佈局 (TASK-015)
 - [x] **DONE-20261101-20**：確立 5 大 Tab 導覽列（加入商城 Tab）、頂部常駐 Header [⚙️]、名人認證特展、體力值 (Stamina) 防刷與消耗型道具 IAP 商業閉環 (TASK-014)
 - [x] **DONE-20261101-19**：通過重大架構決策 [`ADR-0002`](adr/0002-app-shell-with-embedded-pixel-canvas.md)：從全螢幕遊戲引擎轉向「現代 App 外殼 ＋ 局部嵌入像素畫布」架構，確立畫布休眠機制 (TASK-013)
@@ -65,5 +64,5 @@ xychart-beta
     title "各里程碑推進度概況 (%)"
     x-axis ["Phase 0: 商業與規格規劃", "Milestone 1: Web-Demo MVP", "Milestone 2: 裂變與導購", "Milestone 3: 雙端APP上架"]
     y-axis "完成百分比" 0 --> 100
-    bar [65, 0, 0, 0]
+    bar [100, 100, 15, 0]
 ```

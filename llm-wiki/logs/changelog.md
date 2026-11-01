@@ -373,3 +373,30 @@
 - 更新：[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)
 - 更新：[`supabase/migrations/20261101_init_fitmon_game_schema.sql`](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)（擴充 stamina, verification, consumables, event fields）
 - 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（看板版本升級至 `v2.0.0-f2p-stamina-celebrity-aligned`）
+
+
+---
+
+## [2026-11-01] 完成 Web Demo MVP 系統規格書與完整可玩前端實作 (TASK-015 & TASK-016)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者批准 `fitmon_web_mvp_system_spec.md` 系統規格書，並下達 `/goal` 指令：「請直接依照規劃完成實際可以用的 mvp，需要擴充的商城物件或是詳細的商品定價、參數都可以待訂，未來透過調整參數或擴充就好」。
+
+### 2. 工程落地與核心交付 (Engineering Deliverables)
+1. **參數配置完全解耦 (`config/economyConfig.ts` & `config/catalogConfig.ts`)**：
+   - 將初始金幣、體力消耗、任務獎勵、打賞費用、商品定價、動作庫與名人課表全部抽離至獨立設定檔，未來僅需改動常數即可熱調平衡。
+2. **現代 5 大 Tab App 外殼 ＋ 局部嵌入 2D 像素畫布 (`ADR-0002` 實踐)**：
+   - 頂部常駐 Header（顯示連勝火焰 🔥、體力 ⚡、金幣 🪙 與 `[⚙️]` 系統設定/沙盒測試台）。
+   - 首頁 `PixelRoomCanvas`：240×150 虛擬低解析度無損放大，具備 5 層 32×32 角色紙娃娃（4 階段體態演化、髮型、上衣、下褲、手持器材）與房間 6 大裝潢卡槽（牆面、地板、深蹲架、街機/啞鈴塔、獎盃白板、赤柴/黑貓/機器人寵物），切離首頁時自動休眠零耗電。
+3. **專業運動打卡 × `@fitmon/engine` 數值結算閉環**：
+   - 支援「專業組數計時器（跨 Tab 不中斷 Keep-Alive）」、「推/拉/腿與名人課表一鍵帶入」與「3 秒極速補登」。
+   - 實作【防運動懲罰感金律】：體力耗盡時仍 100% 免費無上限記錄組數與 PR，僅暫停金幣掉落。
+   - 完成街機風 `VICTORY!` 結算彈窗與零外置音檔依賴之 Web Audio 8-Bit 街機音效合成器 (`SoundManager.ts`)。
+4. **商城雙軌試穿、消耗品 IAP 模擬、名人特展與 Meme 拍貼工坊**：
+   - 商城頂部提供即時更衣鏡預覽、消耗道具（BCAA 活力水、2X 金幣卡、連勝冰凍卡、幸運扭蛋機）與官方認證名人特展。
+   - 社群廣場支援拍立得動態打賞、送能量水、好友/名人房間串門子，以及 HTML5 Canvas 迷因拍貼工坊（支援疊加本機自拍照、貼紙與匯出高清 PNG）。
+
+### 3. 異動檔案清單 (Impact & Modified Files)
+- 新增：`apps/web-demo/` 完整 React + TypeScript + Vite + Tailwind + Zustand 專案
+- 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)（升級至 `v2.2.0-web-mvp-playable`）
+
