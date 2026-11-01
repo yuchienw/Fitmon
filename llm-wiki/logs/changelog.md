@@ -105,3 +105,34 @@
 - 新增：[`ops/collaboration_sop.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/ops/collaboration_sop.md)（4 大標準作業程序）
 - 更新：[`AGENT.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/AGENT.md)（納入 SOP-1 開局對齊卡強制規則）
 - 更新：[`README.md`](file:///Users/yuchien/Project/Github/fitmon/README.md)、[`wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
+
+
+---
+
+## [2026-11-01] Grill-me 深度對齊：大方向戰略重構、任務金幣社群與遊戲引擎質感技術定調 (TASK-004)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者啟動 `/grill-me` 互動訪談，對 FitMon 的宏觀定位、玩法機制、社交循環與技術選型進行全方位推演與重構。
+- 使用者表明自身為「Web 全端工程師背景，對做手機 App 沒概念」，希望以「打造好玩好用、可執行性高」為核心，依靠朋友圈口碑自然擴散，並強調「看起來要像遊戲引擎設計，而非純 Web UI 畫面；小規模測試完成後能 100% 直接轉 iOS / Android 原生 App」。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **客群泛化 (General Fitness Persona)**：
+   - 跳脫純健美/健力重訓的小眾局限，擴展至徒手自重、跑步、CrossFit、瑜伽等「泛運動愛好者」，擴大朋友圈傳播半徑。
+2. **激勵機制轉型 (Mission & Streak vs RPG Stat Grinding)**：
+   - 捨棄繁瑣的 RPG 打怪升級與數值衰減計算，轉為「三層任務體系」（每日日常任務 + 連續運動 Streak 加成 + 長期成就里程碑）與「金幣 (Coins) 經濟」。
+3. **金幣消費與社交閉環 (Coin Sinks & Social Plaza)**：
+   - 暫緩複雜的外部品牌導購 BD，專注內部娛樂感與好友互動。
+   - 金幣用於解鎖 2D 像素紙娃娃裝扮、好友圈動態打賞、贈送虛擬能量水/應援道具。
+   - 社交體系採用「好友圈動態 (Friend Feed) + 全站運動廣場 (Public Community) + 達人榜」。
+4. **發文與成果卡片 (Visual Quest Card & Meme Generator)**：
+   - 發文以自訂像素人物 + 運動成果圖卡為主體，可額外附現場隨拍照與自嘲短文，並內建 Meme 梗圖排版工坊。
+5. **註冊漸進式無感體驗 (Progressive Onboarding)**：
+   - 首次開啟極速免註冊試玩，觸發發布廣場/加好友/打賞等網路社交動作時引導一鍵綁定 Apple / Google / Email。
+6. **技術架構：遊戲畫布 + 跨端容器 (React + PixiJS + Capacitor)**：
+   - 視覺採用 **PixiJS 2D 像素遊戲渲染畫布**，打造純正遊戲引擎質感（HUD、9-slice 邊框、精靈動畫、8-bit 音效、金幣粒子）。
+   - 平台分發採用 **Web-First PWA ➔ Capacitor 封裝**，朋友點擊連結秒開試玩；驗證完成後由 AI 協助處理 Safe-Area、Haptics 與 Xcode/Android Studio 封裝，使用者完全無需學習 Swift/Kotlin。
+
+### 3. 影響範圍與產出檔案清單 (Impact & Modified Files)
+- 產出戰略對齊書：[`alignment_fitmon_v2_strategy.md`](file:///Users/yuchien/.gemini/antigravity-cli/brain/fe928b95-a5d1-439f-8ae3-9b7bc574f420/alignment_fitmon_v2_strategy.md)
+- 更新狀態看板：[`PROJECT_STATE.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)（版本演進至 `v0.2.0-pivot-aligned`，調整 Backlog 任務池）
+- 歷史日誌追加：[`logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
