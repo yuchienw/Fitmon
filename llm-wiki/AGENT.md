@@ -5,6 +5,16 @@
 
 ---
 
+## 0. 專案當前狀態快照 (Current State Snapshot) - 啟動第一時間必讀
+
+> [!IMPORTANT]
+> - **專案當前階段**：`Phase 0 - 規劃與 LLM-Wiki 知識庫深耕期`
+> - **核心行為約束**：⚠️ **現階段【嚴禁擅自啟動程式開發】**。專案尚未進入應用編碼階段，所有互動重心均為：收錄商業/技術文件、提煉主題 Wiki、論證數值模型、撰寫 ADR 與追加 Changelog。
+> - **最新演進摘要**：已完成 LLM-Wiki 目錄、`index.html` 原始 PRD 提煉、Git Monorepo 初始化。
+> - **進度追溯源**：每次執行任務前，必須先查看 [`logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md) 的最後一筆紀錄。
+
+---
+
 ## 1. 知識庫心智模型 (Mental Model)
 
 本知識庫遵循 Andrej Karpathy 提出的 **LLM-as-a-Maintainer** 架構，數據流向為單向提煉、嚴格隔離：

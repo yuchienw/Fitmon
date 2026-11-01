@@ -4,6 +4,17 @@
 
 ---
 
+## 📌 專案即時狀態看版 (Status Board) - AI 與團隊每次必讀
+
+> [!IMPORTANT]
+> - **當前階段**：`Phase 0 - 規劃與 LLM-Wiki 知識庫構建期`
+> - **開發狀態**：⚠️ **【凍結程式碼開發】**（現階段專注於商業模式、架構論證與日誌推演，尚未進入應用開發階段）
+> - **Git 狀態**：Monorepo 初始化完畢，分支 `main`，第一筆創世 Commit `62e6c3c` 已固化
+> - **最新演進**：請查閱 [`llm-wiki/logs/changelog.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
+> - **AI 協作守則**：請先閱讀 [`AGENT.md`](file:///Users/yuchien/Project/Github/fitmon/AGENT.md) 與 [`llm-wiki/wiki/00_INDEX.md`](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
+
+---
+
 ## 專案目錄結構概覽
 
 本專案採用 **「LLM 知識驅動（Karpathy LLM-Wiki）」** 與 **「Web-First 多平台架構」** 雙軸心佈局：
