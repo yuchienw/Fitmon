@@ -477,7 +477,7 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       activeTab: 'home',
       locale: 'zh-TW',
-      themeMode: 'light',
+      themeMode: 'system',
       soundEnabled: true,
       bgmEnabled: false,
       isNightModeRoom: false,
@@ -1490,12 +1490,12 @@ export const useGameStore = create<GameState>()(
       },
 
       resetDemoState: () => {
-        localStorage.removeItem('fitmon-mvp-storage-v3');
+        localStorage.removeItem('fitmon-mvp-storage-v4');
         window.location.reload();
       },
     }),
     {
-      name: 'fitmon-mvp-storage-v3',
+      name: 'fitmon-mvp-storage-v4',
       partialize: (state) => ({
         locale: state.locale,
         themeMode: state.themeMode,
