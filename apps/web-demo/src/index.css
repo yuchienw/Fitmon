@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --ios-fallback-top: 0px;
+  --ios-fallback-bottom: 0px;
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--ios-fallback-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--ios-fallback-bottom, 0px));
+}
+
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;
@@ -12,6 +19,24 @@
     background-color: #f4efe6;
     color: #29221e;
   }
+}
+
+/* iPhone Dynamic Island / Notch & Home Indicator Safe-Area Protection */
+.safe-top-header {
+  padding-top: calc(var(--safe-top, 0px) + 0.5rem) !important;
+}
+
+.safe-bottom-nav {
+  padding-bottom: calc(var(--safe-bottom, 0px) + 0.375rem) !important;
+}
+
+.fixed.inset-0 {
+  padding-top: calc(var(--safe-top, 0px) + 0.75rem) !important;
+  padding-bottom: calc(var(--safe-bottom, 0px) + 0.75rem) !important;
+}
+
+.fixed.inset-0 > div {
+  max-height: calc(100dvh - var(--safe-top, 0px) - var(--safe-bottom, 0px) - 1.5rem) !important;
 }
 
 .font-pixel {

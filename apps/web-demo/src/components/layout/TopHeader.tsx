@@ -39,7 +39,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
   return (
     <div className="shrink-0 z-30">
       <header
-        className={`backdrop-blur-md border-b px-3 py-2 flex items-center justify-between gap-1.5 transition-colors ${
+        className={`safe-top-header backdrop-blur-md border-b px-3 pb-2 flex items-center justify-between gap-1.5 transition-colors ${
           resolvedTheme === 'dark'
             ? 'bg-[#26211e]/95 border-[#3d3530]'
             : 'bg-[#fffcf7]/95 border-[#e5dccb]'

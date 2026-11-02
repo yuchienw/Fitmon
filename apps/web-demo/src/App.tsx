@@ -43,6 +43,23 @@ export const App: React.FC = () => {
   const resolvedTheme: 'light' | 'dark' =
     themeMode === 'system' ? (systemPrefersDark ? 'dark' : 'light') : themeMode;
 
+  // Detect iOS Native (Capacitor WKWebView) or Standalone Full-Screen App to guarantee Dynamic Island clearance
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const ua = window.navigator.userAgent || '';
+    const isIPhoneOrIPod = /iPhone|iPod/i.test(ua);
+    const isCapacitorNative = Boolean((window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor);
+    const isStandalonePWA =
+      Boolean((window.navigator as unknown as { standalone?: boolean }).standalone) ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    const isIosWebView = isIPhoneOrIPod && !/Safari\//i.test(ua);
+
+    if (isCapacitorNative || isStandalonePWA || isIosWebView) {
+      document.documentElement.style.setProperty('--ios-fallback-top', '56px');
+      document.documentElement.style.setProperty('--ios-fallback-bottom', '22px');
+    }
+  }, []);
+
   // Global Keep-Alive Timer (ticks rest timer & workout focus elapsed timer across all tabs!)
   useEffect(() => {
     if (!isRestRunning && !isWorkoutFocusActive) return;
@@ -69,9 +86,12 @@ export const App: React.FC = () => {
         {/* Top Persistent Header + Cross-Tab Workout Focus Dynamic Island */}
         <TopHeader resolvedTheme={resolvedTheme} />
 
-        {/* Toast Notification Pill */}
+        {/* Toast Notification Pill (Safe-Area Aware below TopHeader) */}
         {toastMessage && (
-          <div className="absolute top-14 left-3 right-3 z-40 pointer-events-none flex justify-center">
+          <div
+            style={{ top: 'calc(var(--safe-top, 0px) + 3.5rem)' }}
+            className="absolute left-3 right-3 z-40 pointer-events-none flex justify-center"
+          >
             <div className="px-3.5 py-2 rounded-xl bg-amber-400 border-2 border-amber-600 text-slate-950 text-xs font-black shadow-xl">
               {toastMessage}
             </div>

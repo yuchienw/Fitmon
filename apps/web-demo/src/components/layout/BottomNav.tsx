@@ -60,7 +60,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
 
   return (
     <nav
-      className={`shrink-0 backdrop-blur-md border-t px-2 py-1.5 z-30 transition-colors ${
+      className={`safe-bottom-nav shrink-0 backdrop-blur-md border-t px-2 pt-1.5 z-30 transition-colors ${
         resolvedTheme === 'dark'
           ? 'bg-[#26211e]/95 border-[#3d3530]'
           : 'bg-[#fffcf7]/95 border-[#e5dccb]'
