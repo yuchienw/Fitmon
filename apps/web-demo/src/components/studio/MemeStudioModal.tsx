@@ -249,7 +249,7 @@ export const MemeStudioModal: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <h3 className="text-sm font-black text-white">迷因拍貼工坊 (可自由拖曳貼圖與角色)</h3>
+            <h3 className="text-sm font-black text-white">拍貼工坊</h3>
           </div>
           <button
             onClick={() => store.setMemeStudioOpen(false)}
@@ -376,7 +376,7 @@ export const MemeStudioModal: React.FC = () => {
         {/* Meme Sticker Picker */}
         <div className="space-y-1">
           <label className="text-[11px] font-bold text-slate-300">
-            選擇健身迷因貼圖 (選取後可在畫布自由移動)：
+            迷因貼圖
           </label>
           <div className="grid grid-cols-2 gap-1.5">
             {MEME_STICKERS.map((stk) => (
@@ -397,7 +397,7 @@ export const MemeStudioModal: React.FC = () => {
 
         {/* Custom Caption */}
         <div>
-          <label className="text-[11px] font-bold text-slate-300 block mb-1">打卡心情語錄：</label>
+          <label className="text-[11px] font-bold text-slate-300 block mb-1">打卡語錄</label>
           <input
             type="text"
             value={caption}
@@ -414,7 +414,7 @@ export const MemeStudioModal: React.FC = () => {
             className="retro-btn py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-xs flex items-center justify-center gap-1.5"
           >
             <Download className="w-4 h-4 text-emerald-400" />
-            <span>下載 PNG 圖檔</span>
+            <span>下載圖片</span>
           </button>
 
           <button
@@ -422,7 +422,7 @@ export const MemeStudioModal: React.FC = () => {
             className="retro-btn py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5"
           >
             <Share2 className="w-4 h-4" />
-            <span>發佈至社交動態</span>
+            <span>發佈動態</span>
           </button>
         </div>
       </div>

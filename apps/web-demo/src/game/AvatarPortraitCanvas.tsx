@@ -6,11 +6,13 @@ interface AvatarPortraitCanvasProps {
   bodyStage: AvatarBodyStage;
   equipped: Record<EquipSlot, string>;
   room?: Record<RoomSlot, string>;
+  size?: number;
 }
 
 export const AvatarPortraitCanvas: React.FC<AvatarPortraitCanvasProps> = ({
   bodyStage,
   equipped,
+  size = 48,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -47,7 +49,8 @@ export const AvatarPortraitCanvas: React.FC<AvatarPortraitCanvasProps> = ({
       ref={canvasRef}
       width={128}
       height={128}
-      className="w-12 h-12 rounded-xl border border-amber-300/80 shrink-0 bg-amber-50 shadow-sm"
+      style={{ width: `${size}px`, height: `${size}px` }}
+      className="rounded-xl border border-amber-300/80 shrink-0 bg-amber-50 shadow-sm"
     />
   );
 };

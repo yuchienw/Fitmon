@@ -7,6 +7,8 @@ import {
   ROOM_ITEMS,
   EXERCISE_LIBRARY,
   INITIAL_SAVED_ROUTINES,
+  IAP_PACKAGES,
+  FRIEND_PROFILES,
   AvatarBodyStage,
   EquipSlot,
   RoomSlot,
@@ -36,6 +38,7 @@ export interface LoggedSet {
 export interface WorkoutSessionRecord {
   id: string;
   dateLabel: string;
+  daysAgo?: number;
   routineName: string;
   durationMinutes: number;
   totalVolume: number;
@@ -171,6 +174,7 @@ interface GameState {
 
   // Social Posts & Anti-Abuse Daily Caps (V2-12, V2-16)
   posts: SocialPost[];
+  friendIds: string[];
   dailySocialSentTotal: number;
   dailySocialMaxTotal: number;
   dailySentPerAuthor: Record<string, number>;
@@ -204,6 +208,7 @@ interface GameState {
   clearTryOnAndCart: () => void;
   checkoutCart: () => void;
   buyConsumable: (id: ConsumableItem['id'], useIapSim?: boolean) => void;
+  purchaseIapPackage: (packId: string) => void;
   useConsumableItem: (id: ConsumableItem['id']) => void;
 
   // Routine & Workout Focus Actions (V2-06, V2-14, V2-15)
@@ -212,6 +217,7 @@ interface GameState {
   copyOrReferenceRoutine: (routine: WorkoutTemplate) => void;
   startWorkoutFocus: (routine?: WorkoutTemplate) => void;
   swapActiveExercise: (oldExerciseId: string, newExerciseId: string) => void;
+  addExerciseToActiveQueue: (exerciseId: string) => void;
   selectExercise: (exerciseId: string) => void;
   setCurrentWeight: (kg: number) => void;
   setCurrentReps: (reps: number) => void;
@@ -224,6 +230,7 @@ interface GameState {
   quickLogSavedRoutine: (routine: WorkoutTemplate) => void;
 
   // Social Actions (V2-12, V2-16)
+  toggleFriend: (profileId: string) => void;
   tipPost: (postId: string) => void;
   giftWaterPost: (postId: string) => void;
   publishPost: (caption: string, stickerText?: string, customImageDataUrl?: string) => void;
@@ -278,8 +285,8 @@ const INITIAL_POSTS: SocialPost[] = [
   {
     id: 'post_seed_1',
     authorId: 'celeb_titan_chen',
-    authorName: '陳巨石 (Rock Chen)',
-    authorTitle: 'IPF 健力金牌・官方認證',
+    authorName: '陳巨石 · Rock',
+    authorTitle: 'IPF 健力金牌 · 官方認證',
     visibility: 'public',
     isVerified: true,
     bodyStage: 'titan',
@@ -297,19 +304,50 @@ const INITIAL_POSTS: SocialPost[] = [
       slotCenter: 'pet_shiba_dog',
       slotRight: 'prop_dumbbell_tower',
     },
-    workoutSummary: '陳巨石・三項極限巨力課表 (11 組)',
+    workoutSummary: '三項極限巨力課表 · 11組',
     totalVolumeKg: 5850,
     streakDays: 84,
-    caption: '今天三項課表全部達標！點擊我的頭像可以看個人主頁，或是來我家一起同框深蹲！🔥',
+    caption: '今天三項課表全部達標！點我頭像可加好友或來我家同框深蹲 🔥',
     stickerText: '🏆 NEW PR! 地心引力阻止不了我',
     tipsCount: 42,
     waterCount: 28,
     createdAtLabel: '12 分鐘前',
   },
   {
+    id: 'post_seed_leo',
+    authorId: 'user_leo',
+    authorName: '街頭健體 · Leo',
+    authorTitle: '體脂 9% · 自然健體 Lv.12',
+    visibility: 'public',
+    isVerified: false,
+    bodyStage: 'aesthetic',
+    equipped: {
+      hair: 'hair_spiky_gold',
+      face: 'face_confident_smile',
+      top: 'top_bare_muscles',
+      bottom: 'bottom_navy_shorts',
+      accessory: 'acc_iron_dumbbell',
+    },
+    room: {
+      wallpaper: 'wall_zen_wood',
+      floor: 'floor_rubber_black',
+      slotLeft: 'rack_classic_cage',
+      slotCenter: 'pet_black_cat',
+      slotRight: 'prop_dumbbell_tower',
+    },
+    workoutSummary: '倒三角肩背課表 · 12組',
+    totalVolumeKg: 4120,
+    streakDays: 16,
+    caption: '剛加入 FitMon！赤膊體態終於練出六塊肌了，歡迎大家加我好友一起互相督促 💪',
+    stickerText: '⚡ 泵感炸裂！',
+    tipsCount: 19,
+    waterCount: 11,
+    createdAtLabel: '22 分鐘前',
+  },
+  {
     id: 'post_seed_2',
     authorId: 'friend_akai',
-    authorName: '深蹲救星・阿凱',
+    authorName: '深蹲救星 · 阿凱',
     authorTitle: '好友 · 維京巨力 Lv.14',
     visibility: 'friends',
     isVerified: false,
@@ -328,10 +366,10 @@ const INITIAL_POSTS: SocialPost[] = [
       slotCenter: 'pet_black_cat',
       slotRight: 'prop_arcade_cabinet',
     },
-    workoutSummary: '黃金臀腿增肌主課表 (10 組)',
+    workoutSummary: '黃金臀腿增肌主課表 · 10組',
     totalVolumeKg: 6840,
     streakDays: 12,
-    caption: '我把家裡左邊換成跑步機、右邊放街機了！練完腿快來我家串門子看看新佈置～😂',
+    caption: '我把家裡左邊換成跑步機、右邊放街機了！練完腿快來我家串門看看新佈置 😂',
     stickerText: '♿ 今天練腿，明天請幫我推輪椅',
     tipsCount: 15,
     waterCount: 9,
@@ -340,7 +378,7 @@ const INITIAL_POSTS: SocialPost[] = [
   {
     id: 'post_seed_3',
     authorId: 'celeb_aesthetic_lin',
-    authorName: '林健美 (Jay Lin)',
+    authorName: '林健美 · Jay',
     authorTitle: 'IFBB Pro 古典健體選手',
     visibility: 'public',
     isVerified: true,
@@ -348,7 +386,7 @@ const INITIAL_POSTS: SocialPost[] = [
     equipped: {
       hair: 'hair_spiky_gold',
       face: 'face_pixel_shades',
-      top: 'top_spartan_cape',
+      top: 'top_bare_muscles',
       bottom: 'bottom_gold_tights',
       accessory: 'acc_protein_shaker',
     },
@@ -359,10 +397,10 @@ const INITIAL_POSTS: SocialPost[] = [
       slotCenter: 'pet_whey_bot',
       slotRight: 'prop_arcade_cabinet',
     },
-    workoutSummary: '3D 倒三角肩背美學 (15 組)',
+    workoutSummary: '3D 倒三角肩背美學 · 15組',
     totalVolumeKg: 4320,
     streakDays: 45,
-    caption: '把每一組啞鈴側平舉的組間休息嚴格控制在 60 秒，三角肌中束泵感炸裂！✨',
+    caption: '把每一組啞鈴側平舉的休息嚴格控制在 60 秒，三角肌中束泵感炸裂 ✨',
     stickerText: '🧋 我的血液裡流淌著高蛋白乳清',
     tipsCount: 31,
     waterCount: 19,
@@ -371,7 +409,7 @@ const INITIAL_POSTS: SocialPost[] = [
   {
     id: 'post_seed_4',
     authorId: 'friend_alice',
-    authorName: '百公斤深蹲・艾莉絲',
+    authorName: '百公斤深蹲 · 艾莉絲',
     authorTitle: '好友 · 古典美學 Lv.19',
     visibility: 'friends',
     isVerified: false,
@@ -390,10 +428,10 @@ const INITIAL_POSTS: SocialPost[] = [
       slotCenter: 'pet_shiba_dog',
       slotRight: 'prop_plant_monstera',
     },
-    workoutSummary: '週末有氧燃脂＋核心恢復 (5 組)',
+    workoutSummary: '有氧燃脂＋核心恢復 · 5組',
     totalVolumeKg: 2400,
     streakDays: 21,
-    caption: '今天不做大重量，跑完坡度跑步機再做 3 組棒式核心，身心舒暢！🌿',
+    caption: '今天不做大重量，跑完坡度跑步機再做 3 組棒式核心，身心舒暢 🌿',
     stickerText: '⚡ 延遲性肌肉痠痛是我的勳章',
     tipsCount: 18,
     waterCount: 14,
@@ -405,6 +443,7 @@ const INITIAL_WORKOUT_HISTORY: WorkoutSessionRecord[] = [
   {
     id: 'hist_seed_1',
     dateLabel: '昨天 20:15',
+    daysAgo: 1,
     routineName: '🔥 黃金臀腿增肌主課表',
     durationMinutes: 48,
     totalVolume: 6320,
@@ -438,8 +477,9 @@ const INITIAL_WORKOUT_HISTORY: WorkoutSessionRecord[] = [
   },
   {
     id: 'hist_seed_2',
-    dateLabel: '3 天前 19:30',
-    routineName: '💪 週三下班快速推日 (胸/肩)',
+    dateLabel: '2 天前 19:30',
+    daysAgo: 2,
+    routineName: '💪 下班快速推日',
     durationMinutes: 42,
     totalVolume: 4680,
     totalSets: 7,
@@ -467,6 +507,84 @@ const INITIAL_WORKOUT_HISTORY: WorkoutSessionRecord[] = [
           { weightKg: 42.5, reps: 8, restSec: 90, isPR: false },
           { weightKg: 45, reps: 8, restSec: 90, isPR: true },
         ],
+      },
+    ],
+  },
+  {
+    id: 'hist_seed_3',
+    dateLabel: '4 天前 21:00',
+    daysAgo: 4,
+    routineName: '🦅 倒三角背部拉日',
+    durationMinutes: 45,
+    totalVolume: 5120,
+    totalSets: 8,
+    coinsEarned: 105,
+    expEarned: 1020,
+    topExerciseZh: '傳統槓鈴硬舉',
+    exerciseLogs: [
+      {
+        exerciseId: 'conventional_deadlift',
+        exerciseNameZh: '傳統槓鈴硬舉',
+        unitLabel: 'kg',
+        sets: [
+          { weightKg: 100, reps: 6, restSec: 150, isPR: false },
+          { weightKg: 110, reps: 6, restSec: 150, isPR: false },
+          { weightKg: 120, reps: 5, restSec: 150, isPR: true },
+        ],
+      },
+      {
+        exerciseId: 'lat_pulldown',
+        exerciseNameZh: '寬握滑輪下拉',
+        unitLabel: 'kg',
+        sets: [
+          { weightKg: 55, reps: 10, restSec: 90, isPR: false },
+          { weightKg: 60, reps: 10, restSec: 90, isPR: false },
+          { weightKg: 60, reps: 10, restSec: 90, isPR: false },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'hist_seed_4',
+    dateLabel: '8 天前 18:40',
+    daysAgo: 8,
+    routineName: '🔥 黃金臀腿增肌主課表',
+    durationMinutes: 50,
+    totalVolume: 5900,
+    totalSets: 7,
+    coinsEarned: 100,
+    expEarned: 980,
+    topExerciseZh: '槓鈴頸後深蹲',
+    exerciseLogs: [
+      {
+        exerciseId: 'barbell_squat',
+        exerciseNameZh: '槓鈴頸後深蹲',
+        unitLabel: 'kg',
+        sets: [
+          { weightKg: 80, reps: 8, restSec: 120, isPR: false },
+          { weightKg: 85, reps: 8, restSec: 120, isPR: false },
+          { weightKg: 90, reps: 8, restSec: 120, isPR: false },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'hist_seed_5',
+    dateLabel: '14 天前 20:00',
+    daysAgo: 14,
+    routineName: '🏃 有氧燃脂＋核心恢復',
+    durationMinutes: 35,
+    totalVolume: 2400,
+    totalSets: 5,
+    coinsEarned: 70,
+    expEarned: 680,
+    topExerciseZh: '坡度跑步機快走',
+    exerciseLogs: [
+      {
+        exerciseId: 'treadmill_run',
+        exerciseNameZh: '坡度跑步機快走',
+        unitLabel: '分鐘',
+        sets: [{ weightKg: 1, reps: 25, restSec: 60, isPR: false }],
       },
     ],
   },
@@ -503,7 +621,7 @@ export const useGameStore = create<GameState>()(
       equipped: {
         hair: 'hair_ headband_red',
         face: 'face_confident_smile',
-        top: 'top_black_tank',
+        top: 'top_bare_muscles',
         bottom: 'bottom_navy_shorts',
         accessory: 'acc_iron_dumbbell',
       },
@@ -517,6 +635,7 @@ export const useGameStore = create<GameState>()(
       ownedItemIds: [
         'hair_ headband_red',
         'face_confident_smile',
+        'top_bare_muscles',
         'top_black_tank',
         'bottom_navy_shorts',
         'acc_iron_dumbbell',
@@ -572,6 +691,7 @@ export const useGameStore = create<GameState>()(
       },
 
       posts: INITIAL_POSTS,
+      friendIds: ['friend_akai', 'friend_alice'],
       dailySocialSentTotal: 0,
       dailySocialMaxTotal: 5,
       dailySentPerAuthor: {},
@@ -827,7 +947,7 @@ export const useGameStore = create<GameState>()(
         };
         const cost = priceMap[id];
         if (!useIapSim && state.coins < cost) {
-          state.showToast(`⚠️ 金幣不足（需 ${cost} 🪙）`);
+          state.showToast(`⚠️ 金幣不足，需 ${cost} 🪙`);
           return;
         }
         soundFX.playCoin();
@@ -838,7 +958,24 @@ export const useGameStore = create<GameState>()(
             [id]: (state.consumables[id] || 0) + 1,
           },
         });
-        state.showToast('🧪 道具已購買存入背包！');
+        state.showToast(useIapSim ? '💳 模擬內購成功！道具已存入背包' : '🧪 道具已購買存入背包');
+      },
+
+      purchaseIapPackage: (packId) => {
+        const state = get();
+        const pack = IAP_PACKAGES.find((p) => p.id === packId);
+        if (!pack) return;
+        soundFX.playVictory();
+        set({
+          coins: state.coins + pack.rewardCoins,
+          stamina: pack.bonusStamina
+            ? Math.min(state.maxStamina, state.stamina + pack.bonusStamina)
+            : state.stamina,
+          streakFreezes: pack.bonusFreezes
+            ? Math.min(5, state.streakFreezes + pack.bonusFreezes)
+            : state.streakFreezes,
+        });
+        state.showToast(`💎 模擬內購成功！獲得 +${pack.rewardCoins} 🪙`);
       },
 
       useConsumableItem: (id) => {
@@ -934,7 +1071,7 @@ export const useGameStore = create<GameState>()(
           activeTab: 'workout',
           selectedProfileId: null,
         });
-        state.showToast(`🔗 已將【${routine.nameZh}】加入您的引用課表庫！`);
+        state.showToast(`🔗 已將【${routine.nameZh}】加入引用課表`);
       },
 
       startWorkoutFocus: (routine) => {
@@ -996,7 +1133,39 @@ export const useGameStore = create<GameState>()(
               : item
           ),
         }));
-        get().showToast(`🔄 已將中途動作替換為：${newEx.nameZh}`);
+        get().showToast(`🔄 已替換為：${newEx.nameZh}`);
+      },
+
+      addExerciseToActiveQueue: (exerciseId) => {
+        const newEx = EXERCISE_LIBRARY.find((e) => e.id === exerciseId);
+        if (!newEx) return;
+        soundFX.playSetComplete();
+        set((state) => {
+          const alreadyExists = state.templateQueue.some((q) => q.exerciseId === exerciseId);
+          const nextQueue = alreadyExists
+            ? state.templateQueue.map((q) =>
+                q.exerciseId === exerciseId ? { ...q, targetSets: q.targetSets + 2 } : q
+              )
+            : [
+                ...state.templateQueue,
+                {
+                  exerciseId: newEx.id,
+                  targetSets: 4,
+                  completedSets: 0,
+                  reps: newEx.defaultReps,
+                  weightKg: newEx.defaultWeightKg,
+                  restSeconds: newEx.defaultRestSec,
+                },
+              ];
+          return {
+            templateQueue: nextQueue,
+            selectedExerciseId: newEx.id,
+            currentWeightKg: newEx.defaultWeightKg,
+            currentReps: newEx.defaultReps,
+            currentRestConfigSec: newEx.defaultRestSec,
+          };
+        });
+        get().showToast(`➕ 已新增動作：${newEx.nameZh}`);
       },
 
       selectExercise: (exerciseId) => {
@@ -1038,7 +1207,7 @@ export const useGameStore = create<GameState>()(
             soundFX.playSetComplete();
             updates.restSecondsLeft = 0;
             updates.isRestRunning = false;
-            state.showToast('⏰ 組間休息結束！準備開始下一組！');
+            state.showToast('⏰ 休息結束！開始下一組');
           } else {
             updates.restSecondsLeft = state.restSecondsLeft - 1;
           }
@@ -1129,10 +1298,10 @@ export const useGameStore = create<GameState>()(
         });
 
         if (isPR) {
-          state.showToast(`🏆 NEW PR！${ex.nameZh} 突破 ${state.currentWeightKg}${ex.unitLabel}！`);
+          state.showToast(`🏆 NEW PR！${ex.nameZh} 突破 ${state.currentWeightKg}${ex.unitLabel}`);
         } else {
           state.showToast(
-            `✅ 完成 ${ex.nameZh} (${state.currentWeightKg}${ex.unitLabel} × ${state.currentReps})！休息倒數 ${state.currentRestConfigSec}s`
+            `✅ 完成 ${ex.nameZh} ${state.currentWeightKg}${ex.unitLabel}×${state.currentReps}`
           );
         }
       },
@@ -1140,7 +1309,7 @@ export const useGameStore = create<GameState>()(
       finishWorkoutSession: () => {
         const state = get();
         if (state.sessionSets.length === 0) {
-          state.showToast('請先至少完成 1 組動作再結算，或點擊「放棄訓練」退出');
+          state.showToast('請至少完成 1 組動作再結算');
           return;
         }
 
@@ -1174,7 +1343,6 @@ export const useGameStore = create<GameState>()(
           )
         );
 
-        // Group sets by exercise for full single-day session history (V2-01)
         const groupedMap = new Map<
           string,
           {
@@ -1210,7 +1378,8 @@ export const useGameStore = create<GameState>()(
 
         const sessionRecord: WorkoutSessionRecord = {
           id: `hist_${Date.now()}`,
-          dateLabel: '剛剛 (今日紀錄)',
+          dateLabel: '今日 剛剛',
+          daysAgo: 0,
           routineName: routineTitle,
           durationMinutes: durationMin,
           totalVolume: calcResult.totalRawVolume,
@@ -1262,7 +1431,7 @@ export const useGameStore = create<GameState>()(
           activeTemplateName: null,
           templateQueue: [],
         });
-        get().showToast('已退出本次運動專注模式');
+        get().showToast('已退出專注模式');
       },
 
       quickLogSavedRoutine: (routine) => {
@@ -1318,7 +1487,8 @@ export const useGameStore = create<GameState>()(
 
         const sessionRecord: WorkoutSessionRecord = {
           id: `hist_${Date.now()}`,
-          dateLabel: '剛剛 (3秒課表速記)',
+          dateLabel: '今日 速記',
+          daysAgo: 0,
           routineName: routine.nameZh,
           durationMinutes: 40,
           totalVolume: calcResult.totalRawVolume,
@@ -1353,18 +1523,34 @@ export const useGameStore = create<GameState>()(
       },
 
       // ================= SOCIAL ACTIONS WITH ANTI-ABUSE CAPS (V2-12, V2-16) =================
+      toggleFriend: (profileId) => {
+        const state = get();
+        const isAlreadyFriend = state.friendIds.includes(profileId);
+        const target = FRIEND_PROFILES.find((f) => f.id === profileId);
+        soundFX.playSetComplete();
+        const nextFriendIds = isAlreadyFriend
+          ? state.friendIds.filter((id) => id !== profileId)
+          : [...state.friendIds, profileId];
+        set({ friendIds: nextFriendIds });
+        state.showToast(
+          isAlreadyFriend
+            ? `已取消與 ${target?.nameZh || '玩家'} 的好友`
+            : `🤝 已與 ${target?.nameZh || '玩家'} 成為好友！`
+        );
+      },
+
       tipPost: (postId) => {
         const state = get();
         const post = state.posts.find((p) => p.id === postId);
         if (!post) return;
 
         if (state.dailySocialSentTotal >= state.dailySocialMaxTotal) {
-          state.showToast(`🛑 今日總互助額度已達上限 (${state.dailySocialMaxTotal}/${state.dailySocialMaxTotal} 次)！`);
+          state.showToast(`🛑 今日互助額度已滿 ${state.dailySocialMaxTotal}/${state.dailySocialMaxTotal}`);
           return;
         }
         const authorCount = state.dailySentPerAuthor[post.authorId] || 0;
         if (authorCount >= 2) {
-          state.showToast(`🛑 對【${post.authorName}】今日鼓勵已達上限 (2/2 次)！`);
+          state.showToast(`🛑 對 ${post.authorName} 今日鼓勵已滿 2/2`);
           return;
         }
         if (state.coins < ECONOMY_CONFIG.tipSingleCoinCost) {
@@ -1385,11 +1571,7 @@ export const useGameStore = create<GameState>()(
             q.id === 'q_social_cheer' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
           ),
         });
-        state.showToast(
-          `🪙 已打賞 ${post.authorName}！（今日剩餘額度 ${
-            state.dailySocialMaxTotal - state.dailySocialSentTotal - 1
-          }/${state.dailySocialMaxTotal}）`
-        );
+        state.showToast(`🪙 已打賞 ${post.authorName}`);
       },
 
       giftWaterPost: (postId) => {
@@ -1398,12 +1580,12 @@ export const useGameStore = create<GameState>()(
         if (!post) return;
 
         if (state.dailySocialSentTotal >= state.dailySocialMaxTotal) {
-          state.showToast(`🛑 今日總互助額度已達上限 (${state.dailySocialMaxTotal}/${state.dailySocialMaxTotal} 次)！`);
+          state.showToast(`🛑 今日互助額度已滿 ${state.dailySocialMaxTotal}/${state.dailySocialMaxTotal}`);
           return;
         }
         const authorCount = state.dailySentPerAuthor[post.authorId] || 0;
         if (authorCount >= 2) {
-          state.showToast(`🛑 對【${post.authorName}】今日送禮已達上限 (2/2 次)！`);
+          state.showToast(`🛑 對 ${post.authorName} 今日送禮已滿 2/2`);
           return;
         }
         if (state.coins < ECONOMY_CONFIG.giftEnergyDrinkCost) {
@@ -1426,11 +1608,7 @@ export const useGameStore = create<GameState>()(
             q.id === 'q_social_cheer' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
           ),
         });
-        state.showToast(
-          `💧 已送水給 ${post.authorName}！（今日剩餘額度 ${
-            state.dailySocialMaxTotal - state.dailySocialSentTotal - 1
-          }/${state.dailySocialMaxTotal}）`
-        );
+        state.showToast(`💧 已送水給 ${post.authorName}`);
       },
 
       publishPost: (caption, stickerText, customImageDataUrl) => {
@@ -1440,18 +1618,18 @@ export const useGameStore = create<GameState>()(
           id: `post_${Date.now()}`,
           authorId: 'me_player',
           authorName: state.nickname,
-          authorTitle: `本人 · Lv.${state.level} ${state.bodyStage.toUpperCase()}`,
+          authorTitle: `本人 · Lv.${state.level}`,
           visibility: 'mine',
           isVerified: false,
           bodyStage: state.bodyStage,
           equipped: { ...state.equipped },
           room: { ...state.room },
           workoutSummary: latestHist
-            ? `${latestHist.routineName} (${latestHist.totalSets} 組)`
+            ? `${latestHist.routineName} · ${latestHist.totalSets}組`
             : '自主訓練打卡',
           totalVolumeKg: latestHist ? latestHist.totalVolume : 3600,
           streakDays: state.streakDays,
-          caption: caption || '今日份的鋼鐵修煉完成！再一組就回家！💪',
+          caption: caption || '今日份的鋼鐵修煉完成！💪',
           stickerText,
           tipsCount: 1,
           waterCount: 1,
@@ -1468,7 +1646,7 @@ export const useGameStore = create<GameState>()(
             q.id === 'q_create_meme' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
           ),
         });
-        state.showToast('📸 拍立得已發布至社交動態（可在「我的貼文」查看）！');
+        state.showToast('📸 已發布至社交動態！');
       },
 
       updateBiometrics: (partial) => {
@@ -1480,22 +1658,22 @@ export const useGameStore = create<GameState>()(
       addDemoCoins: (amount) => {
         soundFX.playCoin();
         set((s) => ({ coins: s.coins + amount }));
-        get().showToast(`🪙 測試金幣 +${amount}！`);
+        get().showToast(`🪙 金幣 +${amount}`);
       },
 
       refillStaminaFull: () => {
         soundFX.playSetComplete();
         set((s) => ({ stamina: s.maxStamina, dailySocialSentTotal: 0, dailySentPerAuthor: {} }));
-        get().showToast('⚡ 體力已補滿至 100/100（並重置今日打賞次數）！');
+        get().showToast('⚡ 體力已補滿 100/100');
       },
 
       resetDemoState: () => {
-        localStorage.removeItem('fitmon-mvp-storage-v4');
+        localStorage.removeItem('fitmon-mvp-storage-v5');
         window.location.reload();
       },
     }),
     {
-      name: 'fitmon-mvp-storage-v4',
+      name: 'fitmon-mvp-storage-v5',
       partialize: (state) => ({
         locale: state.locale,
         themeMode: state.themeMode,
@@ -1519,6 +1697,7 @@ export const useGameStore = create<GameState>()(
         workoutHistory: state.workoutHistory,
         biometrics: state.biometrics,
         posts: state.posts,
+        friendIds: state.friendIds,
         dailySocialSentTotal: state.dailySocialSentTotal,
         dailySentPerAuthor: state.dailySentPerAuthor,
       }),

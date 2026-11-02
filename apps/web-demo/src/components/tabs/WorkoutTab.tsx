@@ -114,27 +114,26 @@ export const WorkoutTab: React.FC = () => {
   if (store.isWorkoutFocusActive) {
     return (
       <div className="p-3.5 space-y-3.5 pb-10">
-        {/* 1. FOCUS TOP BAR (Elapsed Time + Early/Full Settlement) */}
+        {/* 1. FOCUS TOP BAR */}
         <div className="retro-box rounded-2xl p-3 bg-gradient-to-r from-emerald-950/90 via-slate-900 to-slate-900 border-emerald-500/50 flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               <span className="text-[11px] font-black text-emerald-300 uppercase tracking-wider">
-                專注訓練進行中 · {formatMMSS(store.workoutElapsedSeconds)}
+                訓練中 · {formatMMSS(store.workoutElapsedSeconds)}
               </span>
             </div>
             <h2 className="text-sm font-black text-white truncate mt-0.5">
-              📋 {store.activeTemplateName || '自由訓練課表'}
+              📋 {store.activeTemplateName || '自由訓練'}
             </h2>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => store.discardWorkoutSession()}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 text-[11px] font-bold"
-              title="放棄本次訓練"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 text-xs font-bold"
             >
-              放棄
+              退出
             </button>
             <button
               onClick={() => store.finishWorkoutSession()}
@@ -146,35 +145,35 @@ export const WorkoutTab: React.FC = () => {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>完成結算 ({store.sessionSets.length}組)</span>
+              <span>結算 · {store.sessionSets.length}組</span>
             </button>
           </div>
         </div>
 
-        {/* 2. ROUTINE EXERCISE QUEUE (Click to switch exercise anytime) */}
+        {/* 2. ROUTINE EXERCISE QUEUE + MID-WORKOUT ADD / SWAP */}
         {store.templateQueue.length > 0 && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between px-0.5">
-              <span className="text-[11px] font-black text-slate-400">
-                課表動作序列 (可隨時點選切換或中途替換器材)
-              </span>
-              <button
-                onClick={() => setSwapModalOpen(true)}
-                className="text-[11px] font-black text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>中途替換 / 新增動作</span>
-              </button>
+              <span className="text-xs font-black text-slate-300">課表動作</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setSwapModalOpen(true)}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-[11px] font-black text-cyan-300 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3 stroke-[3px]" />
+                  <span>新增 / 換動作</span>
+                </button>
+              </div>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              {store.templateQueue.map((q) => {
+              {store.templateQueue.map((q, qIdx) => {
                 const ex = EXERCISE_LIBRARY.find((e) => e.id === q.exerciseId);
                 if (!ex) return null;
                 const isCurrent = store.selectedExerciseId === q.exerciseId;
                 const isDone = q.completedSets >= q.targetSets;
                 return (
                   <button
-                    key={q.exerciseId}
+                    key={`${q.exerciseId}_${qIdx}`}
                     onClick={() => store.selectExercise(q.exerciseId)}
                     className={`p-2 rounded-xl border text-left shrink-0 flex items-center gap-2 transition ${
                       isDone
@@ -186,14 +185,21 @@ export const WorkoutTab: React.FC = () => {
                   >
                     <ExerciseThumbnail exercise={ex} size={34} />
                     <div>
-                      <div className="text-xs font-black truncate max-w-[110px]">{ex.nameZh}</div>
+                      <div className="text-xs font-black truncate max-w-[105px]">{ex.nameZh}</div>
                       <div className="text-[10px] font-mono text-slate-300">
-                        {q.completedSets}/{q.targetSets} 組 · 休{q.restSeconds}s
+                        {q.completedSets}/{q.targetSets}組
                       </div>
                     </div>
                   </button>
                 );
               })}
+              <button
+                onClick={() => setSwapModalOpen(true)}
+                className="px-3 py-2.5 rounded-xl border border-dashed border-cyan-500/50 bg-slate-900/70 text-cyan-300 text-xs font-black shrink-0 flex items-center gap-1 hover:bg-slate-800"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[3px]" />
+                <span>新增</span>
+              </button>
             </div>
           </div>
         )}
@@ -204,9 +210,7 @@ export const WorkoutTab: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <Timer className="w-5 h-5 text-cyan-400 animate-spin" />
               <div>
-                <div className="text-xs font-black text-cyan-200">
-                  組間休息倒數 (切換至其他分頁也會置頂提醒)
-                </div>
+                <div className="text-xs font-black text-cyan-200">休息倒數</div>
                 <div className="text-lg font-mono font-black text-white">
                   {formatMMSS(store.restSecondsLeft)}
                 </div>
@@ -223,65 +227,60 @@ export const WorkoutTab: React.FC = () => {
                 onClick={() => store.setRestTimer(0)}
                 className="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/30"
               >
-                跳過休息
+                跳過
               </button>
             </div>
           </div>
         )}
 
-        {/* 4. CURRENT EXERCISE VISUAL CARD + DIRECT NUMBER INPUTS (V2-06, V2-14) */}
-        <div className="retro-box rounded-2xl p-4 space-y-4">
-          <div className="flex items-center justify-between gap-3">
+        {/* 4. CURRENT EXERCISE VISUAL CARD + DIRECT NUMBER INPUTS */}
+        <div className="retro-box rounded-2xl p-3.5 space-y-3.5">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
-              <ExerciseThumbnail exercise={selectedExercise} size={56} />
+              <ExerciseThumbnail exercise={selectedExercise} size={54} />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black">
                     {selectedExercise.muscleLabelZh}
                   </span>
-                  <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 text-[10px] font-bold">
-                    {selectedExercise.sportType === 'strength'
-                      ? '🏋️ 重訓器材'
-                      : selectedExercise.sportType === 'cardio'
-                      ? '🏃 有氧耐力'
-                      : '🤸 徒手核心'}
-                  </span>
                   {currentPR > 0 && (
                     <span className="text-[10px] font-mono text-amber-300 font-bold">
-                      🏆 PR: {currentPR} {selectedExercise.unitLabel}
+                      🏆 PR {currentPR} {selectedExercise.unitLabel}
                     </span>
                   )}
                 </div>
-                <h3 className="text-base font-black text-white mt-1 truncate">
+                <h3 className="text-base font-black text-white mt-0.5 truncate">
                   {selectedExercise.nameZh}
                 </h3>
                 {selectedExercise.primaryMusclesZh && (
                   <p className="text-[11px] text-slate-400 truncate">
-                    🎯 主働肌：{selectedExercise.primaryMusclesZh}
+                    🎯 {selectedExercise.primaryMusclesZh}
                   </p>
                 )}
               </div>
             </div>
 
-            <button
-              onClick={() => setSwapModalOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-black flex items-center gap-1 shrink-0"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>換動作</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setSwapModalOpen(true)}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-black flex items-center gap-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>換動作</span>
+              </button>
+            </div>
           </div>
 
           {/* Direct Keyboard Input + Stepper for Weight/Distance & Reps/Duration */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             {/* Weight / Distance / Intensity Input */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col items-center">
-              <span className="text-[11px] text-slate-400 font-bold mb-1.5">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center">
+              <span className="text-xs text-slate-300 font-black mb-1">
                 {selectedExercise.unitLabel === 'kg'
-                  ? '重量 (kg · 可直接點擊輸入)'
+                  ? '重量 kg'
                   : selectedExercise.unitLabel === 'km'
-                  ? '距離 (km · 可直接輸入)'
-                  : '強度 / 秒數'}
+                  ? '距離 km'
+                  : `數值 ${selectedExercise.unitLabel}`}
               </span>
               <div className="flex items-center justify-between w-full gap-1">
                 <button
@@ -319,11 +318,9 @@ export const WorkoutTab: React.FC = () => {
             </div>
 
             {/* Reps / Minutes Input */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col items-center">
-              <span className="text-[11px] text-slate-400 font-bold mb-1.5">
-                {selectedExercise.sportType === 'cardio'
-                  ? '次數 / 趟數 (可直接輸入)'
-                  : '次數 (Reps · 可直接輸入)'}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center">
+              <span className="text-xs text-slate-300 font-black mb-1">
+                {selectedExercise.sportType === 'cardio' ? '趟數 / 組數' : '次數 Reps'}
               </span>
               <div className="flex items-center justify-between w-full gap-1">
                 <button
@@ -352,11 +349,11 @@ export const WorkoutTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Per-Exercise Rest Timer Setting (V2-06) */}
+          {/* Per-Exercise Rest Timer Setting */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <Timer className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span className="text-xs font-bold text-slate-300">本動作組間休息 (秒):</span>
+              <span className="text-xs font-bold text-slate-300">組間休息</span>
             </div>
             <div className="flex items-center gap-1">
               {[60, 90, 120, 180].map((sec) => (
@@ -392,22 +389,22 @@ export const WorkoutTab: React.FC = () => {
           >
             <Check className="w-5 h-5 stroke-[3px]" />
             <span>
-              紀錄本組：{selectedExercise.nameZh} ({store.currentWeightKg}
-              {selectedExercise.unitLabel} × {store.currentReps}次)
+              完成本組 · {store.currentWeightKg}
+              {selectedExercise.unitLabel} × {store.currentReps}
             </span>
           </button>
         </div>
 
-        {/* 5. COMPLETED SETS LOG LIST WITH VISUAL EXERCISE THUMBNAILS (V2-14) */}
+        {/* 5. COMPLETED SETS LOG LIST WITH VISUAL EXERCISE THUMBNAILS */}
         <div className="retro-box rounded-2xl p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black text-white flex items-center gap-1.5">
               <Flame className="w-4 h-4 text-amber-400" />
-              本次已完成動作與組數明細 ({store.sessionSets.length} 組)
+              已完成 {store.sessionSets.length} 組
             </span>
             {store.sessionSets.length > 0 && (
               <span className="text-[11px] font-mono text-emerald-400 font-bold">
-                總容量{' '}
+                總量{' '}
                 {store.sessionSets
                   .reduce((acc, s) => acc + s.weightKg * s.reps, 0)
                   .toLocaleString()}{' '}
@@ -417,8 +414,8 @@ export const WorkoutTab: React.FC = () => {
           </div>
 
           {store.sessionSets.length === 0 ? (
-            <div className="text-center py-6 text-xs text-slate-500">
-              尚未紀錄任何組數，點擊上方「紀錄本組」開始累積獎勵！
+            <div className="text-center py-5 text-xs text-slate-500">
+              點擊上方「完成本組」開始紀錄
             </div>
           ) : (
             <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
@@ -442,13 +439,13 @@ export const WorkoutTab: React.FC = () => {
                           </span>
                           {s.isPR && (
                             <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black">
-                              🏆 PR!
+                              🏆 PR
                             </span>
                           )}
                         </div>
                         <div className="text-[11px] font-mono text-cyan-300 font-bold mt-0.5">
-                          {s.weightKg} {s.unitLabel} × {s.reps} 次{' '}
-                          <span className="text-slate-500">· 休 {s.restSec}s</span>
+                          {s.weightKg} {s.unitLabel} × {s.reps}次{' '}
+                          <span className="text-slate-500">· 休{s.restSec}s</span>
                         </div>
                       </div>
                     </div>
@@ -463,17 +460,17 @@ export const WorkoutTab: React.FC = () => {
           )}
         </div>
 
-        {/* MID-WORKOUT SWAP / SELECT EXERCISE MODAL (V2-06, V2-15) */}
+        {/* MID-WORKOUT ADD OR SWAP EXERCISE MODAL (Item 1 Fixed: Distinct 替換 vs ＋新增 buttons!) */}
         {swapModalOpen && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3 border-2 border-cyan-500/40 max-h-[82vh] flex flex-col">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-black text-white">
-                    🔄 切換或中途替換動作 (目前：{selectedExercise.nameZh})
+                    新增或替換動作
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    器材被佔用？直接替換目前課表動作或切換至重訓/有氧/徒手項目
+                    點「＋新增」加進今日序列，或點「替換」換掉 {selectedExercise.nameZh}
                   </p>
                 </div>
                 <button
@@ -514,7 +511,7 @@ export const WorkoutTab: React.FC = () => {
                   type="text"
                   value={swapSearch}
                   onChange={(e) => setSwapSearch(e.target.value)}
-                  placeholder="搜尋動作名稱或部位 (例：深蹲、胸推、慢跑)..."
+                  placeholder="搜尋動作名稱或部位..."
                   className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-cyan-400"
                 />
               </div>
@@ -536,12 +533,12 @@ export const WorkoutTab: React.FC = () => {
                     className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <ExerciseThumbnail exercise={ex} size={42} />
+                      <ExerciseThumbnail exercise={ex} size={40} />
                       <div className="min-w-0">
                         <div className="text-xs font-black text-white truncate">{ex.nameZh}</div>
                         <div className="text-[10px] text-slate-400">
-                          {ex.muscleLabelZh} · 預設 {ex.defaultWeightKg}
-                          {ex.unitLabel} × {ex.defaultReps} · 休 {ex.defaultRestSec}s
+                          {ex.muscleLabelZh} · {ex.defaultWeightKg}
+                          {ex.unitLabel} × {ex.defaultReps}
                         </div>
                       </div>
                     </div>
@@ -551,9 +548,18 @@ export const WorkoutTab: React.FC = () => {
                           store.swapActiveExercise(selectedExercise.id, ex.id);
                           setSwapModalOpen(false);
                         }}
-                        className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-xs font-black"
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 text-xs font-black"
                       >
-                        替換此動作
+                        替換
+                      </button>
+                      <button
+                        onClick={() => {
+                          store.addExerciseToActiveQueue(ex.id);
+                          setSwapModalOpen(false);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-xs font-black"
+                      >
+                        ＋新增
                       </button>
                     </div>
                   </div>
@@ -574,15 +580,10 @@ export const WorkoutTab: React.FC = () => {
       {/* 1. HEADER & NEW ROUTINE / FREE WORKOUT CTAs */}
       <div className="retro-box rounded-2xl p-3.5 space-y-3">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-black text-white flex items-center gap-1.5">
-              <Dumbbell className="w-4 h-4 text-emerald-400" />
-              運動課表與打卡中心
-            </h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              選擇已儲存課表「3秒速記」或「開始專注訓練」，或建立新課表
-            </p>
-          </div>
+          <h2 className="text-sm font-black text-white flex items-center gap-1.5">
+            <Dumbbell className="w-4 h-4 text-emerald-400" />
+            運動課表
+          </h2>
           <span className="px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] font-bold">
             ⚡ 體力 {store.stamina}/{store.maxStamina}
           </span>
@@ -594,26 +595,26 @@ export const WorkoutTab: React.FC = () => {
             className="retro-btn py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md"
           >
             <Plus className="w-4 h-4 stroke-[3px]" />
-            <span>建立新課表</span>
+            <span>建立課表</span>
           </button>
           <button
             onClick={() => store.startWorkoutFocus()}
             className="retro-btn py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/40 font-black text-xs flex items-center justify-center gap-1.5"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>自由專注訓練</span>
+            <span>自由訓練</span>
           </button>
         </div>
       </div>
 
-      {/* 2. FOUR ROUTINE CATEGORY TABS (我的最愛 / 我的課表 / 引用課表 / 官方推薦) */}
+      {/* 2. FOUR ROUTINE CATEGORY TABS */}
       <div className="grid grid-cols-4 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
         {(
           [
-            { id: 'favorite', label: '我的最愛', icon: Star },
-            { id: 'my_custom', label: '我的課表', icon: FolderHeart },
-            { id: 'referenced', label: '引用他人', icon: Bookmark },
-            { id: 'recommended', label: '官方推薦', icon: Award },
+            { id: 'favorite', label: '最愛', icon: Star },
+            { id: 'my_custom', label: '我的', icon: FolderHeart },
+            { id: 'referenced', label: '引用', icon: Bookmark },
+            { id: 'recommended', label: '推薦', icon: Award },
           ] as const
         ).map((tab) => {
           const Icon = tab.icon;
@@ -623,18 +624,16 @@ export const WorkoutTab: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setRoutineTab(tab.id)}
-              className={`py-2 px-1 rounded-lg text-[11px] font-black flex flex-col items-center gap-0.5 transition ${
+              className={`py-2 px-1 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition ${
                 active
                   ? 'bg-emerald-500 text-slate-950 shadow'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <div className="flex items-center gap-1">
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </div>
-              <span className={`text-[9px] font-mono ${active ? 'text-slate-900' : 'text-slate-500'}`}>
-                {count} 套
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+              <span className={`text-[10px] font-mono ${active ? 'text-slate-900' : 'text-slate-500'}`}>
+                {count}
               </span>
             </button>
           );
@@ -645,12 +644,12 @@ export const WorkoutTab: React.FC = () => {
       <div className="space-y-3">
         {filteredRoutines.length === 0 ? (
           <div className="retro-box rounded-2xl p-6 text-center space-y-2">
-            <p className="text-xs font-bold text-slate-400">此分類目前沒有課表</p>
+            <p className="text-xs font-bold text-slate-400">此分類尚無課表</p>
             <button
               onClick={() => setBuilderOpen(true)}
               className="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-black"
             >
-              ＋ 立即建立新課表
+              ＋ 建立課表
             </button>
           </div>
         ) : (
@@ -668,7 +667,7 @@ export const WorkoutTab: React.FC = () => {
                     </span>
                     {routine.authorName && (
                       <span className="text-[10px] text-cyan-300 font-bold">
-                        👤 來源：{routine.authorName}
+                        👤 {routine.authorName}
                       </span>
                     )}
                   </div>
@@ -679,7 +678,7 @@ export const WorkoutTab: React.FC = () => {
                   <button
                     onClick={() => setDetailRoutine(routine)}
                     className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
-                    title="檢視完整課表細節"
+                    title="課表詳情"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
@@ -690,7 +689,7 @@ export const WorkoutTab: React.FC = () => {
                         ? 'bg-amber-500/20 border-amber-400 text-amber-300'
                         : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-amber-300'
                     }`}
-                    title="切換最愛"
+                    title="最愛"
                   >
                     <Star
                       className={`w-4 h-4 ${routine.category === 'favorite' ? 'fill-amber-300' : ''}`}
@@ -714,33 +713,32 @@ export const WorkoutTab: React.FC = () => {
                         <span className="font-bold text-white truncate">{ex.nameZh}</span>
                       </div>
                       <div className="font-mono text-[11px] text-cyan-300 shrink-0">
-                        {item.sets}組 × {item.reps}次 ·{' '}
+                        {item.sets}組×{item.reps} ·{' '}
                         <span className="text-amber-300 font-bold">
                           {item.weightKg}
                           {ex.unitLabel}
-                        </span>{' '}
-                        <span className="text-slate-500">(休{item.restSeconds}s)</span>
+                        </span>
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Action Buttons: 3-Sec Quick Log (or Modify & Log) vs Start Focus Workout */}
+              {/* Action Buttons: 3-Sec Quick Log vs Start Focus Workout */}
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   onClick={() => handleOpenQuickLogModal(routine)}
                   className="retro-btn py-2.5 px-3 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/50 text-amber-300 font-black text-xs flex items-center justify-center gap-1.5"
                 >
                   <Zap className="w-4 h-4" />
-                  <span>⚡ 3秒速記課表</span>
+                  <span>⚡ 3秒速記</span>
                 </button>
                 <button
                   onClick={() => store.startWorkoutFocus(routine)}
                   className="retro-btn py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow"
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>開始專注訓練</span>
+                  <span>開始訓練</span>
                 </button>
               </div>
             </div>
@@ -749,7 +747,7 @@ export const WorkoutTab: React.FC = () => {
       </div>
 
       {/* =====================================================================
-          MODAL 1: 3-SECOND QUICK LOG / MODIFY BEFORE LOG (V2-14, V2-15)
+          MODAL 1: 3-SECOND QUICK LOG / MODIFY BEFORE LOG
          ===================================================================== */}
       {quickEditRoutine && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -757,7 +755,7 @@ export const WorkoutTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-black text-amber-300 uppercase">
-                  ⚡ 課表 3 秒速記 (可直接打卡或微調今日重量/組數)
+                  ⚡ 課表速記 · 可微調數值
                 </span>
                 <h3 className="text-base font-black text-white">{quickEditRoutine.nameZh}</h3>
               </div>
@@ -804,7 +802,7 @@ export const WorkoutTab: React.FC = () => {
                       </div>
                       <div>
                         <label className="text-[10px] text-slate-400 block mb-0.5">
-                          重量 ({ex.unitLabel})
+                          重量 {ex.unitLabel}
                         </label>
                         <input
                           type="number"
@@ -848,14 +846,14 @@ export const WorkoutTab: React.FC = () => {
               className="w-full retro-btn py-3 rounded-xl bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
             >
               <Zap className="w-4 h-4 fill-current" />
-              <span>確認一鍵完成打卡結算</span>
+              <span>確認速記</span>
             </button>
           </div>
         </div>
       )}
 
       {/* =====================================================================
-          MODAL 2: ROUTINE DETAIL VIEW (檢視課表詳情與安全提示 V2-17)
+          MODAL 2: ROUTINE DETAIL VIEW
          ===================================================================== */}
       {detailRoutine && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -889,18 +887,14 @@ export const WorkoutTab: React.FC = () => {
                         <ExerciseThumbnail exercise={ex} size={46} showPhotoToggle />
                         <div>
                           <div className="text-xs font-black text-white">
-                            {idx + 1}. {ex.nameZh}{' '}
-                            <span className="text-[10px] font-normal text-slate-400">
-                              ({ex.nameEn})
-                            </span>
+                            {idx + 1}. {ex.nameZh}
                           </div>
                           <div className="text-[11px] font-mono text-cyan-300">
-                            {cfg.sets} 組 × {cfg.reps} 次 · {cfg.weightKg} {ex.unitLabel} · 組間休{' '}
-                            {cfg.restSeconds}s
+                            {cfg.sets}組 × {cfg.reps}次 · {cfg.weightKg} {ex.unitLabel} · 休{cfg.restSeconds}s
                           </div>
                           {ex.primaryMusclesZh && (
                             <div className="text-[10px] text-rose-400 font-bold mt-0.5">
-                              🎯 主働肌：{ex.primaryMusclesZh}
+                              🎯 {ex.primaryMusclesZh}
                             </div>
                           )}
                         </div>
@@ -942,7 +936,7 @@ export const WorkoutTab: React.FC = () => {
                 }}
                 className="py-2.5 rounded-xl bg-amber-400/20 border border-amber-400/50 text-amber-300 text-xs font-black"
               >
-                ⚡ 3秒速記此課表
+                ⚡ 3秒速記
               </button>
               <button
                 onClick={() => {
@@ -952,7 +946,7 @@ export const WorkoutTab: React.FC = () => {
                 }}
                 className="py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black"
               >
-                ▶️ 開始專注執行
+                ▶️ 開始訓練
               </button>
             </div>
           </div>
@@ -960,14 +954,14 @@ export const WorkoutTab: React.FC = () => {
       )}
 
       {/* =====================================================================
-          MODAL 3: CREATE NEW CUSTOM ROUTINE BUILDER (建立新課表 V2-06, V2-14, V2-15)
+          MODAL 3: CREATE NEW CUSTOM ROUTINE BUILDER
          ===================================================================== */}
       {builderOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
           <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3 border-2 border-cyan-500/50 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-cyan-300">
-                ＋ 建立專屬訓練課表 (重訓 / 有氧 / 徒手)
+                ＋ 建立課表
               </h3>
               <button
                 onClick={() => setBuilderOpen(false)}
@@ -983,14 +977,14 @@ export const WorkoutTab: React.FC = () => {
                 type="text"
                 value={newRoutineName}
                 onChange={(e) => setNewRoutineName(e.target.value)}
-                placeholder="輸入課表名稱 (例：週三胸背轟炸)"
+                placeholder="課表名稱"
                 className="col-span-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-cyan-400"
               />
               <input
                 type="text"
                 value={newRoutineTag}
                 onChange={(e) => setNewRoutineTag(e.target.value)}
-                placeholder="標籤 (例：增肌)"
+                placeholder="標籤"
                 className="px-2.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-emerald-300 outline-none"
               />
             </div>
@@ -998,7 +992,7 @@ export const WorkoutTab: React.FC = () => {
             {/* Added Exercises Sequence with Direct Inputs */}
             <div className="space-y-2 overflow-y-auto max-h-48 pr-1 border-b border-slate-800 pb-2">
               <div className="text-[11px] font-black text-slate-400">
-                已排入課表動作 ({builderItems.length} 項 · 可設定各動作組間休息秒數)
+                課表動作 · {builderItems.length} 項
               </div>
               {builderItems.map((item, idx) => {
                 const ex =
@@ -1041,7 +1035,7 @@ export const WorkoutTab: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-[9px] text-slate-400 block">
-                          重量({ex.unitLabel})
+                          重量 {ex.unitLabel}
                         </span>
                         <input
                           type="number"
@@ -1071,7 +1065,7 @@ export const WorkoutTab: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-400 block">休息(秒)</span>
+                        <span className="text-[9px] text-slate-400 block">休息秒</span>
                         <input
                           type="number"
                           value={item.restSeconds}
@@ -1147,7 +1141,7 @@ export const WorkoutTab: React.FC = () => {
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-white truncate">{ex.nameZh}</div>
                         <div className="text-[10px] text-slate-400">
-                          {ex.muscleLabelZh} · 預設 {ex.defaultWeightKg}
+                          {ex.muscleLabelZh} · {ex.defaultWeightKg}
                           {ex.unitLabel}
                         </div>
                       </div>
@@ -1179,13 +1173,13 @@ export const WorkoutTab: React.FC = () => {
                 onClick={() => handleCreateCustomRoutine(false)}
                 className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-black border border-slate-700"
               >
-                💾 儲存至我的課表
+                💾 儲存課表
               </button>
               <button
                 onClick={() => handleCreateCustomRoutine(true)}
                 className="py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 text-xs font-black"
               >
-                ▶️ 儲存並開始訓練
+                ▶️ 儲存並開始
               </button>
             </div>
           </div>

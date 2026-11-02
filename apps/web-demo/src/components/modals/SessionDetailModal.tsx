@@ -16,7 +16,7 @@ export const SessionDetailModal: React.FC = () => {
   const handleSaveSessionAsRoutine = () => {
     const template: WorkoutTemplate = {
       id: `from_hist_${Date.now()}`,
-      nameZh: `${session.routineName} (歷史複刻)`,
+      nameZh: `${session.routineName} · 複刻`,
       nameEn: 'History Routine',
       category: 'my_custom',
       authorName: store.nickname,
@@ -90,10 +90,10 @@ export const SessionDetailModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Full Exercise & Set-by-Set Breakdown (V2-01) */}
+        {/* Full Exercise & Set-by-Set Breakdown */}
         <div className="space-y-2.5 overflow-y-auto pr-1 flex-1">
           <div className="text-xs font-black text-slate-300">
-            📋 完整課表動作與各組明細 ({session.exerciseLogs.length} 個動作)
+            📋 課表動作與各組明細 · {session.exerciseLogs.length} 項
           </div>
 
           {session.exerciseLogs.map((log, exIdx) => {

@@ -8,6 +8,8 @@ import {
   Users,
   Home,
   Dumbbell,
+  UserPlus,
+  Check,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { FRIEND_PROFILES, EXERCISE_LIBRARY } from '../../config/catalogConfig';
@@ -23,6 +25,8 @@ export const UserProfileModal: React.FC = () => {
   const profile =
     FRIEND_PROFILES.find((f) => f.id === profileId) || FRIEND_PROFILES[0];
 
+  const isFriendNow = store.friendIds.includes(profile.id);
+
   const userPosts = store.posts.filter(
     (p) => p.authorId === profile.id || p.authorName === profile.nameZh
   );
@@ -30,9 +34,9 @@ export const UserProfileModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
       <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3.5 border-2 border-cyan-500/50 max-h-[90vh] overflow-y-auto">
-        {/* 1. PROFILE HEADER */}
+        {/* 1. PROFILE HEADER + ADD FRIEND BUTTON */}
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="text-base font-black text-white flex items-center gap-1">
                 <span>{profile.nameZh}</span>
@@ -40,26 +44,39 @@ export const UserProfileModal: React.FC = () => {
                   <BadgeCheck className="w-4 h-4 text-cyan-400 fill-cyan-950" />
                 )}
               </h3>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                  profile.isFriend
-                    ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300'
-                    : 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300'
-                }`}
-              >
-                {profile.isFriend ? '👥 互為好友' : '🌟 認證運動家'}
-              </span>
             </div>
             <div className="text-xs font-bold text-amber-300 mt-0.5">{profile.titleZh}</div>
             <p className="text-[11px] text-slate-400 mt-1">{profile.bioZh}</p>
           </div>
 
-          <button
-            onClick={() => store.setSelectedProfileId(null)}
-            className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => store.toggleFriend(profile.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 border transition ${
+                isFriendNow
+                  ? 'bg-slate-800 border-emerald-500/40 text-emerald-300'
+                  : 'bg-emerald-500 text-slate-950 border-emerald-400 shadow'
+              }`}
+            >
+              {isFriendNow ? (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>好友</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>加好友</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => store.setSelectedProfileId(null)}
+              className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Stats Pills */}
@@ -69,14 +86,14 @@ export const UserProfileModal: React.FC = () => {
             <div className="text-xs font-black font-mono text-white">Lv.{profile.level}</div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-            <div className="text-[10px] text-slate-400">連續打卡</div>
+            <div className="text-[10px] text-slate-400">連勝</div>
             <div className="text-xs font-black font-mono text-amber-300 flex items-center justify-center gap-1">
               <Flame className="w-3.5 h-3.5 text-orange-400" />
               {profile.streakDays} 天
             </div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-            <div className="text-[10px] text-slate-400">追蹤者</div>
+            <div className="text-[10px] text-slate-400">粉絲</div>
             <div className="text-xs font-black font-mono text-cyan-300 flex items-center justify-center gap-1">
               <Users className="w-3.5 h-3.5" />
               {profile.followers}
@@ -84,14 +101,12 @@ export const UserProfileModal: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. CO-PRESENCE ROOM VISIT: HOST + YOUR AVATAR TOGETHER! (V2-07) */}
+        {/* 2. CO-PRESENCE ROOM VISIT */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between px-0.5">
-            <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
-              <Home className="w-3.5 h-3.5" />
-              串門同框房間 (你已出現在 {profile.nameZh} 的房間裡！)
-            </span>
-          </div>
+          <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
+            <Home className="w-3.5 h-3.5" />
+            同框串門房間
+          </span>
           <PixelRoomCanvas
             isActive={true}
             compact
@@ -112,7 +127,7 @@ export const UserProfileModal: React.FC = () => {
         <div className="space-y-1.5">
           <span className="text-xs font-black text-white flex items-center gap-1.5">
             <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            個人代表 PR 紀錄
+            最佳 PR
           </span>
           <div className="grid grid-cols-3 gap-2">
             {profile.bestPRs.map((pr, idx) => (
@@ -129,12 +144,12 @@ export const UserProfileModal: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. SIGNATURE ROUTINE TEMPLATE (Reference / Copy to My Routines V2-15) */}
+        {/* 4. SIGNATURE ROUTINE TEMPLATE */}
         <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <div>
               <span className="text-[10px] font-black text-cyan-400">
-                📋 公開主打課表 ({profile.routineTemplate.tagZh})
+                📋 主打課表 · {profile.routineTemplate.tagZh}
               </span>
               <h4 className="text-xs font-black text-white mt-0.5">
                 {profile.routineTemplate.nameZh}
@@ -144,7 +159,7 @@ export const UserProfileModal: React.FC = () => {
               onClick={() => {
                 store.copyOrReferenceRoutine(profile.routineTemplate);
               }}
-              className="retro-btn px-2.5 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-[11px] font-black flex items-center gap-1 shrink-0"
+              className="retro-btn px-2.5 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-black flex items-center gap-1 shrink-0"
             >
               <BookmarkPlus className="w-3.5 h-3.5" />
               <span>引用課表</span>
@@ -165,7 +180,7 @@ export const UserProfileModal: React.FC = () => {
                     <span className="font-bold text-slate-200">{ex.nameZh}</span>
                   </div>
                   <span className="font-mono text-cyan-300">
-                    {item.sets}組 × {item.reps}次 · {item.weightKg}
+                    {item.sets}組×{item.reps} · {item.weightKg}
                     {ex.unitLabel}
                   </span>
                 </div>
@@ -179,7 +194,7 @@ export const UserProfileModal: React.FC = () => {
           <div className="space-y-1.5">
             <span className="text-xs font-black text-slate-300 flex items-center gap-1.5">
               <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />
-              近期打卡貼文 ({userPosts.length} 則)
+              近期貼文 · {userPosts.length} 則
             </span>
             {userPosts.map((post) => (
               <div

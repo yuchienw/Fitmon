@@ -440,28 +440,66 @@ export function drawMapleChibiAvatar(
   const breathY = Math.sin(frameTick * 0.1) * 1.1;
   const squatDrop = isSquat ? 7.5 : Math.abs(walkPhase) * 1.5;
 
-  // Body width multiplier by physique stage
+  // Dramatic physique differentiation: Beginner (slim) vs Aesthetic (V-taper 6-pack) vs Powerlifter (massive) vs Titan (colossal)
+  const isMuscular = bodyStage !== 'beginner';
+  const isHuge = bodyStage === 'powerlifter' || bodyStage === 'titan';
   const torsoW =
     bodyStage === 'titan'
-      ? 25
+      ? 28
       : bodyStage === 'powerlifter'
-      ? 23
+      ? 25
       : bodyStage === 'aesthetic'
-      ? 20
-      : 18;
+      ? 21
+      : 14.5;
+  const armW =
+    bodyStage === 'titan'
+      ? 10.5
+      : bodyStage === 'powerlifter'
+      ? 9.2
+      : bodyStage === 'aesthetic'
+      ? 7.4
+      : 4.6;
+  const legW =
+    bodyStage === 'titan'
+      ? 9.6
+      : bodyStage === 'powerlifter'
+      ? 8.8
+      : bodyStage === 'aesthetic'
+      ? 7.4
+      : 5.4;
 
   // 0. GROUND SHADOW & TITAN AURA
-  fillStrokeEllipse(ctx, 0, 2, 18, 4.5, 'rgba(15, 23, 42, 0.24)', '', 0);
+  fillStrokeEllipse(ctx, 0, 2, torsoW * 0.85, 4.5, 'rgba(15, 23, 42, 0.24)', '', 0);
 
   if (bodyStage === 'titan') {
-    const auraGrad = ctx.createRadialGradient(0, -28 + squatDrop, 6, 0, -28 + squatDrop, 34);
-    auraGrad.addColorStop(0, 'rgba(250, 204, 21, 0.35)');
+    const auraGrad = ctx.createRadialGradient(0, -28 + squatDrop, 6, 0, -28 + squatDrop, 38);
+    auraGrad.addColorStop(0, 'rgba(250, 204, 21, 0.48)');
+    auraGrad.addColorStop(0.6, 'rgba(245, 158, 11, 0.22)');
     auraGrad.addColorStop(1, 'rgba(250, 204, 21, 0)');
-    fillStrokeEllipse(ctx, 0, -28 + squatDrop, 32, 34, auraGrad, '', 0);
+    fillStrokeEllipse(ctx, 0, -28 + squatDrop, 36, 36, auraGrad, '', 0);
   }
 
-  // ---------------- 1. BACK HAIR LAYER (If long/spiky) ----------------
+  // ---------------- 1. BACK HAIR & SPARTAN CAPE LAYER ----------------
   const headY = -41 + squatDrop + breathY;
+  const torsoY = -30 + squatDrop + breathY * 0.6;
+  const torsoH = 16;
+
+  if (equipped.top === 'top_spartan_cape') {
+    // Flowing Crimson Spartan War Cape behind body
+    const capeWave = Math.sin(frameTick * 0.12) * 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-torsoW / 2, torsoY + 1);
+    ctx.lineTo(torsoW / 2, torsoY + 1);
+    ctx.lineTo(torsoW / 2 + 6 + capeWave, -2);
+    ctx.lineTo(-torsoW / 2 - 6 + capeWave, -2);
+    ctx.closePath();
+    ctx.fillStyle = '#dc2626';
+    ctx.fill();
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+  }
+
   if (equipped.hair === 'hair_spiky_gold') {
     ctx.beginPath();
     ctx.moveTo(-16, headY - 2);
@@ -485,29 +523,50 @@ export function drawMapleChibiAvatar(
     ctx.stroke();
   }
 
-  // ---------------- 2. LEGS, SHORTS & SNEAKERS (bottom) ----------------
-  const leftLegX = -5.5 + walkPhase * 3.5 - (isSquat ? 2.5 : 0);
-  const rightLegX = 5.5 - walkPhase * 3.5 + (isSquat ? 2.5 : 0);
-  const hipY = -17 + squatDrop;
+  // ---------------- 2. LEGS, QUAD MUSCLES, SHORTS & SNEAKERS (bottom) ----------------
+  const legSpread = isHuge ? 6.8 : bodyStage === 'aesthetic' ? 5.8 : 4.4;
+  const leftLegX = -legSpread + walkPhase * 3.5 - (isSquat ? 2.5 : 0);
+  const rightLegX = legSpread - walkPhase * 3.5 + (isSquat ? 2.5 : 0);
+  const hipY = -16.5 + squatDrop;
 
-  let shortsMain = '#334155';
-  let shortsTrim = '#38bdf8';
-  if (equipped.bottom === 'bottom_neon_shorts') {
-    shortsMain = '#0284c7';
-    shortsTrim = '#a855f7';
+  let shortsMain = '#1e3a8a';
+  let shortsTrim = '#60a5fa';
+  if (equipped.bottom === 'bottom_camo_joggers') {
+    shortsMain = '#3f6212';
+    shortsTrim = '#a3e635';
   } else if (equipped.bottom === 'bottom_gold_tights') {
-    shortsMain = '#1e1b4b';
+    shortsMain = '#312e81';
     shortsTrim = '#facc15';
   }
 
-  // Left & Right Legs + Sneakers
+  // Left & Right Legs + Quad Sweep + Sneakers
   [leftLegX, rightLegX].forEach((lx, idx) => {
     const legLift = idx === 0 ? Math.max(0, walkPhase * 2.5) : Math.max(0, -walkPhase * 2.5);
-    // Thigh / Calf skin
-    fillStrokeRoundRect(ctx, lx - 3.8, hipY + 3, 7.6, 11 - squatDrop * 0.4, 3.5, '#ffdfc4', OUTLINE, 1.2);
+    // Muscular Quad / Calf skin
+    fillStrokeRoundRect(
+      ctx,
+      lx - legW / 2,
+      hipY + 3,
+      legW,
+      11 - squatDrop * 0.4,
+      legW * 0.45,
+      '#ffdfc4',
+      OUTLINE,
+      1.2
+    );
+    // Quad muscle separation line for muscular stages
+    if (isMuscular) {
+      ctx.strokeStyle = '#d99b72';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(lx, hipY + 6.5);
+      ctx.lineTo(lx, hipY + 10.5);
+      ctx.stroke();
+    }
     // Shorts leg
-    fillStrokeRoundRect(ctx, lx - 4.6, hipY, 9.2, 7.5, 3, shortsMain, OUTLINE, 1.2);
-    fillStrokeRoundRect(ctx, lx - 4.4, hipY + 5.5, 8.8, 1.8, 0.8, shortsTrim, '', 0);
+    const shortW = legW + 1.6;
+    fillStrokeRoundRect(ctx, lx - shortW / 2, hipY, shortW, 7, 2.8, shortsMain, OUTLINE, 1.2);
+    fillStrokeRoundRect(ctx, lx - shortW / 2 + 0.3, hipY + 5, shortW - 0.6, 1.6, 0.8, shortsTrim, '', 0);
     // White athletic socks
     fillStrokeRoundRect(ctx, lx - 3.6, -5 - legLift, 7.2, 3.5, 1.2, '#ffffff', OUTLINE, 1);
     // Chibi Rounded Sneakers
@@ -515,79 +574,169 @@ export function drawMapleChibiAvatar(
     fillStrokeRoundRect(ctx, lx - 4.5, 1 - legLift, 10, 2, 1, '#f8fafc', OUTLINE, 0.9);
   });
 
-  // ---------------- 3. TORSO & TOP APPAREL (top) ----------------
-  const torsoY = -30 + squatDrop + breathY * 0.6;
-  const torsoH = 15.5;
+  // ---------------- 3. TORSO, TRAPS, PECS, 6-PACK ABS & TOP APPAREL (top) ----------------
+  // Muscular Bull Traps for Powerlifter & Titan
+  if (isHuge) {
+    fillStrokeEllipse(
+      ctx,
+      0,
+      torsoY + 0.5,
+      torsoW * 0.46,
+      4.5,
+      '#f5cba7',
+      OUTLINE,
+      1.2
+    );
+  }
 
-  // Skin upper chest/neck base
+  // Sculpted Torso Base (V-Taper for Aesthetic/Titan, Slim for Beginner)
+  const skinTorsoGrad = ctx.createLinearGradient(0, torsoY, 0, torsoY + torsoH);
+  skinTorsoGrad.addColorStop(0, '#ffe4cc');
+  skinTorsoGrad.addColorStop(1, '#f5cba7');
   fillStrokeRoundRect(
     ctx,
     -torsoW / 2,
     torsoY,
     torsoW,
     torsoH,
-    6,
-    '#ffdfc4',
+    isMuscular ? 5.5 : 4,
+    skinTorsoGrad,
     OUTLINE,
     1.3
   );
 
-  if (equipped.top === 'top_crimson_sbd') {
-    // Red & Black SBD Powerlifting Singlet
-    fillStrokeRoundRect(ctx, -torsoW / 2, torsoY, torsoW, torsoH, 5.5, '#1e293b', OUTLINE, 1.3);
-    fillStrokeRoundRect(ctx, -torsoW / 2 + 3, torsoY + 1, torsoW - 6, torsoH - 2, 4, '#dc2626', OUTLINE, 1);
-    // SBD Lever Belt
-    fillStrokeRoundRect(ctx, -torsoW / 2 - 0.5, torsoY + 10, torsoW + 1, 4.2, 1.5, '#0f172a', OUTLINE, 1.1);
-    fillStrokeRoundRect(ctx, -3, torsoY + 10.2, 6, 3.8, 1, '#facc15', OUTLINE, 0.9);
-  } else if (equipped.top === 'top_pump_hoodie') {
-    // Cozy Streetwear Pump Cover Hoodie
-    const hoodieGrad = ctx.createLinearGradient(0, torsoY, 0, torsoY + torsoH);
-    hoodieGrad.addColorStop(0, '#64748b');
-    hoodieGrad.addColorStop(1, '#334155');
-    fillStrokeRoundRect(ctx, -torsoW / 2 - 1.5, torsoY - 1, torsoW + 3, torsoH + 2, 6.5, hoodieGrad, OUTLINE, 1.3);
-    // White drawstrings & Cyan chest logo
-    fillStrokeRoundRect(ctx, -5, torsoY + 4, 10, 2.5, 1.2, '#38bdf8', '', 0);
-    ctx.strokeStyle = '#f8fafc';
-    ctx.lineWidth = 1.2;
+  // Draw Sculpted Pectoral Plates & 6-Pack Abs on Torso Skin!
+  if (isMuscular) {
+    const pecW = torsoW * 0.42;
+    const pecH = isHuge ? 6.8 : 5.8;
+    // Left & Right Pectoral Muscle Plates
+    fillStrokeRoundRect(
+      ctx,
+      -pecW - 0.4,
+      torsoY + 1.5,
+      pecW,
+      pecH,
+      2.5,
+      '#ffd8b8',
+      '#c67d50',
+      1.05
+    );
+    fillStrokeRoundRect(
+      ctx,
+      0.4,
+      torsoY + 1.5,
+      pecW,
+      pecH,
+      2.5,
+      '#ffd8b8',
+      '#c67d50',
+      1.05
+    );
+    // Upper pec shine highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(-2.5, torsoY + 1);
-    ctx.lineTo(-2.5, torsoY + 6);
-    ctx.moveTo(2.5, torsoY + 1);
-    ctx.lineTo(2.5, torsoY + 6);
+    ctx.moveTo(-pecW + 1.5, torsoY + 3);
+    ctx.lineTo(-2, torsoY + 3);
+    ctx.moveTo(2, torsoY + 3);
+    ctx.lineTo(pecW - 1.5, torsoY + 3);
     ctx.stroke();
-  } else if (equipped.top === 'top_gold_armor') {
-    // Titan Golden Armor
-    const armorGrad = ctx.createLinearGradient(-torsoW / 2, torsoY, torsoW / 2, torsoY + torsoH);
-    armorGrad.addColorStop(0, '#fef08a');
-    armorGrad.addColorStop(0.5, '#f59e0b');
-    armorGrad.addColorStop(1, '#b45309');
-    fillStrokeRoundRect(ctx, -torsoW / 2 - 1, torsoY, torsoW + 2, torsoH + 1, 5.5, armorGrad, OUTLINE, 1.3);
-    // Glowing cyan energy core
-    fillStrokeEllipse(ctx, 0, torsoY + 7, 3.5, 3.5, '#22d3ee', OUTLINE, 1);
+
+    // 6-Pack Abdominal Blocks (3 rows x 2 columns)
+    const abW = isHuge ? 4.2 : 3.5;
+    for (let row = 0; row < 3; row++) {
+      const ay = torsoY + 8.6 + row * 2.2;
+      fillStrokeRoundRect(ctx, -abW - 0.3, ay, abW, 1.9, 0.8, '#f8cfa9', '#c67d50', 0.85);
+      fillStrokeRoundRect(ctx, 0.3, ay, abW, 1.9, 0.8, '#f8cfa9', '#c67d50', 0.85);
+    }
   } else {
-    // Classic Obsidian Gym Stringer Tank
-    fillStrokeRoundRect(ctx, -torsoW / 2 + 1.5, torsoY + 1, torsoW - 3, torsoH - 1, 5, '#1e293b', OUTLINE, 1.2);
-    fillStrokeRoundRect(ctx, -4.5, torsoY + 5, 9, 2.2, 1, '#10b981', '', 0);
+    // Beginner: cute little belly button dot on soft flat tummy
+    fillStrokeEllipse(ctx, 0, torsoY + 11.5, 0.9, 1.1, '#c67d50', '', 0);
   }
 
-  // ---------------- 4. ARMS & HELD GYM ACCESSORY (accessory) ----------------
+  // Render Equipped Top over the sculpted physique
+  if (equipped.top === 'top_bare_muscles') {
+    // Bare Physique! Only a champion wrist/waist trim so 100% of pecs & 6-pack abs shine!
+    if (bodyStage === 'titan') {
+      fillStrokeRoundRect(ctx, -torsoW / 2, torsoY + 13.5, torsoW, 2.5, 1, '#facc15', OUTLINE, 0.9);
+    }
+  } else if (equipped.top === 'top_spartan_cape') {
+    // Spartan Cross-Chest Harness & Gold Belt (leaves Pecs & Abs visible!)
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(-torsoW / 2 + 2, torsoY + 1);
+    ctx.lineTo(torsoW / 2 - 2, torsoY + 13);
+    ctx.stroke();
+    fillStrokeEllipse(ctx, -torsoW / 2 + 3, torsoY + 2, 2.5, 2.5, '#facc15', OUTLINE, 0.9);
+    fillStrokeEllipse(ctx, torsoW / 2 - 3, torsoY + 2, 2.5, 2.5, '#facc15', OUTLINE, 0.9);
+    fillStrokeRoundRect(ctx, -torsoW / 2, torsoY + 12.2, torsoW, 3.5, 1.2, '#f59e0b', OUTLINE, 1);
+  } else if (equipped.top === 'top_crimson_sbd') {
+    // Red & Black SBD Powerlifting Singlet (shows upper chest cleavage + massive traps/arms)
+    fillStrokeRoundRect(ctx, -torsoW / 2, torsoY + 2, torsoW, torsoH - 2, 4.5, '#1e293b', OUTLINE, 1.2);
+    fillStrokeRoundRect(ctx, -torsoW / 2 + 2.5, torsoY + 3, torsoW - 5, torsoH - 4, 3.5, '#dc2626', OUTLINE, 0.9);
+    // SBD Lever Belt
+    fillStrokeRoundRect(ctx, -torsoW / 2 - 0.5, torsoY + 10.5, torsoW + 1, 4, 1.5, '#0f172a', OUTLINE, 1.1);
+    fillStrokeRoundRect(ctx, -3.2, torsoY + 10.7, 6.4, 3.6, 1, '#facc15', OUTLINE, 0.9);
+  } else if (equipped.top === 'top_pump_cover' || equipped.top === 'top_pump_hoodie') {
+    // Neon Green Pump-Cover Oversized Tee
+    fillStrokeRoundRect(ctx, -torsoW / 2 - 1, torsoY, torsoW + 2, torsoH + 1, 5.5, '#065f46', OUTLINE, 1.3);
+    fillStrokeRoundRect(ctx, -5.5, torsoY + 5, 11, 2.8, 1.2, '#34d399', '', 0);
+  } else {
+    // Deep-Cut Stringer Tank Top (leaves Upper Pecs & massive Deltoids exposed!)
+    ctx.beginPath();
+    ctx.moveTo(-torsoW / 2 + 2, torsoY + 1);
+    ctx.lineTo(-2.5, torsoY + 6.5);
+    ctx.lineTo(2.5, torsoY + 6.5);
+    ctx.lineTo(torsoW / 2 - 2, torsoY + 1);
+    ctx.lineTo(torsoW / 2 - 1, torsoY + torsoH);
+    ctx.lineTo(-torsoW / 2 + 1, torsoY + torsoH);
+    ctx.closePath();
+    ctx.fillStyle = '#1e293b';
+    ctx.fill();
+    ctx.strokeStyle = OUTLINE;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    fillStrokeRoundRect(ctx, -4, torsoY + 8.5, 8, 2, 1, '#10b981', '', 0);
+  }
+
+  // ---------------- 4. ARMS, DELTOID CAPS, BICEP PEAKS & HELD GEAR ----------------
   const shoulderY = torsoY + 3.5;
-  const armAngle = isCheer ? -2.3 : isCurl ? -1.1 : isSquat ? -0.6 : walkPhase * 0.45;
+  const armAngle = isCheer ? -2.3 : isCurl ? -1.15 : isSquat ? -0.6 : walkPhase * 0.45;
+
+  // Helper to draw a limb (slim for beginner, 3D deltoid + bulging bicep for muscular!)
+  const drawChibiArm = () => {
+    if (isMuscular) {
+      // Round 3D Deltoid Shoulder Cap
+      fillStrokeEllipse(ctx, 0, 0.5, armW * 0.56, armW * 0.52, '#ffd8b8', OUTLINE, 1.2);
+      // Bulging Bicep & Forearm
+      fillStrokeRoundRect(ctx, -armW / 2, 1, armW, 10.5, armW * 0.48, '#ffdfc4', OUTLINE, 1.2);
+      // Bicep Peak Contour Line
+      ctx.strokeStyle = '#c67d50';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0.5, 5.2, armW * 0.34, -0.4 * Math.PI, 0.5 * Math.PI);
+      ctx.stroke();
+    } else {
+      // Slim Beginner Arm
+      fillStrokeRoundRect(ctx, -armW / 2, -0.5, armW, 10.5, armW * 0.48, '#ffdfc4', OUTLINE, 1.15);
+    }
+    // Fist
+    fillStrokeEllipse(ctx, 0, 10.8, armW * 0.48, 3.2, '#ffdfc4', OUTLINE, 1.2);
+  };
 
   // Back Arm
   ctx.save();
-  ctx.translate(-torsoW / 2 - 1, shoulderY);
+  ctx.translate(-torsoW / 2 - armW * 0.22, shoulderY);
   ctx.rotate(-armAngle * 0.7);
-  fillStrokeRoundRect(ctx, -3.5, -1, 7, 11, 3.5, '#ffdfc4', OUTLINE, 1.2);
-  fillStrokeEllipse(ctx, 0, 10.5, 3.6, 3.2, '#ffdfc4', OUTLINE, 1.2);
+  drawChibiArm();
   ctx.restore();
 
   // Front Arm + Held Equipment
   ctx.save();
-  ctx.translate(torsoW / 2 + 1, shoulderY);
+  ctx.translate(torsoW / 2 + armW * 0.22, shoulderY);
   ctx.rotate(armAngle);
-  fillStrokeRoundRect(ctx, -3.5, -1, 7, 11, 3.5, '#ffdfc4', OUTLINE, 1.2);
-  fillStrokeEllipse(ctx, 0, 10.5, 3.8, 3.4, '#ffdfc4', OUTLINE, 1.2);
+  drawChibiArm();
 
   // Held Accessory in Front Hand (when not doing Barbell Back Squat)
   if (state !== 'SQUAT') {
@@ -1193,8 +1342,18 @@ export function drawSingleItemThumbnail(
       ctx.stroke();
     }
   } else if (slot === 'top') {
-    fillStrokeRoundRect(ctx, 14, 14, 28, 30, 7, primaryColor, OUTLINE, 1.5);
-    fillStrokeRoundRect(ctx, 20, 22, 16, 8, 3, accentColor, OUTLINE, 1.1);
+    if (itemId === 'top_bare_muscles') {
+      fillStrokeRoundRect(ctx, 12, 13, 32, 30, 8, '#ffd8b8', OUTLINE, 1.4);
+      fillStrokeRoundRect(ctx, 15, 16, 12, 10, 3, '#ffe4cc', '#c67d50', 1.1);
+      fillStrokeRoundRect(ctx, 29, 16, 12, 10, 3, '#ffe4cc', '#c67d50', 1.1);
+      for (let r = 0; r < 3; r++) {
+        fillStrokeRoundRect(ctx, 21, 28 + r * 4.5, 6, 3.5, 1, '#f8cfa9', '#c67d50', 0.9);
+        fillStrokeRoundRect(ctx, 29, 28 + r * 4.5, 6, 3.5, 1, '#f8cfa9', '#c67d50', 0.9);
+      }
+    } else {
+      fillStrokeRoundRect(ctx, 14, 14, 28, 30, 7, primaryColor, OUTLINE, 1.5);
+      fillStrokeRoundRect(ctx, 20, 22, 16, 8, 3, accentColor, OUTLINE, 1.1);
+    }
   } else if (slot === 'bottom') {
     fillStrokeRoundRect(ctx, 14, 16, 28, 14, 4, primaryColor, OUTLINE, 1.4);
     fillStrokeRoundRect(ctx, 14, 26, 12, 16, 3, primaryColor, OUTLINE, 1.4);

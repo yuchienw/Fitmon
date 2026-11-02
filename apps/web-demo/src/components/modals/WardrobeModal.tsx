@@ -12,19 +12,19 @@ import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
 
 const AVATAR_SLOTS: { id: EquipSlot; label: string; emoji: string }[] = [
-  { id: 'hair', label: '頭飾/髮型', emoji: '🧢' },
-  { id: 'face', label: '臉部/表情', emoji: '😊' },
+  { id: 'hair', label: '頭飾', emoji: '🧢' },
+  { id: 'face', label: '表情', emoji: '😊' },
   { id: 'top', label: '上衣', emoji: '👕' },
   { id: 'bottom', label: '下身', emoji: '🩳' },
-  { id: 'accessory', label: '手持裝備', emoji: '🏋️' },
+  { id: 'accessory', label: '手持', emoji: '🏋️' },
 ];
 
 const ROOM_SLOTS: { id: RoomSlot; label: string; desc: string }[] = [
-  { id: 'slotLeft', label: '📍 左側位置', desc: '可放器材/街機/植栽/寵物或留空' },
-  { id: 'slotCenter', label: '📍 中央前景', desc: '可放寵物/植栽/器材或留空' },
-  { id: 'slotRight', label: '📍 右側位置', desc: '可放街機/啞鈴塔/深蹲架/寵物或留空' },
-  { id: 'wallpaper', label: '🧱 牆面風格', desc: '切換房間背景牆' },
-  { id: 'floor', label: '🟫 地板材質', desc: '切換地板材質' },
+  { id: 'slotLeft', label: '📍 左側', desc: '可放器材、街機、植栽或寵物' },
+  { id: 'slotCenter', label: '📍 中央', desc: '可放寵物、植栽或器材' },
+  { id: 'slotRight', label: '📍 右側', desc: '可放街機、啞鈴塔、深蹲架或寵物' },
+  { id: 'wallpaper', label: '🧱 牆面', desc: '切換房間背景牆' },
+  { id: 'floor', label: '🟫 地板', desc: '切換地板材質' },
 ];
 
 export const WardrobeModal: React.FC = () => {
@@ -58,7 +58,7 @@ export const WardrobeModal: React.FC = () => {
       <div className="w-full max-w-md retro-box rounded-2xl overflow-hidden border-2 border-slate-700 flex flex-col max-h-[92vh]">
         {/* Top Header */}
         <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
-          <h3 className="text-sm font-black text-white">🎒 個人紙娃娃衣櫃 & 房間自由佈置</h3>
+          <h3 className="text-sm font-black text-white">🎒 衣櫃與房間佈置</h3>
           <button
             onClick={() => store.setWardrobeModalOpen(false)}
             className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
@@ -82,7 +82,7 @@ export const WardrobeModal: React.FC = () => {
               }`}
             >
               <Shirt className="w-3.5 h-3.5" />
-              <span>紙娃娃部位換裝</span>
+              <span>角色換裝</span>
             </button>
             <button
               onClick={() => setMode('room')}
@@ -91,7 +91,7 @@ export const WardrobeModal: React.FC = () => {
               }`}
             >
               <Home className="w-3.5 h-3.5" />
-              <span>房間槽位自由擺設</span>
+              <span>房間擺設</span>
             </button>
           </div>
         </div>
@@ -123,20 +123,20 @@ export const WardrobeModal: React.FC = () => {
 
               {/* Body Stage Selector */}
               <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-300 shrink-0">💪 體態階段：</span>
+                <span className="text-xs font-bold text-slate-300 shrink-0">💪 體態</span>
                 <div className="flex gap-1">
                   {(
                     [
-                      { id: 'beginner', label: '新手' },
-                      { id: 'powerlifter', label: '巨力' },
-                      { id: 'aesthetic', label: '美學' },
+                      { id: 'beginner', label: '🌱菜鳥' },
+                      { id: 'aesthetic', label: '⚡精實' },
+                      { id: 'powerlifter', label: '🐻巨巨' },
                       { id: 'titan', label: '👑泰坦' },
                     ] as { id: AvatarBodyStage; label: string }[]
                   ).map((st) => (
                     <button
                       key={st.id}
                       onClick={() => store.setBodyStage(st.id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                      className={`px-2 py-1 rounded-lg text-xs font-bold ${
                         store.bodyStage === st.id
                           ? 'bg-amber-400 text-slate-950 font-black'
                           : 'bg-slate-800 text-slate-400'

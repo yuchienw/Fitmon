@@ -83,7 +83,7 @@ export const VictoryModal: React.FC = () => {
             className="retro-btn w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2"
           >
             <Camera className="w-4 h-4" />
-            <span>📸 製作今日運動迷因拍貼 (IG 限動 / 廣場)</span>
+            <span>📸 製作今日運動拍貼</span>
           </button>
 
           <div className="grid grid-cols-2 gap-2">
@@ -98,7 +98,7 @@ export const VictoryModal: React.FC = () => {
               className="retro-btn py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1"
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span>直接發廣場</span>
+              <span>發佈動態</span>
             </button>
 
             <button

@@ -1,0 +1,6 @@
+{
+  "appId": "com.fitmon.app",
+  "appName": "FitMon",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "FitMon 健身紙娃娃社群",
+  "short_name": "FitMon",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f0e6",
+  "theme_color": "#10b981",
+  "orientation": "portrait"
+}

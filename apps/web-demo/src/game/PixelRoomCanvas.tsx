@@ -161,7 +161,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
       <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none gap-2">
         <div className="bg-slate-950/85 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white shadow truncate">
           {customOverride
-            ? `🏠 ${customOverride.ownerName}${visitorAvatar ? ' (與你同框串門中)' : ''}`
+            ? `🏠 ${customOverride.ownerName}${visitorAvatar ? ' · 同框串門' : ''}`
             : `💬 ${speechBubble}`}
         </div>
 
@@ -244,10 +244,10 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
           {onOpenWardrobe && (
             <button
               onClick={onOpenWardrobe}
-              className="retro-btn px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1"
+              className="retro-btn px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1 shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>換裝 / 房間佈置</span>
+              <span>換裝佈置</span>
             </button>
           )}
         </div>

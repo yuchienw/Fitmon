@@ -9,11 +9,11 @@
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、Meme 拍貼、開源科學動作庫 |
-| **目前階段** | **Phase 1：Web Demo MVP v2.7 實機體驗驗收期 (HD 2D Chibi + Warm Theme + Pro Exercise DB)** | 🚀 **【已完成《楓之谷》級高清 2D 賽璐璐 Q 版引擎、專業解剖動作圖庫與溫暖亮色主題】** |
-| **當前版本** | `v2.7.0-hd-chibi-and-warm-light-theme` | 廢除 8-Bit 馬賽克方塊，全面改採 `960×600` 高清圓潤 2D 賽璐璐 Q 版紙娃娃、專業解剖肌群/真人圖庫與溫暖亮色預設主題 |
-| **最後更新時間** | `2026-11-03 00:01 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `de0048e` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 驗收 `apps/web-demo` V2 全部 18 項修正成果（`http://localhost:5173`） |
+| **目前階段** | **Phase 1：Web Demo & Native iOS/Android App v2.8 實機測試期** | 🚀 **【已完成 V2.8 七大體感升級 ＋ Capacitor iOS/Android 原生專案封裝】** |
+| **當前版本** | `v2.8.0-mobile-native-and-ux-polish` | 專注模式中途新增動作、極簡無括號介面、加好友模擬、模擬內購儲值、月曆/週檢視訓練量、高反差六塊肌紙娃娃、Capacitor 雙端封裝 |
+| **最後更新時間** | `2026-11-03 01:05 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `36d2783` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 於 iPhone 實機測試 `apps/web-demo`（Web / PWA 或 Xcode Native iOS App） |
 
 ---
 
@@ -56,11 +56,21 @@
 - [x] **V2-10 [8-Bit 背景音樂 BGM 循環播放]**：內建 Web Audio API Chiptune 輕快 8-Bit 背景音樂自動循環序列器 (`SoundManager.ts`)，於房間右上角 `[🎵 BGM]` 與設定彈窗皆可獨立開關。
 - [x] **V2-11 [頂部 Header 大數值防爆版保護]**：當金幣、連勝等數值過長時自動縮寫 (`formatCompact`: `12.5K` / `1.2M`)，並鎖定右上角 `[⚙️]` 為 `shrink-0` 絕不擠出畫面外。
 
-#### E. 後續里程碑 (Future Milestones)
+#### E. V2.8 手機實機體驗 7 大優化與雙端 App 封裝 (V2.8 Mobile Polish & Native Packaging)
+- [x] **V2-19 [專注訓練中途新增動作]**：於專注訓練模式提供獨立的 **`[＋新增]`** 與 **`[替換]`** 雙按鈕（`addExerciseToActiveQueue` vs `swapActiveExercise`），可隨時把新動作排入今日序列而不覆蓋原動作。
+- [x] **V2-20 [全域極簡無括號 UI 減字]**：全面剃除各分頁與彈窗的 `(...)` 括號贅字說明，將所有按鈕濃縮為 2~4 字極簡標籤，杜絕手機窄螢幕換行或 `...` 截斷。
+- [x] **V2-21 [社交加好友情境模擬]**：新增非好友玩家（如 `街頭健體 · Leo` 與認證名人），於動態牆、「找健友」名冊與個人主頁提供即時互動 **`[＋ 加好友]` ➔ `[✓ 好友]`** 切換 (`toggleFriend`)。
+- [x] **V2-22 [商城模擬內購儲值閉環]**：於 `[🛒 商城]` 新增第 4 分頁 **`[💎 儲值]`** 及道具 `NT$` 直購鈕，內建 Apple App Store / Google Play 沙盒模擬結帳彈窗 (`[一鍵模擬付款]`)。
+- [x] **V2-23 [健身紀錄月曆檢視 & 週訓練量檢視]**：於 `[👤 我的 -> 月曆與紀錄]` 實作 **`📅 月曆檢視`**（28 日格狀熱力日曆＋每日容量標籤）與 **`📊 週訓練量`**（近 7 日長條圖＋週總組數/週總容量統計）。
+- [x] **V2-24 [高反差肌肉紙娃娃體態階段]**：新增免費預設 **`赤膊健美體態 (top_bare_muscles)`** 上衣，並在 `[🏠 房間]`、衣櫃与 `[👤 我的]` 提供 **`🌱 菜鳥 / ⚡ 精實 / 🐻 巨巨 / 👑 泰坦`** 一鍵切換，立體呈現平坦肚皮 vs 3D 胸肌、六塊腹肌、斜方肌與寬肩反差。
+- [x] **MILESTONE-3 [Capacitor iOS / Android 雙端原生 App 專案產出]**：完成 `@capacitor/ios` 與 `@capacitor/android` 建置（`apps/web-demo/ios` 與 `apps/web-demo/android`），並支援 iOS PWA 全螢幕主畫面安裝。
+
+#### F. 後續里程碑 (Future Milestones)
 - [ ] **MILESTONE-2**：串接 Supabase 雲端資料庫與 OAuth 漸進式綁定
-- [ ] **MILESTONE-3**：Capacitor 封裝 iOS / Android 雙端原生 App
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261103-26**：完成 V2.8 手機實機體驗 7 大優化（中途新增動作、極簡減字、加好友模擬、模擬內購、月曆/週檢視、高反差六塊肌紙娃娃）與 Capacitor iOS/Android 雙端 App 封裝 (TASK-021)
+- [x] **DONE-20261103-25**：完成 V2.7 《楓之谷》級高清 2D 賽璐璐 Q 版引擎、專業運動解剖肌群圖庫與系統自適應溫暖亮色主題 (TASK-020)
 - [x] **DONE-20261102-24**：全面完成首輪試玩反饋 18 項功能與架構升級 (`V2-01` ~ `V2-18`) 並通過 TypeScript 與 Vite 生產環境建置驗證 (TASK-019)
 - [x] **DONE-20261101-23**：完成首輪 MVP 實機試玩體驗，收錄使用者 18 項關鍵產品與 UX 細節待辦事項至看板 (TASK-018)
 - [x] **DONE-20261101-22**：升級《楓之谷》風格二頭身 Q 版精細點陣角色與房間 ＋ 砍除 70% 介面雜亂文字 (TASK-017)

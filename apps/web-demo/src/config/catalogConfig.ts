@@ -166,6 +166,17 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
 
   // ================= 3. 上衣 (top) =================
   {
+    id: 'top_bare_muscles',
+    slot: 'top',
+    nameZh: '赤膊健美體態',
+    nameEn: 'Bare Physique',
+    priceCoins: 0,
+    rarity: 'common',
+    primaryColor: '#ffdfc4',
+    accentColor: '#f59e0b',
+    badgeText: '秀肌肉',
+  },
+  {
     id: 'top_black_tank',
     slot: 'top',
     nameZh: '黑魂訓練吊嘎',
@@ -892,10 +903,10 @@ export const FRIEND_PROFILES: FriendProfile[] = [
   {
     id: 'celeb_titan_chen',
     nameZh: '陳巨石 (Rock Chen)',
-    titleZh: 'IPF 國際健力三項金牌 × 傳奇館長',
-    isFriend: true,
+    titleZh: 'IPF 健力三項金牌',
+    isFriend: false,
     isVerified: true,
-    verifiedBadge: '👑 官方認證運動員',
+    verifiedBadge: '👑 認證選手',
     bioZh: '沒有奇蹟，只有累積！每一組深蹲都是對地心引力的宣戰！',
     followers: '128.4K',
     level: 42,
@@ -904,7 +915,7 @@ export const FRIEND_PROFILES: FriendProfile[] = [
     equipped: {
       hair: 'hair_titan_crown',
       face: 'face_fierce_grit',
-      top: 'top_crimson_sbd',
+      top: 'top_bare_muscles',
       bottom: 'bottom_navy_shorts',
       accessory: 'acc_gold_barbell',
     },
@@ -925,10 +936,10 @@ export const FRIEND_PROFILES: FriendProfile[] = [
   {
     id: 'celeb_aesthetic_lin',
     nameZh: '林健美 (Jay Lin)',
-    titleZh: 'IFBB Pro 古典健體職業卡得主',
-    isFriend: true,
+    titleZh: 'IFBB 古典健體選手',
+    isFriend: false,
     isVerified: true,
-    verifiedBadge: '✨ 官方認證職業選手',
+    verifiedBadge: '✨ 認證選手',
     bioZh: '重量只是工具，肌肉感受度與肩腰比例才是古典美學的靈魂。',
     followers: '94.2K',
     level: 36,
@@ -937,7 +948,7 @@ export const FRIEND_PROFILES: FriendProfile[] = [
     equipped: {
       hair: 'hair_spiky_gold',
       face: 'face_pixel_shades',
-      top: 'top_spartan_cape',
+      top: 'top_bare_muscles',
       bottom: 'bottom_gold_tights',
       accessory: 'acc_protein_shaker',
     },
@@ -954,6 +965,38 @@ export const FRIEND_PROFILES: FriendProfile[] = [
       { label: '體脂', value: '6.8%' },
     ],
     routineTemplate: INITIAL_SAVED_ROUTINES[4],
+  },
+  {
+    id: 'user_leo',
+    nameZh: '街頭健體・Leo',
+    titleZh: '街頭健身玩家',
+    isFriend: false,
+    isVerified: false,
+    bioZh: '主打暴力上槓與引體向上，尋找一起衝刺連勝的健友！',
+    followers: '512',
+    level: 22,
+    streakDays: 16,
+    bodyStage: 'aesthetic',
+    equipped: {
+      hair: 'hair_spiky_gold',
+      face: 'face_confident_smile',
+      top: 'top_bare_muscles',
+      bottom: 'bottom_camo_joggers',
+      accessory: 'acc_iron_dumbbell',
+    },
+    room: {
+      wallpaper: 'wall_zen_wood',
+      floor: 'floor_maple_wood',
+      slotLeft: 'rack_classic_cage',
+      slotCenter: 'pet_black_cat',
+      slotRight: 'prop_plant_monstera',
+    },
+    bestPRs: [
+      { label: '引體', value: '+35kg' },
+      { label: '臥推', value: '110kg' },
+      { label: '棒式', value: '240秒' },
+    ],
+    routineTemplate: INITIAL_SAVED_ROUTINES[1],
   },
   {
     id: 'friend_akai',
@@ -1063,4 +1106,59 @@ export const MEME_STICKERS = [
   { id: 'stk_bulk', text: '🍔 我不是變胖，我是在乾淨增肌', color: '#8b5cf6' },
   { id: 'stk_pr', text: '🏆 NEW PR! 地心引力阻止不了我', color: '#eab308' },
   { id: 'stk_sore', text: '⚡ 延遲性肌肉痠痛是我的勳章', color: '#06b6d4' },
+];
+
+
+export interface IapPackageItem {
+  id: string;
+  nameZh: string;
+  descZh: string;
+  priceNtd: string;
+  rewardCoins: number;
+  bonusStamina?: number;
+  bonusFreezes?: number;
+  iconEmoji: string;
+  tagZh?: string;
+}
+
+export const IAP_PACKAGES: IapPackageItem[] = [
+  {
+    id: 'iap_starter_bundle',
+    nameZh: '新手破繭超值禮包',
+    descZh: '800 🪙 ＋ 體力補滿 ＋ 冰凍卡 ×2',
+    priceNtd: 'NT$ 30',
+    rewardCoins: 800,
+    bonusStamina: 100,
+    bonusFreezes: 2,
+    iconEmoji: '🎁',
+    tagZh: '首儲激推',
+  },
+  {
+    id: 'iap_coins_small',
+    nameZh: '輕量金幣補給袋',
+    descZh: '立即獲得 600 🪙 金幣',
+    priceNtd: 'NT$ 60',
+    rewardCoins: 600,
+    iconEmoji: '💰',
+  },
+  {
+    id: 'iap_coins_mega',
+    nameZh: '鐵館巨巨黃金寶箱',
+    descZh: '立即獲得 2,200 🪙 金幣 ＋ 體力補滿',
+    priceNtd: 'NT$ 150',
+    rewardCoins: 2200,
+    bonusStamina: 100,
+    iconEmoji: '👑',
+    tagZh: '最划算',
+  },
+  {
+    id: 'iap_pro_pass',
+    nameZh: 'PRO 尊榮月度通行證',
+    descZh: '1,500 🪙 ＋ 雙倍金幣狀態開啟',
+    priceNtd: 'NT$ 190',
+    rewardCoins: 1500,
+    bonusStamina: 100,
+    iconEmoji: '💎',
+    tagZh: 'VIP',
+  },
 ];

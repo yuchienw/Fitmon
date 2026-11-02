@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Trophy,
-  Flame,
   Calculator,
   Calendar,
   TrendingUp,
@@ -11,17 +10,23 @@ import {
   Clock,
   Sparkles,
   Activity,
+  CalendarDays,
+  ListFilter,
 } from 'lucide-react';
-import { useGameStore } from '../../stores/useGameStore';
+import { useGameStore, WorkoutSessionRecord } from '../../stores/useGameStore';
 import { EXERCISE_LIBRARY, AvatarBodyStage } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
+import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 
-type MeSubTab = 'charts' | 'history' | 'trophies';
+type MeSubTab = 'history' | 'charts' | 'trophies';
+type HistoryViewMode = 'calendar' | 'weekly' | 'list';
 type ChartMetricType = 'volume' | 'strength_pr' | 'muscle_split';
 
 export const AnalyticsTab: React.FC = () => {
   const store = useGameStore();
-  const [subTab, setSubTab] = useState<MeSubTab>('charts');
+  const [subTab, setSubTab] = useState<MeSubTab>('history');
+  const [historyMode, setHistoryMode] = useState<HistoryViewMode>('calendar');
+  const [selectedDaysAgo, setSelectedDaysAgo] = useState<number | null>(null);
   const [chartType, setChartType] = useState<ChartMetricType>('volume');
   const { biometrics } = store;
 
@@ -41,6 +46,70 @@ export const AnalyticsTab: React.FC = () => {
     50,
     Math.round((targetKcal - proteinGrams * 4 - fatGrams * 9) / 4)
   );
+
+  // Map workout sessions by daysAgo (0 = today, 1 = yesterday, etc.)
+  const getSessionDaysAgo = (s: WorkoutSessionRecord, idx: number): number => {
+    if (typeof s.daysAgo === 'number') return s.daysAgo;
+    if (s.dateLabel.includes('今日') || s.dateLabel.includes('剛剛')) return 0;
+    if (s.dateLabel.includes('昨天')) return 1;
+    return idx + 1;
+  };
+
+  const sessionsByDaysAgo = new Map<number, WorkoutSessionRecord[]>();
+  store.workoutHistory.forEach((s, idx) => {
+    const d = getSessionDaysAgo(s, idx);
+    const prev = sessionsByDaysAgo.get(d) || [];
+    prev.push(s);
+    sessionsByDaysAgo.set(d, prev);
+  });
+
+  // Weekly 7-day data (6 days ago -> Today)
+  const weeklyDays = Array.from({ length: 7 }, (_, i) => {
+    const dAgo = 6 - i;
+    const daySessions = sessionsByDaysAgo.get(dAgo) || [];
+    const volume = daySessions.reduce((sum, s) => sum + s.totalVolume, 0);
+    const sets = daySessions.reduce((sum, s) => sum + s.totalSets, 0);
+    const dateObj = new Date();
+    dateObj.setDate(dateObj.getDate() - dAgo);
+    const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
+    const label = dAgo === 0 ? '今日' : `週${weekdayNames[dateObj.getDay()]}`;
+    return { dAgo, label, volume, sets, sessions: daySessions };
+  });
+
+  const maxWeeklyDayVol = Math.max(...weeklyDays.map((d) => d.volume), 6000);
+  const weeklyTotalVolume = weeklyDays.reduce((sum, d) => sum + d.volume, 0);
+  const weeklyTotalSets = weeklyDays.reduce((sum, d) => sum + d.sets, 0);
+  const weeklyActiveDays = weeklyDays.filter((d) => d.sets > 0).length;
+
+  // Monthly 28-day Calendar Grid (4 weeks ending today so today is always visible in the grid)
+  const todayObj = new Date();
+  const calendarCells = Array.from({ length: 28 }, (_, i) => {
+    const dAgo = 27 - i;
+    const cellDate = new Date();
+    cellDate.setDate(todayObj.getDate() - dAgo);
+    const dayNum = cellDate.getDate();
+    const daySessions = sessionsByDaysAgo.get(dAgo) || [];
+    const volume = daySessions.reduce((sum, s) => sum + s.totalVolume, 0);
+    const sets = daySessions.reduce((sum, s) => sum + s.totalSets, 0);
+    return {
+      dAgo,
+      dayNum,
+      isToday: dAgo === 0,
+      volume,
+      sets,
+      sessions: daySessions,
+    };
+  });
+
+  const monthlyActiveDays = calendarCells.filter((c) => c.sets > 0).length;
+  const monthlyTotalVolume = calendarCells.reduce((sum, c) => sum + c.volume, 0);
+  const monthlyTotalSets = calendarCells.reduce((sum, c) => sum + c.sets, 0);
+
+  // Filtered sessions for bottom list when a calendar/week day is selected
+  const displayedSessions =
+    selectedDaysAgo !== null
+      ? sessionsByDaysAgo.get(selectedDaysAgo) || []
+      : store.workoutHistory;
 
   // Chronological sessions for trend chart (oldest -> newest)
   const chronologicalSessions = [...store.workoutHistory].reverse();
@@ -96,41 +165,43 @@ export const AnalyticsTab: React.FC = () => {
         },${padY + plotH}`
       : '';
 
+  const isBareTop = store.equipped.top === 'top_bare_muscles';
+
   return (
     <div className="p-3.5 space-y-3.5 pb-10">
-      {/* 1. PLAYER PROFILE & PAPER-DOLL WARDROBE HEADER CARD (V2-08, V2-13) */}
+      {/* 1. PLAYER PROFILE HEADER CARD */}
       <div className="retro-box rounded-2xl p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/50 flex items-center justify-between gap-2">
         <div>
           <div className="flex items-center gap-1.5">
             <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black">
-              Lv.{store.level} 訓練家
+              Lv.{store.level}
             </span>
             <span className="text-xs font-mono text-amber-300 font-bold">
-              🔥 連續打卡 {store.streakDays} 天
+              🔥 連勝 {store.streakDays} 天
             </span>
           </div>
-          <h2 className="text-base font-black text-white mt-1">{store.nickname} 的個人中心</h2>
+          <h2 className="text-base font-black text-white mt-1">{store.nickname}</h2>
           <p className="text-[11px] text-slate-400">
-            累積完成 {store.workoutHistory.length} 次單日訓練 · 總金幣 {store.coins.toLocaleString()}🪙
+            累計 {store.workoutHistory.length} 次訓練 · {store.coins.toLocaleString()} 🪙
           </p>
         </div>
 
         <button
           onClick={() => store.setWardrobeModalOpen(true)}
-          className="retro-btn px-3 py-2.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shrink-0 shadow-md"
+          className="retro-btn px-3 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shrink-0 shadow-md"
         >
           <Shirt className="w-4 h-4" />
-          <span>造型與房間設定</span>
+          <span>衣櫃佈置</span>
         </button>
       </div>
 
-      {/* 2. THREE SUB-TABS: 數據趨勢圖表 / 單日課表紀錄 / 成就與體態 */}
+      {/* 2. THREE SUB-TABS: 月曆與紀錄 / 趨勢圖表 / 體態與PR */}
       <div className="grid grid-cols-3 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
         {(
           [
-            { id: 'charts', label: '數據趨勢圖', icon: TrendingUp },
-            { id: 'history', label: '單日課表紀錄', icon: Calendar },
-            { id: 'trophies', label: 'PR 與體態', icon: Trophy },
+            { id: 'history', label: '月曆與紀錄', icon: Calendar },
+            { id: 'charts', label: '趨勢圖表', icon: TrendingUp },
+            { id: 'trophies', label: '體態與PR', icon: Trophy },
           ] as const
         ).map((tab) => {
           const Icon = tab.icon;
@@ -139,7 +210,7 @@ export const AnalyticsTab: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setSubTab(tab.id)}
-              className={`py-2 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition ${
+              className={`py-2 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition ${
                 active
                   ? 'bg-emerald-500 text-slate-950 shadow'
                   : 'text-slate-400 hover:text-white'
@@ -153,35 +224,287 @@ export const AnalyticsTab: React.FC = () => {
       </div>
 
       {/* =====================================================================
-          SUB-TAB 1: DATA NERD TREND CHARTS & BIOMETRICS (V2-09)
+          SUB-TAB 1: MONTHLY CALENDAR, WEEKLY VOLUME & SESSION LIST (Item 5)
+         ===================================================================== */}
+      {subTab === 'history' && (
+        <div className="space-y-3">
+          {/* View Switcher: 月曆 / 週檢視 / 列表 */}
+          <div className="flex items-center justify-between bg-slate-900 p-1 rounded-xl border border-slate-800">
+            {(
+              [
+                { id: 'calendar', label: '📅 月曆檢視', icon: CalendarDays },
+                { id: 'weekly', label: '📊 週訓練量', icon: BarChart3 },
+                { id: 'list', label: '📋 列表明細', icon: ListFilter },
+              ] as const
+            ).map((m) => {
+              const active = historyMode === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    setHistoryMode(m.id);
+                    setSelectedDaysAgo(null);
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-black transition ${
+                    active
+                      ? 'bg-cyan-500 text-slate-950 shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* VIEW A: MONTHLY CALENDAR GRID */}
+          {historyMode === 'calendar' && (
+            <div className="retro-box rounded-2xl p-3.5 space-y-3">
+              {/* Monthly Summary KPIs */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
+                  <div className="text-[10px] text-slate-400">近4週訓練</div>
+                  <div className="text-sm font-black font-mono text-emerald-400">
+                    {monthlyActiveDays} 天
+                  </div>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
+                  <div className="text-[10px] text-slate-400">總組數</div>
+                  <div className="text-sm font-black font-mono text-white">
+                    {monthlyTotalSets} 組
+                  </div>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
+                  <div className="text-[10px] text-slate-400">總訓練量</div>
+                  <div className="text-sm font-black font-mono text-amber-300">
+                    {(monthlyTotalVolume / 1000).toFixed(1)}k kg
+                  </div>
+                </div>
+              </div>
+
+              {/* 7-Column Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1.5 text-center">
+                {calendarCells.map((cell) => {
+                  const hasWorkout = cell.sets > 0;
+                  const isSelected = selectedDaysAgo === cell.dAgo;
+                  return (
+                    <button
+                      key={cell.dAgo}
+                      onClick={() =>
+                        setSelectedDaysAgo(isSelected ? null : cell.dAgo)
+                      }
+                      className={`py-2 px-1 rounded-xl border flex flex-col items-center justify-center transition ${
+                        isSelected
+                          ? 'bg-cyan-500 text-slate-950 border-cyan-300 font-black'
+                          : hasWorkout
+                          ? 'bg-emerald-500/20 border-emerald-500/60 text-white'
+                          : cell.isToday
+                          ? 'bg-slate-800 border-amber-400/60 text-amber-300'
+                          : 'bg-slate-900/70 border-slate-800/80 text-slate-500'
+                      }`}
+                    >
+                      <span className="text-[11px] font-mono font-black">
+                        {cell.isToday ? '今' : cell.dayNum}
+                      </span>
+                      {hasWorkout ? (
+                        <span
+                          className={`text-[9px] font-mono font-bold mt-0.5 ${
+                            isSelected ? 'text-slate-950' : 'text-emerald-300'
+                          }`}
+                        >
+                          {(cell.volume / 1000).toFixed(1)}k
+                        </span>
+                      ) : (
+                        <span className="text-[9px] opacity-30 mt-0.5">-</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
+                <span>🟢 綠框代表有訓練紀錄與當日容量</span>
+                {selectedDaysAgo !== null && (
+                  <button
+                    onClick={() => setSelectedDaysAgo(null)}
+                    className="text-cyan-400 font-bold"
+                  >
+                    顯示全部紀錄
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW B: WEEKLY VOLUME BAR VIEW */}
+          {historyMode === 'weekly' && (
+            <div className="retro-box rounded-2xl p-3.5 space-y-3">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
+                  <div className="text-[10px] text-slate-400">本週訓練</div>
+                  <div className="text-sm font-black font-mono text-emerald-400">
+                    {weeklyActiveDays} 天
+                  </div>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
+                  <div className="text-[10px] text-slate-400">本週組數</div>
+                  <div className="text-sm font-black font-mono text-white">
+                    {weeklyTotalSets} 組
+                  </div>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
+                  <div className="text-[10px] text-slate-400">本週總量</div>
+                  <div className="text-sm font-black font-mono text-amber-300">
+                    {weeklyTotalVolume.toLocaleString()} kg
+                  </div>
+                </div>
+              </div>
+
+              {/* 7-Day Vertical Bar Chart */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3">
+                <div className="grid grid-cols-7 gap-2 items-end h-32 pt-4">
+                  {weeklyDays.map((d) => {
+                    const heightPct =
+                      d.volume > 0 ? Math.max(16, Math.round((d.volume / maxWeeklyDayVol) * 100)) : 6;
+                    const isSelected = selectedDaysAgo === d.dAgo;
+                    return (
+                      <button
+                        key={d.dAgo}
+                        onClick={() =>
+                          setSelectedDaysAgo(isSelected ? null : d.dAgo)
+                        }
+                        className="flex flex-col items-center h-full justify-end group"
+                      >
+                        <span className="text-[9px] font-mono text-emerald-300 font-bold mb-1">
+                          {d.volume > 0 ? `${(d.volume / 1000).toFixed(1)}k` : ''}
+                        </span>
+                        <div
+                          className={`w-full rounded-t-lg transition-all ${
+                            isSelected
+                              ? 'bg-cyan-400'
+                              : d.volume > 0
+                              ? 'bg-gradient-to-t from-emerald-600 to-emerald-400'
+                              : 'bg-slate-800'
+                          }`}
+                          style={{ height: `${heightPct}%` }}
+                        />
+                        <span className="text-[10px] font-bold text-slate-300 mt-1.5">
+                          {d.label}
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-500">
+                          {d.sets}組
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SESSION CARDS LIST */}
+          <div className="space-y-2.5">
+            {displayedSessions.length === 0 ? (
+              <div className="retro-box rounded-2xl p-5 text-center text-xs text-slate-400">
+                該日無訓練紀錄
+              </div>
+            ) : (
+              displayedSessions.map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => store.setSelectedHistorySessionId(session.id)}
+                  className="retro-box rounded-2xl p-3.5 space-y-2.5 cursor-pointer hover:border-emerald-500/50 transition group"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2 text-[11px] font-mono text-emerald-400 font-bold">
+                        <span>📅 {session.dateLabel}</span>
+                        <span>·</span>
+                        <span className="flex items-center gap-0.5 text-slate-400">
+                          <Clock className="w-3 h-3" />
+                          {session.durationMinutes}分
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-black text-white group-hover:text-emerald-300 mt-0.5">
+                        {session.routineName}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-0.5 text-xs font-black text-cyan-400 shrink-0">
+                      <span>明細</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </div>
+
+                  {/* Exercise Thumbnails Preview Strip */}
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                    {session.exerciseLogs.map((log, i) => {
+                      const exObj =
+                        EXERCISE_LIBRARY.find((e) => e.id === log.exerciseId) ||
+                        EXERCISE_LIBRARY[0];
+                      return (
+                        <div
+                          key={i}
+                          className="px-2 py-1 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-1.5 shrink-0"
+                        >
+                          <ExerciseThumbnail exercise={exObj} size={26} />
+                          <div className="text-[10px]">
+                            <div className="font-bold text-white">{log.exerciseNameZh}</div>
+                            <div className="font-mono text-cyan-300">
+                              {log.sets.length}組 · {Math.max(...log.sets.map((s) => s.weightKg))}
+                              {log.unitLabel}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Bottom Summary Strip */}
+                  <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-slate-800/80 text-slate-400">
+                    <span>
+                      組數 <strong className="text-white">{session.totalSets}組</strong>
+                    </span>
+                    <span>
+                      容量{' '}
+                      <strong className="text-emerald-400">
+                        {session.totalVolume.toLocaleString()} kg
+                      </strong>
+                    </span>
+                    <span className="text-amber-300 font-bold">+{session.coinsEarned}🪙</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUB-TAB 2: DATA NERD TREND CHARTS & BIOMETRICS
          ===================================================================== */}
       {subTab === 'charts' && (
         <div className="space-y-3.5">
           {/* Interactive SVG Trend Chart Box */}
           <div className="retro-box rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <div>
-                <h3 className="text-xs font-black text-white flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-emerald-400" />
-                  運動數據控進階趨勢圖表
-                </h3>
-                <p className="text-[10px] text-slate-400">
-                  追蹤每次訓練容量成長、三大項力量曲線與肌群平衡
-                </p>
-              </div>
+              <h3 className="text-xs font-black text-white flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-emerald-400" />
+                訓練趨勢圖
+              </h3>
 
               <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
                 {(
                   [
-                    { id: 'volume', label: '容量折線' },
-                    { id: 'strength_pr', label: '力量成長' },
-                    { id: 'muscle_split', label: '肌群分佈' },
+                    { id: 'volume', label: '容量' },
+                    { id: 'strength_pr', label: '三項' },
+                    { id: 'muscle_split', label: '肌群' },
                   ] as const
                 ).map((c) => (
                   <button
                     key={c.id}
                     onClick={() => setChartType(c.id)}
-                    className={`px-2 py-1 rounded text-[10px] font-black transition ${
+                    className={`px-2.5 py-1 rounded text-[11px] font-black transition ${
                       chartType === c.id
                         ? 'bg-cyan-500 text-slate-950'
                         : 'text-slate-400 hover:text-white'
@@ -205,7 +528,6 @@ export const AnalyticsTab: React.FC = () => {
                       </linearGradient>
                     </defs>
 
-                    {/* Horizontal Grid Lines */}
                     {[0.25, 0.5, 0.75, 1].map((ratio, idx) => {
                       const y = padY + plotH * (1 - ratio);
                       return (
@@ -232,10 +554,8 @@ export const AnalyticsTab: React.FC = () => {
                       );
                     })}
 
-                    {/* Shaded Area */}
                     {areaPolygonStr && <polygon points={areaPolygonStr} fill="url(#volAreaGrad)" />}
 
-                    {/* Line Path */}
                     {polylineStr && (
                       <polyline
                         fill="none"
@@ -247,7 +567,6 @@ export const AnalyticsTab: React.FC = () => {
                       />
                     )}
 
-                    {/* Data Points & Labels */}
                     {volumePoints.map((pt, idx) => (
                       <g
                         key={pt.session.id}
@@ -278,29 +597,29 @@ export const AnalyticsTab: React.FC = () => {
                           y={svgH - 4}
                           textAnchor="middle"
                           fill="#94a3b8"
-                          fontSize="8.5"
+                          fontSize="8"
                         >
-                          {idx + 1}.{pt.session.dateLabel}
+                          #{idx + 1}
                         </text>
                       </g>
                     ))}
                   </svg>
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
-                  <span>💡 點擊折線圖上的節點可直接檢視該日完整課表紀錄</span>
-                  <span className="font-mono text-emerald-400 font-bold">單位: kg·reps</span>
+                  <span>點擊節點可開啟當日明細</span>
+                  <span className="font-mono text-emerald-400 font-bold">kg · reps</span>
                 </div>
               </div>
             )}
 
-            {/* CHART 2: BIG-3 1RM / TOP WEIGHT PROGRESSION MULTI-LINE CHART */}
+            {/* CHART 2: BIG-3 1RM PROGRESSION */}
             {chartType === 'strength_pr' && (
               <div className="space-y-2">
                 <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-2">
                   <div className="flex items-center justify-between text-[10px] font-bold">
-                    <span className="text-amber-300">● 硬舉 (Deadlift)</span>
-                    <span className="text-emerald-400">● 深蹲 (Squat)</span>
-                    <span className="text-cyan-400">● 臥推 (Bench)</span>
+                    <span className="text-amber-300">● 硬舉</span>
+                    <span className="text-emerald-400">● 深蹲</span>
+                    <span className="text-cyan-400">● 臥推</span>
                   </div>
                   <svg viewBox="0 0 320 130" className="w-full h-36">
                     {[40, 80, 120, 160].map((val, i) => {
@@ -321,21 +640,18 @@ export const AnalyticsTab: React.FC = () => {
                         </g>
                       );
                     })}
-                    {/* Deadlift Curve */}
                     <polyline
                       fill="none"
                       stroke="#fbbf24"
                       strokeWidth="2.5"
                       points="40,56 105,50 170,45 235,40 290,34"
                     />
-                    {/* Squat Curve */}
                     <polyline
                       fill="none"
                       stroke="#10b981"
                       strokeWidth="2.5"
                       points="40,68 105,63 170,58 235,54 290,48"
                     />
-                    {/* Bench Curve */}
                     <polyline
                       fill="none"
                       stroke="#38bdf8"
@@ -356,20 +672,6 @@ export const AnalyticsTab: React.FC = () => {
                     ))}
                   </svg>
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  近 5 週三大項極限重量穩定提升：硬舉{' '}
-                  <strong className="text-amber-300">
-                    {store.personalRecords.conventional_deadlift || 130}kg
-                  </strong>{' '}
-                  / 深蹲{' '}
-                  <strong className="text-emerald-400">
-                    {store.personalRecords.barbell_squat || 110}kg
-                  </strong>{' '}
-                  / 臥推{' '}
-                  <strong className="text-cyan-300">
-                    {store.personalRecords.barbell_bench || 85}kg
-                  </strong>
-                </p>
               </div>
             )}
 
@@ -405,7 +707,7 @@ export const AnalyticsTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-white flex items-center gap-1.5">
                 <Calculator className="w-4 h-4 text-cyan-400" />
-                身體數值與每日營養目標 (TDEE)
+                身體數值與每日熱量 TDEE
               </span>
               <span className="text-xs font-mono font-black text-emerald-400">
                 {targetKcal} kcal/日
@@ -414,7 +716,7 @@ export const AnalyticsTab: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-center">
-                <label className="text-[10px] text-slate-400 block">身高 (cm)</label>
+                <label className="text-[10px] text-slate-400 block">身高 cm</label>
                 <input
                   type="number"
                   value={biometrics.heightCm}
@@ -423,7 +725,7 @@ export const AnalyticsTab: React.FC = () => {
                 />
               </div>
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-center">
-                <label className="text-[10px] text-slate-400 block">體重 (kg)</label>
+                <label className="text-[10px] text-slate-400 block">體重 kg</label>
                 <input
                   type="number"
                   value={biometrics.weightKg}
@@ -432,7 +734,7 @@ export const AnalyticsTab: React.FC = () => {
                 />
               </div>
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-2 text-center">
-                <label className="text-[10px] text-slate-400 block">體脂率 (%)</label>
+                <label className="text-[10px] text-slate-400 block">體脂 %</label>
                 <input
                   type="number"
                   value={biometrics.bodyFatPct}
@@ -445,15 +747,15 @@ export const AnalyticsTab: React.FC = () => {
             <div className="grid grid-cols-3 gap-1.5">
               {(
                 [
-                  { id: 'cut', label: '🔥 減脂 (-400)' },
-                  { id: 'maintain', label: '⚖️ 維持體態' },
-                  { id: 'bulk', label: '💪 增肌 (+300)' },
+                  { id: 'cut', label: '🔥 減脂' },
+                  { id: 'maintain', label: '⚖️ 維持' },
+                  { id: 'bulk', label: '💪 增肌' },
                 ] as const
               ).map((g) => (
                 <button
                   key={g.id}
                   onClick={() => store.updateBiometrics({ goal: g.id })}
-                  className={`py-1.5 rounded-lg text-[11px] font-black border transition ${
+                  className={`py-1.5 rounded-lg text-xs font-black border transition ${
                     biometrics.goal === g.id
                       ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
                       : 'bg-slate-900 border-slate-800 text-slate-400'
@@ -470,11 +772,11 @@ export const AnalyticsTab: React.FC = () => {
                 <div className="text-sm font-black font-mono text-white">{proteinGrams}g</div>
               </div>
               <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-500/30">
-                <div className="text-[10px] text-amber-300 font-bold">碳水化合物</div>
+                <div className="text-[10px] text-amber-300 font-bold">碳水</div>
                 <div className="text-sm font-black font-mono text-white">{carbsGrams}g</div>
               </div>
               <div className="p-2 rounded-xl bg-cyan-950/30 border border-cyan-500/30">
-                <div className="text-[10px] text-cyan-300 font-bold">健康脂肪</div>
+                <div className="text-[10px] text-cyan-300 font-bold">脂肪</div>
                 <div className="text-sm font-black font-mono text-white">{fatGrams}g</div>
               </div>
             </div>
@@ -483,122 +785,59 @@ export const AnalyticsTab: React.FC = () => {
       )}
 
       {/* =====================================================================
-          SUB-TAB 2: SINGLE-DAY WORKOUT SESSION LOGS (單日完整課表紀錄 V2-01, V2-17)
-         ===================================================================== */}
-      {subTab === 'history' && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-black text-white flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-emerald-400" />
-              單日健身單次課表紀錄 (點擊展開完整動作與組數)
-            </span>
-            <span className="text-[11px] font-mono text-slate-400">
-              共 {store.workoutHistory.length} 次紀錄
-            </span>
-          </div>
-
-          {store.workoutHistory.map((session) => (
-            <div
-              key={session.id}
-              onClick={() => store.setSelectedHistorySessionId(session.id)}
-              className="retro-box rounded-2xl p-3.5 space-y-2.5 cursor-pointer hover:border-emerald-500/50 transition group"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2 text-[11px] font-mono text-emerald-400 font-bold">
-                    <span>📅 {session.dateLabel}</span>
-                    <span>·</span>
-                    <span className="flex items-center gap-0.5 text-slate-400">
-                      <Clock className="w-3 h-3" />
-                      {session.durationMinutes} 分鐘
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-black text-white group-hover:text-emerald-300 mt-0.5">
-                    {session.routineName}
-                  </h3>
-                </div>
-
-                <div className="flex items-center gap-1 text-xs font-black text-cyan-400 shrink-0">
-                  <span>完整明細</span>
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              </div>
-
-              {/* Exercise Thumbnails Preview Strip */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-                {session.exerciseLogs.map((log, i) => {
-                  const exObj =
-                    EXERCISE_LIBRARY.find((e) => e.id === log.exerciseId) || EXERCISE_LIBRARY[0];
-                  return (
-                    <div
-                      key={i}
-                      className="px-2 py-1 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-1.5 shrink-0"
-                    >
-                      <ExerciseThumbnail exercise={exObj} size={26} />
-                      <div className="text-[10px]">
-                        <div className="font-bold text-white">{log.exerciseNameZh}</div>
-                        <div className="font-mono text-cyan-300">
-                          {log.sets.length}組 · 最高{' '}
-                          {Math.max(...log.sets.map((s) => s.weightKg))}
-                          {log.unitLabel}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Bottom Summary Strip */}
-              <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-slate-800/80 text-slate-400">
-                <span>
-                  總組數: <strong className="text-white">{session.totalSets} 組</strong>
-                </span>
-                <span>
-                  總容量:{' '}
-                  <strong className="text-emerald-400">
-                    {session.totalVolume.toLocaleString()}
-                  </strong>
-                </span>
-                <span className="text-amber-300 font-bold">+{session.coinsEarned}🪙</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* =====================================================================
-          SUB-TAB 3: PR TROPHIES & AVATAR BODY STAGE SWITCHER
+          SUB-TAB 3: PR TROPHIES & HIGH-CONTRAST AVATAR MUSCLE STAGE SWITCHER (Item 6)
          ===================================================================== */}
       {subTab === 'trophies' && (
         <div className="space-y-3.5">
-          {/* Body Stage Evolution Selector */}
-          <div className="retro-box rounded-2xl p-4 space-y-2.5">
-            <span className="text-xs font-black text-white flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              角色體態進化階段切換
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  { id: 'beginner', label: '🌱 初心訓練者', desc: '標準勻稱線條' },
-                  { id: 'aesthetic', label: '⚡ 精實美學體態', desc: '倒三角肩腰比' },
-                  { id: 'powerlifter', label: '🐻 重裝健力霸主', desc: '厚實胸背力量感' },
-                  { id: 'titan', label: '👑 傳奇巨獸體態', desc: '極致寬肩與金色氣場' },
-                ] as { id: AvatarBodyStage; label: string; desc: string }[]
-              ).map((st) => (
-                <button
-                  key={st.id}
-                  onClick={() => store.setBodyStage(st.id)}
-                  className={`p-2.5 rounded-xl border text-left transition ${
-                    store.bodyStage === st.id
-                      ? 'bg-emerald-950/40 border-emerald-400 text-white'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <div className="text-xs font-black">{st.label}</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">{st.desc}</div>
-                </button>
-              ))}
+          {/* Body Stage Evolution Selector + Live Muscular Portrait */}
+          <div className="retro-box rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-white flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                肌肉體態進化對比
+              </span>
+              <button
+                onClick={() =>
+                  store.equipOwnedAvatarItem(
+                    'top',
+                    isBareTop ? 'top_black_tank' : 'top_bare_muscles'
+                  )
+                }
+                className="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 text-xs font-black"
+              >
+                {isBareTop ? '💪 赤膊展示中' : '👕 脫衣看肌肉'}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <AvatarPortraitCanvas
+                bodyStage={store.bodyStage}
+                equipped={store.equipped}
+                size={92}
+              />
+              <div className="grid grid-cols-2 gap-2 flex-1">
+                {(
+                  [
+                    { id: 'beginner', label: '🌱 菜鳥', desc: '平坦柔和無腹肌' },
+                    { id: 'aesthetic', label: '⚡ 精實', desc: '倒三角＋六塊腹肌' },
+                    { id: 'powerlifter', label: '🐻 巨巨', desc: '厚實胸肌＋斜方肌' },
+                    { id: 'titan', label: '👑 泰坦', desc: '極限寬肩＋霸王氣場' },
+                  ] as { id: AvatarBodyStage; label: string; desc: string }[]
+                ).map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => store.setBodyStage(st.id)}
+                    className={`p-2 rounded-xl border text-left transition ${
+                      store.bodyStage === st.id
+                        ? 'bg-emerald-950/40 border-emerald-400 text-white'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-xs font-black">{st.label}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">{st.desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -607,7 +846,7 @@ export const AnalyticsTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-white flex items-center gap-1.5">
                 <Trophy className="w-4 h-4 text-amber-400" />
-                各動作最高個人紀錄 (PR 殿堂)
+                各動作最佳 PR
               </span>
               <BarChart3 className="w-4 h-4 text-slate-500" />
             </div>

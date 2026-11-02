@@ -491,3 +491,41 @@
 3. **溫暖亮色預設主題 × 柔和暖深色模式 (`index.css`, `App.tsx`, `TopHeader.tsx`, `SettingsModal.tsx`)**：
    - 全域導入 `.theme-light`（燕麥奶白底色 `#faf6f0`、純白立體卡片、暖木棕邊框與深焙咖啡字體）與 `.theme-dark`（暖炭焙深色 `#211d1a` / `#2b2623`，徹底去除冰冷科技霓虹感）。
    - 支援 `light`（預設）/ `dark` / `system`（偵測手機 `prefers-color-scheme` 並以亮色為 Fallback），且在頂部 Header 提供一鍵 `☀️ / 🌙` 切換鈕。
+
+
+---
+
+## [2026-11-03] 實機體驗第二輪優化 (v2.8.0)：中途新增動作、極簡無括號 UI、加好友與內購模擬、月曆/週檢視、高反差六塊肌紙娃娃與 Capacitor iOS/Android 雙端封裝 (TASK-021)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者於手機實機測試 `v2.7.0` 後提出 7 項具體優化與封裝需求：
+  1. 專注訓練中無法中途「新增動作」，點選後皆為替換。
+  2. 介面文字過多、充滿 `(...)` 括號說明與過長按鈕文字，易造成手機窄螢幕換行或 `...` 截斷。
+  3. 社交頁面需模擬「還不是好友、可以加好友」的互動情境。
+  4. 商城缺乏可見的內購儲值入口（可先以沙盒模擬不串真實金流）。
+  5. 健身紀錄需具備「月曆檢視」與「週檢視」，快速確認每日與每週訓練量。
+  6. 紙娃娃缺乏展示肌肉的機會，新手菜鳥與健身巨巨的體態辨識度太低。
+  7. 完成上述調整後，產出 iOS / Android 原生 App 專案並提供 iPhone 實機安裝測試教學。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **專注訓練「新增 vs 替換」雙軌解耦**：於 `useGameStore.ts` 新增 `addExerciseToActiveQueue(exerciseId)`，並在 `WorkoutTab.tsx` 的動作選擇視窗中為每個動作提供獨立的 **`[替換]`** 與 **`[＋新增]`** 雙按鈕，且在水平動作序列末端加上 **`[＋ 新增]`** 快捷卡。
+2. **全域無括號極簡文字規範**：徹底移除五大 Tab 與所有 Modal 中的 `(...)` 補充說明，將所有按鈕精簡為 2～4 字（如 `開始運動`、`拍貼工坊`、`換裝佈置`、`加好友`、`串門`、`結帳穿戴`）。
+3. **動態好友關係模擬 (`friendIds`)**：於 `FRIEND_PROFILES` 與初始動態牆加入非好友角色（`街頭健體 · Leo`、`陳巨石`、`林健美`），透過 `store.toggleFriend(id)` 即時切換 **`[＋ 加好友]` ➔ `[✓ 好友]`**，成為好友後其貼文即自動匯入「好友」動態分頁。
+4. **商城模擬內購 (`💎 儲值` 分頁 & 沙盒付款彈窗)**：於 `catalogConfig.ts` 定義 `IAP_PACKAGES`（NT$ 30 ~ NT$ 190），並在 `ShopTab.tsx` 實作 Apple App Store / Google Play 風格的模擬付款確認視窗 (`[一鍵模擬付款]`)。
+5. **月曆與週訓練量檢視 (`AnalyticsTab.tsx`)**：於 `[👤 我的 -> 月曆與紀錄]` 實作 3 種檢視切換：**`📅 月曆檢視`**（28 日格狀月曆標示訓練日與當日容量 `k`）、**`📊 週訓練量`**（近 7 日垂直長條圖＋本週天數/組數/總量 KPI）與 **`📋 列表明細`**。
+6. **高反差肌肉紙娃娃 (`pixelSpriteDrawer.ts`)**：新增免費預設的 `top_bare_muscles`（赤膊健美體態），大幅拉開 `🌱 菜鳥`（窄肩、細手臂、平坦柔和肚皮）與 `⚡ 精實 / 🐻 巨巨 / 👑 泰坦`（斜方肌、立體胸大肌高光、六塊腹肌、3D 三角肌與二頭肌峰）的視覺落差，並在 `[🏠 房間]` 首屏直接提供一鍵體態切換預覽列。
+7. **Capacitor iOS / Android 原生專案封裝**：於 `apps/web-demo` 安裝 `@capacitor/core`、`@capacitor/cli`、`@capacitor/ios`、`@capacitor/android`，建立 `capacitor.config.json` 並產出 `apps/web-demo/ios` (Xcode) 與 `apps/web-demo/android` (Android Studio) 原生工程，同時補齊 iOS PWA Standalone Meta 標籤。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [catalogConfig.ts](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/config/catalogConfig.ts)
+- [pixelSpriteDrawer.ts](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/game/pixelSpriteDrawer.ts)
+- [useGameStore.ts](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/stores/useGameStore.ts)
+- [HomeTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/HomeTab.tsx)
+- [WorkoutTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/WorkoutTab.tsx)
+- [ShopTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/ShopTab.tsx)
+- [PlazaTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/PlazaTab.tsx)
+- [AnalyticsTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/AnalyticsTab.tsx)
+- [UserProfileModal.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/modals/UserProfileModal.tsx)
+- [WardrobeModal.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/modals/WardrobeModal.tsx)
+- [capacitor.config.json](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/capacitor.config.json)
+- [PROJECT_STATE.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)

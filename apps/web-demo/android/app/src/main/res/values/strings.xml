@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FitMon</string>
+    <string name="title_activity_main">FitMon</string>
+    <string name="package_name">com.fitmon.app</string>
+    <string name="custom_url_scheme">com.fitmon.app</string>
+</resources>

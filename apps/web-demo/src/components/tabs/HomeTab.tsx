@@ -10,7 +10,14 @@ import {
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
-import { DAILY_SCIENCE_QUIZZES } from '../../config/catalogConfig';
+import { DAILY_SCIENCE_QUIZZES, AvatarBodyStage } from '../../config/catalogConfig';
+
+const STAGE_OPTIONS: { id: AvatarBodyStage; label: string }[] = [
+  { id: 'beginner', label: '🌱 菜鳥' },
+  { id: 'aesthetic', label: '⚡ 精實' },
+  { id: 'powerlifter', label: '🐻 巨巨' },
+  { id: 'titan', label: '👑 泰坦' },
+];
 
 export const HomeTab: React.FC = () => {
   const store = useGameStore();
@@ -20,31 +27,63 @@ export const HomeTab: React.FC = () => {
 
   const currentQuiz = DAILY_SCIENCE_QUIZZES[selectedQuizIdx % DAILY_SCIENCE_QUIZZES.length];
   const isQuizAnswered = store.answeredQuizIds.includes(currentQuiz.id);
+  const isBareTop = store.equipped.top === 'top_bare_muscles';
 
   return (
-    <div className="p-3.5 space-y-3.5 pb-8">
+    <div className="p-3.5 space-y-3 pb-8">
       {/* 1. HERO: MAPLESTORY CHIBI 2D GYM ROOM */}
       <PixelRoomCanvas
         isActive={store.activeTab === 'home'}
         onOpenWardrobe={() => store.setWardrobeModalOpen(true)}
       />
 
+      {/* 1.5 QUICK PHYSIQUE & MUSCLE PREVIEW BAR (Item 6: High-Contrast Beginner vs Giant Muscle Stages) */}
+      <div className="retro-box rounded-2xl p-2.5 flex items-center justify-between gap-1.5">
+        <div className="grid grid-cols-4 gap-1 flex-1">
+          {STAGE_OPTIONS.map((st) => (
+            <button
+              key={st.id}
+              onClick={() => store.setBodyStage(st.id)}
+              className={`py-1.5 rounded-xl text-[11px] font-black transition ${
+                store.bodyStage === st.id
+                  ? 'bg-emerald-500 text-slate-950 shadow'
+                  : 'bg-slate-800/90 text-slate-300 hover:text-white'
+              }`}
+            >
+              {st.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() =>
+            store.equipOwnedAvatarItem('top', isBareTop ? 'top_black_tank' : 'top_bare_muscles')
+          }
+          className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 border transition ${
+            isBareTop
+              ? 'bg-amber-400 text-slate-950 border-amber-300'
+              : 'bg-slate-900 text-amber-300 border-amber-500/40'
+          }`}
+        >
+          {isBareTop ? '💪 赤膊中' : '👕 穿背心'}
+        </button>
+      </div>
+
       {/* 2. TWO CLEAN VISUAL CTA BUTTONS */}
       <div className="grid grid-cols-2 gap-2.5">
         <button
           onClick={() => store.setActiveTab('workout')}
-          className="retro-btn py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
+          className="retro-btn py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
         >
           <Dumbbell className="w-5 h-5 stroke-[2.5px]" />
-          <span>開始運動打卡</span>
+          <span>開始運動</span>
         </button>
 
         <button
           onClick={() => store.setMemeStudioOpen(true)}
-          className="retro-btn py-3.5 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-sm flex items-center justify-center gap-2"
+          className="retro-btn py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-sm flex items-center justify-center gap-2"
         >
           <Camera className="w-5 h-5 text-amber-400" />
-          <span>迷因拍貼工坊</span>
+          <span>拍貼工坊</span>
         </button>
       </div>
 
@@ -120,7 +159,7 @@ export const HomeTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm font-black text-cyan-300 flex items-center gap-1.5">
                 <Brain className="w-4 h-4" />
-                每日運動科普問答 (+15🪙)
+                每日運動科普問答 · +15🪙
               </span>
               <button
                 onClick={() => setQuizOpen(false)}
