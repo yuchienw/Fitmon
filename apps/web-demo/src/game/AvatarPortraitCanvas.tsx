@@ -5,13 +5,12 @@ import { drawMapleChibiAvatar } from './pixelSpriteDrawer';
 interface AvatarPortraitCanvasProps {
   bodyStage: AvatarBodyStage;
   equipped: Record<EquipSlot, string>;
-  room: Record<RoomSlot, string>;
+  room?: Record<RoomSlot, string>;
 }
 
 export const AvatarPortraitCanvas: React.FC<AvatarPortraitCanvasProps> = ({
   bodyStage,
   equipped,
-  room,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -21,33 +20,34 @@ export const AvatarPortraitCanvas: React.FC<AvatarPortraitCanvasProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, 96, 96);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, 128, 128);
 
-    // Subtle dark gradient backdrop
-    ctx.fillStyle = '#151c2c';
-    ctx.fillRect(0, 0, 96, 96);
+    // Warm sunlit portrait backdrop
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(0, 0, 128, 128);
 
+    ctx.scale(2, 2);
     drawMapleChibiAvatar(ctx, {
+      x: 4,
+      y: 2,
       bodyStage,
       equipped,
-      room,
-      isNight: false,
-      frameTick: 4,
-      avatarX: 8,
-      avatarY: 16,
-      avatarState: 'IDLE',
+      state: 'IDLE',
       facingRight: true,
-      petHearts: [],
+      frameTick: 4,
     });
-  }, [bodyStage, equipped, room]);
+    ctx.restore();
+  }, [bodyStage, equipped]);
 
   return (
     <canvas
       ref={canvasRef}
-      width={96}
-      height={96}
-      className="w-12 h-12 rounded-xl border border-slate-700 pixel-canvas shrink-0 bg-slate-900"
+      width={128}
+      height={128}
+      className="w-12 h-12 rounded-xl border border-amber-300/80 shrink-0 bg-amber-50 shadow-sm"
     />
   );
 };

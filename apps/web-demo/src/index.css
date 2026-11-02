@@ -9,48 +9,215 @@
 
   body {
     font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #06080d;
-    color: #f1f5f9;
+    background-color: #f4efe6;
+    color: #29221e;
   }
-}
-
-.pixel-canvas {
-  image-rendering: -moz-crisp-edges;
-  image-rendering: -webkit-crisp-edges;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 .font-pixel {
   font-family: 'Press Start 2P', 'JetBrains Mono', monospace;
 }
 
-.retro-box {
-  background: #131722;
-  border: 2px solid #262d40;
-  box-shadow: 0 4px 0 #080a0f;
+/* ============================================================================
+   1. WARM DAYLIGHT THEME (.theme-light - Default)
+    MapleStory / Duolingo-style warm cream, soft sand, and tactile 3D cards
+   ============================================================================ */
+.theme-light {
+  --app-outer-bg: #ebe4d8;
+  --app-shell-bg: #faf6f0;
+  --app-bar-bg: rgba(255, 252, 247, 0.95);
+  --app-border: #e5dccb;
+  color: #29221e;
 }
 
-.retro-box-emerald {
-  background: #0f1f1c;
+.theme-light .retro-box {
+  background: #ffffff;
+  border: 2px solid #e5dccb;
+  box-shadow: 0 4px 0 #d8ccb8;
+}
+
+.theme-light .retro-box-emerald {
+  background: #ecfdf5;
+  border: 2px solid #10b981;
+  box-shadow: 0 4px 0 #a7f3d0;
+}
+
+.theme-light .retro-box-amber {
+  background: #fffbeb;
+  border: 2px solid #f59e0b;
+  box-shadow: 0 4px 0 #fde68a;
+}
+
+/* Remap dark slate utility classes inside .theme-light to Warm Daylight surfaces */
+.theme-light .bg-slate-950,
+.theme-light .bg-slate-950\/95,
+.theme-light .bg-slate-950\/90,
+.theme-light .bg-slate-950\/85,
+.theme-light .bg-slate-950\/80,
+.theme-light .bg-slate-950\/70 {
+  background-color: #f5efe6 !important;
+}
+
+.theme-light .bg-slate-900,
+.theme-light .bg-slate-900\/95,
+.theme-light .bg-slate-900\/90,
+.theme-light .bg-slate-900\/80,
+.theme-light .bg-slate-900\/70,
+.theme-light .bg-slate-900\/40 {
+  background-color: #faf6f0 !important;
+}
+
+.theme-light .bg-slate-800 {
+  background-color: #efe8dc !important;
+  color: #3b312b !important;
+}
+
+.theme-light .bg-slate-800:hover {
+  background-color: #e5dccb !important;
+}
+
+.theme-light .border-slate-800,
+.theme-light .border-slate-800\/90,
+.theme-light .border-slate-800\/80,
+.theme-light .border-slate-800\/50,
+.theme-light .border-slate-700,
+.theme-light .border-slate-700\/90,
+.theme-light .border-slate-700\/80,
+.theme-light .border-slate-600 {
+  border-color: #e2d8c5 !important;
+}
+
+.theme-light .text-white,
+.theme-light .text-slate-100,
+.theme-light .text-slate-200 {
+  color: #29221e !important;
+}
+
+.theme-light .text-slate-300 {
+  color: #4a3f39 !important;
+}
+
+.theme-light .text-slate-400,
+.theme-light .text-slate-500 {
+  color: #786b63 !important;
+}
+
+/* Warm up accent text in light mode for crisp readability */
+.theme-light .text-amber-300,
+.theme-light .text-amber-400 {
+  color: #b45309 !important;
+}
+
+.theme-light .text-emerald-300,
+.theme-light .text-emerald-400 {
+  color: #047857 !important;
+}
+
+.theme-light .text-cyan-200,
+.theme-light .text-cyan-300,
+.theme-light .text-cyan-400 {
+  color: #0369a1 !important;
+}
+
+.theme-light .text-rose-200,
+.theme-light .text-rose-300 {
+  color: #be123c !important;
+}
+
+.theme-light .bg-emerald-950\/90,
+.theme-light .bg-emerald-950\/70,
+.theme-light .bg-emerald-950\/50,
+.theme-light .bg-emerald-950\/40,
+.theme-light .bg-emerald-950\/20 {
+  background-color: #ecfdf5 !important;
+}
+
+.theme-light .bg-amber-950\/40,
+.theme-light .bg-amber-950\/30,
+.theme-light .bg-amber-950\/15 {
+  background-color: #fffbeb !important;
+}
+
+.theme-light .bg-cyan-950\/80,
+.theme-light .bg-cyan-950\/60,
+.theme-light .bg-cyan-950\/40,
+.theme-light .bg-cyan-950\/30 {
+  background-color: #f0f9ff !important;
+}
+
+.theme-light .bg-rose-950\/70,
+.theme-light .bg-rose-950\/60,
+.theme-light .bg-rose-950\/50,
+.theme-light .bg-rose-950\/30 {
+  background-color: #fff1f2 !important;
+}
+
+/* ============================================================================
+   2. COZY WARM DARK THEME (.theme-dark - Non-Techy Warm Cocoa/Charcoal)
+   ============================================================================ */
+.theme-dark {
+  --app-outer-bg: #171412;
+  --app-shell-bg: #211d1a;
+  --app-bar-bg: rgba(38, 33, 30, 0.95);
+  --app-border: #3d3530;
+  color: #f5f0eb;
+}
+
+.theme-dark .retro-box {
+  background: #2b2623;
+  border: 2px solid #443b35;
+  box-shadow: 0 4px 0 #14110f;
+}
+
+.theme-dark .retro-box-emerald {
+  background: #132a23;
   border: 2px solid #10b981;
   box-shadow: 0 4px 0 #064e3b;
 }
 
-.retro-box-amber {
-  background: #231b10;
+.theme-dark .retro-box-amber {
+  background: #2d2214;
   border: 2px solid #f59e0b;
   box-shadow: 0 4px 0 #78350f;
 }
 
+.theme-dark .bg-slate-950,
+.theme-dark .bg-slate-950\/95,
+.theme-dark .bg-slate-950\/90,
+.theme-dark .bg-slate-950\/85,
+.theme-dark .bg-slate-950\/80 {
+  background-color: #1f1b18 !important;
+}
+
+.theme-dark .bg-slate-900,
+.theme-dark .bg-slate-900\/95,
+.theme-dark .bg-slate-900\/90,
+.theme-dark .bg-slate-900\/80,
+.theme-dark .bg-slate-900\/70 {
+  background-color: #26211e !important;
+}
+
+.theme-dark .bg-slate-800 {
+  background-color: #362f2b !important;
+}
+
+.theme-dark .border-slate-800,
+.theme-dark .border-slate-800\/90,
+.theme-dark .border-slate-800\/80,
+.theme-dark .border-slate-700,
+.theme-dark .border-slate-700\/80 {
+  border-color: #443b35 !important;
+}
+
+/* Tactile 3D button press physics */
 .retro-btn {
   transition: transform 0.08s ease, box-shadow 0.08s ease;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 0 rgba(41, 34, 30, 0.25);
 }
 
 .retro-btn:active:not(:disabled) {
   transform: translateY(3px);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+  box-shadow: 0 1px 0 rgba(41, 34, 30, 0.25);
 }
 
 /* Custom sleek scrollbar */
@@ -59,10 +226,10 @@
   height: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0d13;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #262d40;
+  background: #cbbfa8;
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {

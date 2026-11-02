@@ -82,7 +82,10 @@ export const ShopTab: React.FC = () => {
       {/* =====================================================================
           1. STICKY PINNED TOP LIVE TRY-ON STAGE + CATEGORY CONTROLS (V2-05)
          ===================================================================== */}
-      <div className="sticky top-0 z-30 bg-[#0d111a]/95 backdrop-blur-md px-3.5 pt-2.5 pb-2.5 border-b border-slate-800/90 shadow-xl space-y-2">
+      <div
+        className="sticky top-0 z-30 backdrop-blur-md px-3.5 pt-2.5 pb-2.5 border-b border-slate-800/90 shadow-md space-y-2"
+        style={{ backgroundColor: 'var(--app-bar-bg)' }}
+      >
         <div className="relative">
           <PixelRoomCanvas
             isActive={store.activeTab === 'shop'}

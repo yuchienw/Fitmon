@@ -470,3 +470,24 @@
 ### 3. 異動檔案清單 (Impact & Modified Files)
 - 更新：`apps/web-demo/src/` 全部核心組件、狀態機與點陣渲染引擎
 - 更新：[`PROJECT_STATE.md`](../PROJECT_STATE.md)、[`logs/changelog.md`](changelog.md)
+
+---
+
+## [2026-11-03] 重大美術與體驗升級 (`v2.7.0`)：全面廢除 8-Bit 馬賽克方塊，升級《楓之谷》級高清 2D 賽璐璐 Q 版引擎、專業運動解剖圖庫與溫暖亮色主題 (TASK-020)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者明確指出三大核心體驗升級需求：
+  1. **角色與房間畫質**：不想要 8-Bit 粗糙馬賽克方塊像素風，而是要像《楓之谷》(MapleStory) 那種圓潤精緻、讓人一看就覺得「可愛或很酷」的 2D Q 版紙娃娃風格（拍板採用方案 A：高清 2D 圓潤賽璐璐向量與漸層骨架引擎）。
+  2. **健身動作資料庫專業化**：身為一款主打健身知識與自律的紙娃娃遊戲，運動資料庫不應使用像素圖，而應採用專業的解剖肌群高亮圖解與 `free-exercise-db` 真人動作示範圖庫。
+  3. **主視覺告別暗黑科技感**：不要冷硬的暗黑賽博科技風，預設改為溫暖明亮的日常風格（支援偵測系統深淺色、抓不到或初始預設為亮色溫暖版，並提供柔和不科技感的暖深色模式）。
+
+### 2. 工程落地與核心交付 (Engineering Deliverables)
+1. **《楓之谷》級高清 2D 圓潤賽璐璐紙娃娃與房間渲染引擎 (`pixelSpriteDrawer.ts`, `PixelRoomCanvas.tsx`, `ItemSpriteThumbnail.tsx`)**：
+   - 徹底移除 `image-rendering: pixelated` 與 `fillRect` 馬賽克方塊畫法，畫布升級為 `960×600` Retina 抗鋸齒平滑渲染 (`imageSmoothingQuality = 'high'`)。
+   - 採用圓潤貝茲曲線、暖深棕漫畫描邊 (`#2b1d16`) 與多層次光影漸層，打造正宗二頭身 Q 版大頭娃娃：圓潤臉頰與腮紅、三層寶石漸層水汪汪大眼（含雙星芒高光與眨眼動畫）、帶天使光圈的蓬鬆漸層髮束、立體 SBD 健力服/連帽衫/黃金戰甲、超萌圓潤赤柴犬（豆助）/黑貓/懸浮乳清機器人與陽光灑落的木質健身房。
+2. **專業運動科學解剖圖庫 × `free-exercise-db` 真人動作示範 (`ExerciseThumbnail.tsx`, `catalogConfig.ts`, `WorkoutTab.tsx`)**：
+   - 為全動作庫補齊 `primaryMusclesZh`（主働肌）、`secondaryMusclesZh`（協同肌）、`equipmentZh` 與 `freeExerciseDbId`。
+   - `ExerciseThumbnail.tsx` 改為專業運動醫學級 SVG 生物力學與紅/橘主次働肌群高亮解剖圖，並於課表詳情內嵌 `yuhonas/free-exercise-db` 起始與頂峰收縮雙圖示範。
+3. **溫暖亮色預設主題 × 柔和暖深色模式 (`index.css`, `App.tsx`, `TopHeader.tsx`, `SettingsModal.tsx`)**：
+   - 全域導入 `.theme-light`（燕麥奶白底色 `#faf6f0`、純白立體卡片、暖木棕邊框與深焙咖啡字體）與 `.theme-dark`（暖炭焙深色 `#211d1a` / `#2b2623`，徹底去除冰冷科技霓虹感）。
+   - 支援 `light`（預設）/ `dark` / `system`（偵測手機 `prefers-color-scheme` 並以亮色為 Fallback），且在頂部 Header 提供一鍵 `☀️ / 🌙` 切換鈕。

@@ -71,7 +71,8 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     const drawCurrentFrame = () => {
       const st = animRef.current;
@@ -200,15 +201,15 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
         )}
       </div>
 
-      {/* 480x300 MapleStory Chibi Scene Canvas */}
+      {/* 960x600 Retina HD MapleStory 2D Chibi Scene Canvas */}
       <canvas
         ref={canvasRef}
-        width={480}
-        height={300}
+        width={960}
+        height={600}
         onClick={handleCanvasInteraction}
         className={`w-full ${
           compact ? 'h-44 sm:h-48' : 'h-64 sm:h-72'
-        } object-cover pixel-canvas cursor-pointer block`}
+        } object-cover cursor-pointer block`}
       />
 
       {/* Bottom Action & Quick Wardrobe/Room Customize Bar */}

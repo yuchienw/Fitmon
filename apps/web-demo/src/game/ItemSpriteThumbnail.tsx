@@ -26,10 +26,10 @@ export const ItemSpriteThumbnail: React.FC<ItemSpriteThumbnailProps> = ({
   return (
     <canvas
       ref={canvasRef}
-      width={56}
-      height={56}
+      width={112}
+      height={112}
       style={size ? { width: `${size}px`, height: `${size}px` } : undefined}
-      className={`${size ? '' : sizeClass} rounded-xl bg-slate-950/90 border border-slate-700/80 pixel-canvas shrink-0`}
+      className={`${size ? '' : sizeClass} rounded-xl bg-amber-50 border border-amber-200/80 shrink-0 shadow-sm`}
     />
   );
 };

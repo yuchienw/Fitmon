@@ -45,13 +45,14 @@ export const MemeStudioModal: React.FC = () => {
       ctx.fillStyle = '#0b0d13';
       ctx.fillRect(0, 0, W, H);
 
-      // Draw offscreen 480x300 MapleStory Chibi scene with custom Pose, Expression & Position
+      // Draw offscreen 960x600 HD MapleStory Chibi scene with custom Pose, Expression & Position
       const off = document.createElement('canvas');
-      off.width = 480;
-      off.height = 300;
+      off.width = 960;
+      off.height = 600;
       const offCtx = off.getContext('2d');
       if (offCtx) {
-        offCtx.imageSmoothingEnabled = false;
+        offCtx.imageSmoothingEnabled = true;
+        offCtx.imageSmoothingQuality = 'high';
         drawPixelGymScene(offCtx, {
           bodyStage: store.bodyStage,
           equipped: store.equipped,
@@ -70,12 +71,12 @@ export const MemeStudioModal: React.FC = () => {
       const sceneY = 54;
       const sceneH = aspectRatio === '9:16' ? 360 : 265;
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       if (bgImg) {
         ctx.drawImage(bgImg, 20, sceneY, W - 40, sceneH);
-        ctx.imageSmoothingEnabled = false;
         ctx.drawImage(off, 28, sceneY + sceneH - 110, 160, 100);
       } else {
-        ctx.imageSmoothingEnabled = false;
         ctx.drawImage(off, 20, sceneY, W - 40, sceneH);
       }
 

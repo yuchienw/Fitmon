@@ -255,6 +255,11 @@ export const WorkoutTab: React.FC = () => {
                 <h3 className="text-base font-black text-white mt-1 truncate">
                   {selectedExercise.nameZh}
                 </h3>
+                {selectedExercise.primaryMusclesZh && (
+                  <p className="text-[11px] text-slate-400 truncate">
+                    🎯 主働肌：{selectedExercise.primaryMusclesZh}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -881,18 +886,43 @@ export const WorkoutTab: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <ExerciseThumbnail exercise={ex} size={42} />
+                        <ExerciseThumbnail exercise={ex} size={46} showPhotoToggle />
                         <div>
                           <div className="text-xs font-black text-white">
-                            {idx + 1}. {ex.nameZh}
+                            {idx + 1}. {ex.nameZh}{' '}
+                            <span className="text-[10px] font-normal text-slate-400">
+                              ({ex.nameEn})
+                            </span>
                           </div>
                           <div className="text-[11px] font-mono text-cyan-300">
                             {cfg.sets} 組 × {cfg.reps} 次 · {cfg.weightKg} {ex.unitLabel} · 組間休{' '}
                             {cfg.restSeconds}s
                           </div>
+                          {ex.primaryMusclesZh && (
+                            <div className="text-[10px] text-rose-400 font-bold mt-0.5">
+                              🎯 主働肌：{ex.primaryMusclesZh}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
+
+                    {ex.freeExerciseDbId && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <img
+                          src={`https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${ex.freeExerciseDbId}/0.jpg`}
+                          alt={`${ex.nameZh} 起始動作`}
+                          className="w-full h-24 object-cover rounded-lg border border-slate-700 bg-slate-950"
+                          loading="lazy"
+                        />
+                        <img
+                          src={`https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${ex.freeExerciseDbId}/1.jpg`}
+                          alt={`${ex.nameZh} 頂峰收縮`}
+                          className="w-full h-24 object-cover rounded-lg border border-slate-700 bg-slate-950"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
                     <div className="text-[11px] text-slate-400 bg-slate-950/80 p-2 rounded-lg space-y-0.5">
                       {ex.safetyCues.map((cue, cIdx) => (
                         <div key={cIdx}>• {cue}</div>

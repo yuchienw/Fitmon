@@ -96,6 +96,7 @@ interface GameState {
   // Navigation & Global Overlays
   activeTab: MainTab;
   locale: Locale;
+  themeMode: 'system' | 'light' | 'dark';
   soundEnabled: boolean;
   bgmEnabled: boolean;
   isNightModeRoom: boolean;
@@ -177,6 +178,7 @@ interface GameState {
   // UI Actions
   setActiveTab: (tab: MainTab) => void;
   setLocale: (locale: Locale) => void;
+  setThemeMode: (mode: 'system' | 'light' | 'dark') => void;
   toggleSound: () => void;
   toggleBgm: () => void;
   toggleNightModeRoom: () => void;
@@ -475,6 +477,7 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       activeTab: 'home',
       locale: 'zh-TW',
+      themeMode: 'light',
       soundEnabled: true,
       bgmEnabled: false,
       isNightModeRoom: false,
@@ -579,6 +582,11 @@ export const useGameStore = create<GameState>()(
       },
 
       setLocale: (locale) => set({ locale }),
+
+      setThemeMode: (mode) => {
+        soundFX.playBlip();
+        set({ themeMode: mode });
+      },
 
       toggleSound: () => {
         const next = !get().soundEnabled;
@@ -1482,14 +1490,15 @@ export const useGameStore = create<GameState>()(
       },
 
       resetDemoState: () => {
-        localStorage.removeItem('fitmon-mvp-storage-v2');
+        localStorage.removeItem('fitmon-mvp-storage-v3');
         window.location.reload();
       },
     }),
     {
-      name: 'fitmon-mvp-storage-v2',
+      name: 'fitmon-mvp-storage-v3',
       partialize: (state) => ({
         locale: state.locale,
+        themeMode: state.themeMode,
         nickname: state.nickname,
         bodyStage: state.bodyStage,
         level: state.level,
