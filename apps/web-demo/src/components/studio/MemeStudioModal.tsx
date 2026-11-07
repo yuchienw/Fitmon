@@ -109,6 +109,7 @@ export const MemeStudioModal: React.FC = () => {
     y: 0.76,
   });
   const [avatarScale, setAvatarScale] = useState<number>(1.35);
+  const [avatarRotationDeg, setAvatarRotationDeg] = useState<number>(0);
   const [facingRight, setFacingRight] = useState<boolean>(false);
   const [selectedPose, setSelectedPose] = useState<PoseOption>('CHEER');
   const [selectedExpression, setSelectedExpression] = useState<ExpressionOption>('smile');
@@ -273,10 +274,14 @@ export const MemeStudioModal: React.FC = () => {
       ctx.fill();
       ctx.restore();
 
-      // Draw Chibi Avatar
+      // Draw Chibi Avatar (with smooth 360-degree rotation around character's body center)
       ctx.save();
       ctx.translate(targetX, targetY);
       const finalScale = 2.8 * avatarScale;
+      const bodyCenterOffsetY = -30 * finalScale;
+      ctx.translate(0, bodyCenterOffsetY);
+      ctx.rotate((avatarRotationDeg * Math.PI) / 180);
+      ctx.translate(0, -bodyCenterOffsetY);
       ctx.scale(finalScale, finalScale);
       drawMapleChibiAvatar(ctx, {
         x: -28,
@@ -523,6 +528,7 @@ export const MemeStudioModal: React.FC = () => {
     customPaceStr,
     avatarNormPos,
     avatarScale,
+    avatarRotationDeg,
     facingRight,
     selectedPose,
     selectedExpression,
@@ -722,6 +728,7 @@ export const MemeStudioModal: React.FC = () => {
                   const found = SHARE_TEMPLATES.find((t) => t.id === templateId);
                   setAvatarNormPos(found ? found.defaultAvatarPos : { x: 0.78, y: 0.76 });
                   setAvatarScale(1.35);
+                  setAvatarRotationDeg(0);
                   setFacingRight(false);
                 }}
                 className="text-slate-400 hover:text-white flex items-center gap-0.5 text-[10px] font-bold"
@@ -902,6 +909,54 @@ export const MemeStudioModal: React.FC = () => {
                 <FlipHorizontal2 className="w-3.5 h-3.5 text-cyan-400" aria-hidden="true" />
                 <span>翻轉</span>
               </button>
+            </div>
+
+            {/* 360-Degree Rotation Slider + Quick Angle Buttons */}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+              <div className="flex items-center gap-2 flex-1">
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
+                <span className="text-[11px] font-black text-slate-300 shrink-0">旋轉角度</span>
+                <input
+                  type="range"
+                  min={-180}
+                  max={180}
+                  step={5}
+                  value={avatarRotationDeg}
+                  onChange={(e) => setAvatarRotationDeg(parseInt(e.target.value, 10))}
+                  className="w-full accent-amber-400 cursor-pointer"
+                />
+                <span className="text-[11px] font-mono font-bold text-amber-400 w-10 text-right">
+                  {avatarRotationDeg > 0 ? `+${avatarRotationDeg}°` : `${avatarRotationDeg}°`}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() =>
+                    setAvatarRotationDeg((d) => Math.max(-180, Math.min(180, d - 15)))
+                  }
+                  className="px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono font-black text-slate-300"
+                  title="逆時針轉 15°"
+                >
+                  -15°
+                </button>
+                <button
+                  onClick={() => setAvatarRotationDeg(0)}
+                  className="px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-black text-amber-300"
+                  title="角度回正 0°"
+                >
+                  0°
+                </button>
+                <button
+                  onClick={() =>
+                    setAvatarRotationDeg((d) => Math.max(-180, Math.min(180, d + 15)))
+                  }
+                  className="px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono font-black text-slate-300"
+                  title="順時針轉 15°"
+                >
+                  +15°
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between gap-1.5 flex-wrap pt-1 border-t border-slate-800/80">
