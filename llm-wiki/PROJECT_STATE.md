@@ -11,9 +11,9 @@
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、Meme 拍貼、開源科學動作庫 |
 | **目前階段** | **Phase 1：Web Demo & Native iOS/Android App v2.8 實機測試期** | 🚀 **【已完成 V2.8 七大體感升級 ＋ Capacitor iOS/Android 原生專案封裝】** |
 | **當前版本** | `v2.8.0-mobile-native-and-ux-polish` | 專注模式中途新增動作、極簡無括號介面、加好友模擬、模擬內購儲值、月曆/週檢視訓練量、高反差六塊肌紙娃娃、Capacitor 雙端封裝 |
-| **最後更新時間** | `2026-11-03 01:05 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `36d2783` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 於 iPhone 實機測試 `apps/web-demo`（Web / PWA 或 Xcode Native iOS App） |
+| **最後更新時間** | `2026-11-07 12:00 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `131af37` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 於 iPhone 實機測試 `apps/web-demo`（Web / PWA / GitHub Pages 或 Xcode Native iOS App） |
 
 ---
 
@@ -69,6 +69,7 @@
 - [ ] **MILESTONE-2**：串接 Supabase 雲端資料庫與 OAuth 漸進式綁定
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261107-27**：建立 GitHub Actions 自動部署至 GitHub Pages 工作流程，調整 Vite 與 Web Manifest 為相對路徑 (TASK-022)
 - [x] **DONE-20261103-26**：完成 V2.8 手機實機體驗 7 大優化（中途新增動作、極簡減字、加好友模擬、模擬內購、月曆/週檢視、高反差六塊肌紙娃娃）與 Capacitor iOS/Android 雙端 App 封裝 (TASK-021)
 - [x] **DONE-20261103-25**：完成 V2.7 《楓之谷》級高清 2D 賽璐璐 Q 版引擎、專業運動解剖肌群圖庫與系統自適應溫暖亮色主題 (TASK-020)
 - [x] **DONE-20261102-24**：全面完成首輪試玩反饋 18 項功能與架構升級 (`V2-01` ~ `V2-18`) 並通過 TypeScript 與 Vite 生產環境建置驗證 (TASK-019)
