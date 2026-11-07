@@ -79,23 +79,40 @@
 .theme-light .bg-slate-950\/90,
 .theme-light .bg-slate-950\/85,
 .theme-light .bg-slate-950\/80,
-.theme-light .bg-slate-950\/70 {
+.theme-light .bg-slate-950\/75,
+.theme-light .bg-slate-950\/70,
+.theme-light .bg-slate-950\/60,
+.theme-light .bg-slate-950\/50 {
   background-color: #f5efe6 !important;
 }
 
 .theme-light .bg-slate-900,
 .theme-light .bg-slate-900\/95,
 .theme-light .bg-slate-900\/90,
+.theme-light .bg-slate-900\/85,
 .theme-light .bg-slate-900\/80,
+.theme-light .bg-slate-900\/75,
 .theme-light .bg-slate-900\/70,
+.theme-light .bg-slate-900\/60,
+.theme-light .bg-slate-900\/50,
 .theme-light .bg-slate-900\/40 {
+  background-color: #faf6f0 !important;
+}
+
+/* Clear dark slate gradients in light mode so dark text is never rendered over dark gradients */
+.theme-light .from-slate-900,
+.theme-light .via-slate-900,
+.theme-light .to-slate-900 {
+  background-image: none !important;
   background-color: #faf6f0 !important;
 }
 
 .theme-light .bg-slate-800,
 .theme-light .bg-slate-800\/90,
 .theme-light .bg-slate-800\/80,
-.theme-light .bg-slate-800\/70 {
+.theme-light .bg-slate-800\/70,
+.theme-light .bg-slate-800\/60,
+.theme-light .bg-slate-800\/50 {
   background-color: #efe8dc !important;
   color: #3b312b !important;
 }
@@ -181,28 +198,41 @@
 
 .theme-light .bg-emerald-950,
 .theme-light .bg-emerald-950\/90,
+.theme-light .bg-emerald-950\/80,
 .theme-light .bg-emerald-950\/70,
 .theme-light .bg-emerald-950\/60,
 .theme-light .bg-emerald-950\/50,
 .theme-light .bg-emerald-950\/40,
-.theme-light .bg-emerald-950\/20 {
+.theme-light .bg-emerald-950\/30,
+.theme-light .bg-emerald-950\/25,
+.theme-light .bg-emerald-950\/20,
+.theme-light .bg-emerald-950\/15 {
   background-color: #ecfdf5 !important;
 }
 
 .theme-light .bg-amber-950,
+.theme-light .bg-amber-950\/80,
+.theme-light .bg-amber-950\/70,
 .theme-light .bg-amber-950\/60,
+.theme-light .bg-amber-950\/50,
 .theme-light .bg-amber-950\/40,
 .theme-light .bg-amber-950\/30,
+.theme-light .bg-amber-950\/25,
+.theme-light .bg-amber-950\/20,
 .theme-light .bg-amber-950\/15 {
   background-color: #fffbeb !important;
 }
 
 .theme-light .bg-cyan-950,
+.theme-light .bg-cyan-950\/90,
 .theme-light .bg-cyan-950\/80,
 .theme-light .bg-cyan-950\/70,
 .theme-light .bg-cyan-950\/60,
+.theme-light .bg-cyan-950\/50,
 .theme-light .bg-cyan-950\/40,
-.theme-light .bg-cyan-950\/30 {
+.theme-light .bg-cyan-950\/30,
+.theme-light .bg-cyan-950\/25,
+.theme-light .bg-cyan-950\/20 {
   background-color: #f0f9ff !important;
 }
 
@@ -349,16 +379,68 @@
   color: #fda4af !important;
 }
 
+.theme-light .game-stage-dark .bg-slate-950,
+.theme-light .game-stage-dark .bg-slate-950\/95,
 .theme-light .game-stage-dark .bg-slate-950\/90,
+.theme-light .game-stage-dark .bg-slate-950\/85,
 .theme-light .game-stage-dark .bg-slate-950\/80,
+.theme-light .game-stage-dark .bg-slate-950\/75,
+.theme-light .game-stage-dark .bg-slate-950\/70,
+.theme-light .game-stage-dark .bg-slate-900,
+.theme-light .game-stage-dark .bg-slate-900\/95,
 .theme-light .game-stage-dark .bg-slate-900\/90,
-.theme-light .game-stage-dark .bg-slate-900\/80 {
+.theme-light .game-stage-dark .bg-slate-900\/80,
+.theme-light .game-stage-dark .bg-slate-900\/70,
+.theme-light .game-stage-dark .bg-slate-900\/50 {
   background-color: rgba(15, 23, 42, 0.85) !important;
 }
 
-.theme-light .game-stage-dark .bg-slate-800 {
+.theme-light .game-stage-dark .bg-slate-800,
+.theme-light .game-stage-dark .bg-slate-800\/90,
+.theme-light .game-stage-dark .bg-slate-800\/80 {
   background-color: #1e293b !important;
   color: #f8fafc !important;
+}
+
+.theme-light .game-stage-dark .bg-emerald-950,
+.theme-light .game-stage-dark .bg-emerald-950\/90,
+.theme-light .game-stage-dark .bg-emerald-950\/70,
+.theme-light .game-stage-dark .bg-emerald-950\/60,
+.theme-light .game-stage-dark .bg-emerald-950\/50,
+.theme-light .game-stage-dark .bg-emerald-950\/40 {
+  background-color: rgba(2, 44, 34, 0.78) !important;
+}
+
+.theme-light .game-stage-dark .bg-amber-950,
+.theme-light .game-stage-dark .bg-amber-950\/60,
+.theme-light .game-stage-dark .bg-amber-950\/40 {
+  background-color: rgba(69, 26, 3, 0.78) !important;
+}
+
+.theme-light .game-stage-dark .bg-cyan-950,
+.theme-light .game-stage-dark .bg-cyan-950\/90,
+.theme-light .game-stage-dark .bg-cyan-950\/80,
+.theme-light .game-stage-dark .bg-cyan-950\/60 {
+  background-color: rgba(8, 51, 68, 0.85) !important;
+}
+
+.theme-light .game-stage-dark .bg-rose-950,
+.theme-light .game-stage-dark .bg-rose-950\/90,
+.theme-light .game-stage-dark .bg-rose-950\/80,
+.theme-light .game-stage-dark .bg-rose-950\/60,
+.theme-light .game-stage-dark .bg-rose-950\/40 {
+  background-color: rgba(76, 5, 25, 0.82) !important;
+}
+
+.theme-light .game-stage-dark .border-slate-800,
+.theme-light .game-stage-dark .border-slate-700,
+.theme-light .game-stage-dark .border-slate-700\/80 {
+  border-color: rgba(51, 65, 85, 0.85) !important;
+}
+
+/* Ensure bright solid badges inside .game-stage-dark keep dark slate text */
+.theme-light .game-stage-dark .text-slate-950 {
+  color: #020617 !important;
 }
 
 /* ============================================================================

@@ -328,7 +328,7 @@ export const ExerciseThumbnail: React.FC<ExerciseThumbnailProps> = ({
     >
       {renderAnatomicalSvg()}
       {!disableGuideModal && (!size || size >= 30) && (
-        <span className="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-slate-950/80 text-[8px] font-black text-cyan-300 leading-none pointer-events-none">
+        <span className="game-stage-dark absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-slate-950/85 text-[8px] font-black text-cyan-300 leading-none pointer-events-none">
           說明
         </span>
       )}

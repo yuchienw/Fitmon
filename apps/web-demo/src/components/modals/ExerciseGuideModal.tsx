@@ -81,7 +81,7 @@ export const ExerciseGuideModal: React.FC = () => {
                       onError={() => setImgError0(true)}
                       className="w-full h-full object-cover"
                     />
-                    <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-slate-950/85 text-[10px] font-black text-cyan-300 border border-cyan-500/30">
+                    <span className="game-stage-dark absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-slate-950/85 text-[10px] font-black text-cyan-300 border border-cyan-500/30">
                       STEP 1 · 起始準備
                     </span>
                   </div>
@@ -94,7 +94,7 @@ export const ExerciseGuideModal: React.FC = () => {
                       onError={() => setImgError1(true)}
                       className="w-full h-full object-cover"
                     />
-                    <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-slate-950/85 text-[10px] font-black text-emerald-300 border border-emerald-500/30">
+                    <span className="game-stage-dark absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-slate-950/85 text-[10px] font-black text-emerald-300 border border-emerald-500/30">
                       STEP 2 · 發力收縮
                     </span>
                   </div>

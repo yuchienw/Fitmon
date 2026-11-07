@@ -157,71 +157,23 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
   };
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-[#0d111a] shadow-2xl">
-      {/* Top Floating Room Controls */}
-      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none gap-2">
-        <div className="bg-slate-950/85 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white shadow break-words">
+    <div className="game-stage-dark relative rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-[#0d111a] shadow-2xl">
+      {/* Top Floating Room Controls: Left Speech Bubble + Right Pose Switcher Bar */}
+      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-start justify-between pointer-events-none gap-1.5 flex-wrap">
+        <div className="bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/15 text-[11px] font-bold text-white shadow break-words">
           {customOverride
             ? `🏠 ${customOverride.ownerName}${visitorAvatar ? ' · 同框串門' : ''}`
             : `💬 ${speechBubble}`}
         </div>
 
-        {!compact && (
-          <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
-            <button
-              onClick={() => store.toggleBgm()}
-              title="切換 8-Bit 背景音樂 (BGM)"
-              className={`px-2 py-1 rounded-full border text-[11px] font-bold flex items-center gap-1 transition ${
-                store.bgmEnabled
-                  ? 'bg-emerald-500 text-slate-950 border-emerald-300 font-black'
-                  : 'bg-slate-950/85 border-white/15 text-slate-300 hover:text-white'
-              }`}
-            >
-              <Music className="w-3 h-3" />
-              <span>BGM</span>
-            </button>
-            <button
-              onClick={() => store.toggleNightModeRoom()}
-              title="切換日夜窗景"
-              className="p-1.5 rounded-full bg-slate-950/85 border border-white/15 text-amber-300 hover:bg-slate-800 active:scale-95 transition"
-            >
-              {store.isNightModeRoom ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-            </button>
-            <button
-              onClick={() => store.toggleSound()}
-              title="切換點擊音效 (SFX)"
-              className="p-1.5 rounded-full bg-slate-950/85 border border-white/15 text-emerald-400 hover:bg-slate-800 active:scale-95 transition"
-            >
-              {store.soundEnabled ? (
-                <Volume2 className="w-3.5 h-3.5" />
-              ) : (
-                <VolumeX className="w-3.5 h-3.5 text-slate-500" />
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 960x600 Retina HD MapleStory 2D Chibi Scene Canvas */}
-      <canvas
-        ref={canvasRef}
-        width={960}
-        height={600}
-        onClick={handleCanvasInteraction}
-        className={`w-full ${
-          compact ? 'h-44 sm:h-48' : 'h-72 sm:h-80'
-        } object-cover cursor-pointer block`}
-      />
-
-      {/* Floating Bottom Game HUD Overlay inside the Room Stage */}
-      <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
-        <div className="flex items-center gap-1 bg-slate-950/80 backdrop-blur-md p-1 rounded-xl border border-white/15 pointer-events-auto shadow-lg">
+        {/* Top-Right Pose Switcher Bar (Never blocks the character!) */}
+        <div className="ml-auto flex items-center gap-0.5 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-white/20 pointer-events-auto shadow-lg">
           {(
             [
-              { id: 'IDLE', label: '🧍 站姿' },
-              { id: 'SQUAT', label: '🏋️ 深蹲' },
-              { id: 'CURL', label: '💪 彎舉' },
-              ...(compact ? [] : ([{ id: 'WALK', label: '🚶 散步' }] as const)),
+              { id: 'IDLE', label: '🧍站姿' },
+              { id: 'SQUAT', label: '🏋️深蹲' },
+              { id: 'CURL', label: '💪彎舉' },
+              ...(compact ? [] : ([{ id: 'WALK', label: '🚶散步' }] as const)),
             ] as const
           ).map((m) => (
             <button
@@ -235,27 +187,76 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
                 }
                 store.interactWithRoomEntity('avatar');
               }}
-              className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-black transition ${
+              className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-black transition whitespace-nowrap ${
                 aiState === m.id
-                  ? 'bg-emerald-500 text-slate-950 shadow'
-                  : 'text-slate-300 hover:text-white'
+                  ? 'bg-emerald-400 text-slate-950 shadow'
+                  : 'text-slate-200 hover:text-white'
               }`}
             >
               {m.label}
             </button>
           ))}
         </div>
-
-        {!compact && onOpenWardrobe && (
-          <button
-            onClick={onOpenWardrobe}
-            className="pointer-events-auto retro-btn px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1 shrink-0 shadow-lg"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>換裝佈置</span>
-          </button>
-        )}
       </div>
+
+      {/* 960x600 Retina HD MapleStory 2D Chibi Scene Canvas */}
+      <canvas
+        ref={canvasRef}
+        width={960}
+        height={600}
+        onClick={handleCanvasInteraction}
+        className={`w-full ${
+          compact ? 'h-44 sm:h-48' : 'h-72 sm:h-80'
+        } object-cover cursor-pointer block`}
+      />
+
+      {/* Bottom Corner Utility Controls (Audio/Day-Night on Left, Wardrobe on Right) */}
+      {!compact && (
+        <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
+          <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
+            <button
+              onClick={() => store.toggleBgm()}
+              title="切換 8-Bit 背景音樂 (BGM)"
+              className={`px-2 py-1 rounded-full border text-[11px] font-bold flex items-center gap-1 transition ${
+                store.bgmEnabled
+                  ? 'bg-emerald-400 text-slate-950 border-emerald-300 font-black'
+                  : 'bg-slate-950/85 border-white/20 text-slate-200 hover:text-white'
+              }`}
+            >
+              <Music className="w-3 h-3" />
+              <span>BGM</span>
+            </button>
+            <button
+              onClick={() => store.toggleNightModeRoom()}
+              title="切換日夜窗景"
+              className="p-1.5 rounded-full bg-slate-950/85 border border-white/20 text-amber-300 hover:bg-slate-800 active:scale-95 transition"
+            >
+              {store.isNightModeRoom ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              onClick={() => store.toggleSound()}
+              title="切換點擊音效 (SFX)"
+              className="p-1.5 rounded-full bg-slate-950/85 border border-white/20 text-emerald-400 hover:bg-slate-800 active:scale-95 transition"
+            >
+              {store.soundEnabled ? (
+                <Volume2 className="w-3.5 h-3.5" />
+              ) : (
+                <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+              )}
+            </button>
+          </div>
+
+          {onOpenWardrobe && (
+            <button
+              onClick={onOpenWardrobe}
+              className="pointer-events-auto retro-btn px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1 shrink-0 shadow-lg"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>換裝佈置</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

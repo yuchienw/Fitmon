@@ -527,7 +527,7 @@ export const AnalyticsTab: React.FC = () => {
             {/* CHART 1: TRAINING VOLUME SVG LINE CHART */}
             {chartType === 'volume' && (
               <div className="space-y-2">
-                <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-2">
+                <div className="game-stage-dark bg-slate-950/90 border border-slate-800 rounded-xl p-2">
                   <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-40 overflow-visible">
                     <defs>
                       <linearGradient id="volAreaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -623,7 +623,7 @@ export const AnalyticsTab: React.FC = () => {
             {/* CHART 2: BIG-3 1RM PROGRESSION */}
             {chartType === 'strength_pr' && (
               <div className="space-y-2">
-                <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-2">
+                <div className="game-stage-dark bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-2">
                   <div className="flex items-center justify-between text-[10px] font-bold">
                     <span className="text-amber-300">● 硬舉</span>
                     <span className="text-emerald-400">● 深蹲</span>
