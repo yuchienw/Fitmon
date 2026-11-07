@@ -184,13 +184,13 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
 
   return (
     <div className="game-stage-dark relative rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-[#0d111a] shadow-2xl">
-      {/* Top Floating Room Info: Speech Bubble (Pose manual selection moved to Settings Dev Cheats) */}
-      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-start justify-between pointer-events-none gap-1.5 flex-wrap">
-        <div className="bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/15 text-[11px] font-bold text-white shadow flex items-center gap-1.5 break-words">
+      {/* Top Floating Room Bar: Left Speech Bubble + Right Audio / Day-Night Controls */}
+      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-start justify-between pointer-events-none gap-1.5">
+        <div className="bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/15 text-[11px] font-bold text-white shadow flex items-center gap-1.5 break-words min-w-0">
           {customOverride ? (
             <>
               <Home className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
-              <span>
+              <span className="truncate">
                 {customOverride.ownerName}
                 {visitorAvatar ? ' · 同框串門' : ''}
               </span>
@@ -198,19 +198,49 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
           ) : (
             <>
               <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
-              <span>{speechBubble}</span>
+              <span className="truncate">{speechBubble}</span>
             </>
           )}
         </div>
 
-        {store.devRoomPoseOverride !== 'AUTO' && !compact && (
-          <button
-            onClick={() => store.setSettingsOpen(true)}
-            className="ml-auto pointer-events-auto bg-amber-500/20 hover:bg-amber-500/30 backdrop-blur-md px-2 py-0.5 rounded-full border border-amber-400/50 text-[10px] font-black text-amber-300 flex items-center gap-1 shadow"
-          >
-            <Wrench className="w-3 h-3 shrink-0" aria-hidden="true" />
-            <span>外掛鎖定：{store.devRoomPoseOverride}</span>
-          </button>
+        {/* Top-Right Controls: BGM, Day/Night (早晚), SFX (音效) */}
+        {!compact && (
+          <div className="ml-auto flex items-center gap-1.5 pointer-events-auto shrink-0">
+            <button
+              onClick={() => store.toggleBgm()}
+              title="切換 8-Bit 背景音樂 (BGM)"
+              className={`px-2 py-1 rounded-full border text-[11px] font-bold flex items-center gap-1 shadow transition ${
+                store.bgmEnabled
+                  ? 'bg-emerald-400 text-slate-950 border-emerald-300 font-black'
+                  : 'bg-slate-950/85 backdrop-blur-md border-white/20 text-slate-200 hover:text-white'
+              }`}
+            >
+              <Music className="w-3 h-3" />
+              <span>BGM</span>
+            </button>
+            <button
+              onClick={() => store.toggleNightModeRoom()}
+              title="切換早晚日夜窗景"
+              className="p-1.5 rounded-full bg-slate-950/85 backdrop-blur-md border border-white/20 text-amber-300 hover:bg-slate-800 active:scale-95 shadow transition"
+            >
+              {store.isNightModeRoom ? (
+                <Moon className="w-3.5 h-3.5" />
+              ) : (
+                <Sun className="w-3.5 h-3.5" />
+              )}
+            </button>
+            <button
+              onClick={() => store.toggleSound()}
+              title="切換點擊音效 (SFX)"
+              className="p-1.5 rounded-full bg-slate-950/85 backdrop-blur-md border border-white/20 text-emerald-400 hover:bg-slate-800 active:scale-95 shadow transition"
+            >
+              {store.soundEnabled ? (
+                <Volume2 className="w-3.5 h-3.5" />
+              ) : (
+                <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+              )}
+            </button>
+          </div>
         )}
       </div>
 
@@ -225,40 +255,19 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
         } object-cover cursor-pointer block`}
       />
 
-      {/* Bottom Corner Utility Controls (Audio/Day-Night on Left, Wardrobe on Right) */}
+      {/* Bottom Corner Utility Controls (Dev Pose Override Badge on Left if active, Wardrobe on Right) */}
       {!compact && (
         <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
-          <div className="flex items-center gap-1.5 pointer-events-auto shrink-0">
-            <button
-              onClick={() => store.toggleBgm()}
-              title="切換 8-Bit 背景音樂 (BGM)"
-              className={`px-2 py-1 rounded-full border text-[11px] font-bold flex items-center gap-1 transition ${
-                store.bgmEnabled
-                  ? 'bg-emerald-400 text-slate-950 border-emerald-300 font-black'
-                  : 'bg-slate-950/85 border-white/20 text-slate-200 hover:text-white'
-              }`}
-            >
-              <Music className="w-3 h-3" />
-              <span>BGM</span>
-            </button>
-            <button
-              onClick={() => store.toggleNightModeRoom()}
-              title="切換日夜窗景"
-              className="p-1.5 rounded-full bg-slate-950/85 border border-white/20 text-amber-300 hover:bg-slate-800 active:scale-95 transition"
-            >
-              {store.isNightModeRoom ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-            </button>
-            <button
-              onClick={() => store.toggleSound()}
-              title="切換點擊音效 (SFX)"
-              className="p-1.5 rounded-full bg-slate-950/85 border border-white/20 text-emerald-400 hover:bg-slate-800 active:scale-95 transition"
-            >
-              {store.soundEnabled ? (
-                <Volume2 className="w-3.5 h-3.5" />
-              ) : (
-                <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-              )}
-            </button>
+          <div>
+            {store.devRoomPoseOverride !== 'AUTO' && (
+              <button
+                onClick={() => store.setSettingsOpen(true)}
+                className="pointer-events-auto bg-amber-500/20 hover:bg-amber-500/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-400/50 text-[10px] font-black text-amber-300 flex items-center gap-1 shadow"
+              >
+                <Wrench className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span>外掛鎖定：{store.devRoomPoseOverride}</span>
+              </button>
+            )}
           </div>
 
           {onOpenWardrobe && (
