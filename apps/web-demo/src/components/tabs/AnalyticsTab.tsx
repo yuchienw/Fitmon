@@ -320,8 +320,8 @@ export const AnalyticsTab: React.FC = () => {
           {historyMode === 'calendar' && (
             <div className="retro-box rounded-2xl p-3.5 space-y-3">
               {/* Month Navigation & Cycle Banner */}
-              <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800">
-                <div className="flex items-center gap-1.5">
+              <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800 gap-1.5">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => {
                       setSelectedDateKey(null);
@@ -337,8 +337,8 @@ export const AnalyticsTab: React.FC = () => {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black">
-                    📅 {calYear} 年 {calMonth} 月
+                  <span className="px-2 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black font-mono shrink-0">
+                    📅 {calYear}年{calMonth}月
                   </span>
                   <button
                     onClick={() => {
@@ -362,15 +362,24 @@ export const AnalyticsTab: React.FC = () => {
                         setCalYear(todayObj.getFullYear());
                         setCalMonth(todayObj.getMonth() + 1);
                       }}
-                      className="text-[10px] font-bold text-cyan-400 px-2 py-0.5 rounded-lg bg-slate-800 border border-cyan-500/30"
+                      className="text-[10px] font-bold text-cyan-400 px-1.5 py-0.5 rounded-lg bg-slate-800 border border-cyan-500/30 shrink-0"
                     >
                       本月
                     </button>
                   )}
                 </div>
-                <span className="text-[10px] font-mono font-bold text-slate-400">
-                  週期：1 號 ～ {daysInMonth} 號
-                </span>
+                {selectedDateKey !== null ? (
+                  <button
+                    onClick={() => setSelectedDateKey(null)}
+                    className="text-[11px] font-bold text-cyan-400 shrink-0"
+                  >
+                    查看全月
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                    1號～{daysInMonth}號
+                  </span>
+                )}
               </div>
 
               {/* Monthly Summary KPIs */}
@@ -471,8 +480,8 @@ export const AnalyticsTab: React.FC = () => {
           {historyMode === 'weekly' && (
             <div className="retro-box rounded-2xl p-3.5 space-y-3">
               {/* Week Navigation & Cycle Banner */}
-              <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800">
-                <div className="flex items-center gap-1.5">
+              <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800 gap-1.5">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => {
                       setSelectedDateKey(null);
@@ -483,8 +492,8 @@ export const AnalyticsTab: React.FC = () => {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-black">
-                    📊 {weeklyDays[0].mmdd} (週日) ～ {weeklyDays[6].mmdd} (週六)
+                  <span className="px-2 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-black font-mono shrink-0">
+                    📊 {weeklyDays[0].mmdd} ～ {weeklyDays[6].mmdd}
                   </span>
                   <button
                     onClick={() => {
@@ -502,15 +511,24 @@ export const AnalyticsTab: React.FC = () => {
                         setSelectedDateKey(null);
                         setWeekOffset(0);
                       }}
-                      className="text-[10px] font-bold text-cyan-400 px-2 py-0.5 rounded-lg bg-slate-800 border border-cyan-500/30"
+                      className="text-[10px] font-bold text-cyan-400 px-1.5 py-0.5 rounded-lg bg-slate-800 border border-cyan-500/30 shrink-0"
                     >
                       本週
                     </button>
                   )}
                 </div>
-                <span className="text-[10px] font-mono font-bold text-slate-400">
-                  週期：週日 ～ 週六
-                </span>
+                {selectedDateKey !== null ? (
+                  <button
+                    onClick={() => setSelectedDateKey(null)}
+                    className="text-[11px] font-bold text-cyan-400 shrink-0"
+                  >
+                    查看全週
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                    週日～週六
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -536,7 +554,7 @@ export const AnalyticsTab: React.FC = () => {
 
               {/* 7-Day Vertical Bar Chart with Exact MM/DD Dates */}
               <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3">
-                <div className="grid grid-cols-7 gap-1.5 items-end h-36 pt-4">
+                <div className="grid grid-cols-7 gap-1 items-end h-36 pt-4">
                   {weeklyDays.map((d) => {
                     const heightPct =
                       d.volume > 0 ? Math.max(16, Math.round((d.volume / maxWeeklyDayVol) * 100)) : 6;
@@ -581,20 +599,20 @@ export const AnalyticsTab: React.FC = () => {
 
           {/* SESSION CARDS LIST (Filtered strictly by current Month View or Week View) */}
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-xs font-black text-slate-300">
+            <div className="flex items-center justify-between px-1 gap-2">
+              <span className="text-xs font-black text-slate-300 truncate">
                 {selectedDateKey !== null
-                  ? `📋 ${selectedDateKey} 訓練明細（共 ${displayedSessions.length} 筆）`
+                  ? `📋 ${selectedDateKey} 紀錄（${displayedSessions.length} 筆）`
                   : historyMode === 'weekly'
-                  ? `📋 本週訓練明細（${weeklyDays[0].mmdd}～${weeklyDays[6].mmdd} · 共 ${displayedSessions.length} 筆）`
-                  : `📋 本月訓練明細（${calYear}年${calMonth}月 · 1號～${daysInMonth}號 · 共 ${displayedSessions.length} 筆）`}
+                  ? `📋 本週明細（${weeklyDays[0].mmdd}～${weeklyDays[6].mmdd} · ${displayedSessions.length}筆）`
+                  : `📋 本月明細（${calYear}/${calMonth} · ${displayedSessions.length}筆）`}
               </span>
               {selectedDateKey !== null && (
                 <button
                   onClick={() => setSelectedDateKey(null)}
-                  className="text-[11px] font-black text-cyan-400"
+                  className="text-[11px] font-black text-cyan-400 shrink-0 whitespace-nowrap"
                 >
-                  查看{historyMode === 'weekly' ? '本週' : '本月'}全部
+                  查看全部
                 </button>
               )}
             </div>
