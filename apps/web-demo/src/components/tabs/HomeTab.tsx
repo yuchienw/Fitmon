@@ -6,6 +6,8 @@ import {
   Camera,
   Dumbbell,
   Coins,
+  Swords,
+  Wrench,
   X,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
@@ -22,81 +24,131 @@ const STAGE_OPTIONS: { id: AvatarBodyStage; label: string }[] = [
 export const HomeTab: React.FC = () => {
   const store = useGameStore();
   const [quizOpen, setQuizOpen] = useState(false);
+  const [devPreviewOpen, setDevPreviewOpen] = useState(false);
   const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
 
   const currentQuiz = DAILY_SCIENCE_QUIZZES[selectedQuizIdx % DAILY_SCIENCE_QUIZZES.length];
   const isQuizAnswered = store.answeredQuizIds.includes(currentQuiz.id);
   const isBareTop = store.equipped.top === 'top_bare_muscles';
+  const isWorkoutCharged = store.todayWorkoutStatus !== 'none';
 
   return (
-    <div className="p-3.5 space-y-3 pb-8">
-      {/* 1. HERO: MAPLESTORY CHIBI 2D GYM ROOM */}
-      <PixelRoomCanvas
-        isActive={store.activeTab === 'home'}
-        onOpenWardrobe={() => store.setWardrobeModalOpen(true)}
-      />
+    <div className="p-3 space-y-3 pb-8">
+      {/* 1. HERO STAGE: MAPLESTORY CHIBI 2D GYM ROOM WITH FLOATING DEV PILL */}
+      <div className="relative">
+        <PixelRoomCanvas
+          isActive={store.activeTab === 'home'}
+          onOpenWardrobe={() => store.setWardrobeModalOpen(true)}
+        />
 
-      {/* 1.5 QUICK PHYSIQUE & MUSCLE PREVIEW BAR (Item 6: High-Contrast Beginner vs Giant Muscle Stages) */}
-      <div className="retro-box rounded-2xl p-2.5 flex items-center justify-between gap-1.5">
-        <div className="grid grid-cols-4 gap-1 flex-1">
-          {STAGE_OPTIONS.map((st) => (
-            <button
-              key={st.id}
-              onClick={() => store.setBodyStage(st.id)}
-              className={`py-1.5 rounded-xl text-[11px] font-black transition ${
-                store.bodyStage === st.id
-                  ? 'bg-emerald-500 text-slate-950 shadow'
-                  : 'bg-slate-800/90 text-slate-300 hover:text-white'
-              }`}
-            >
-              {st.label}
-            </button>
-          ))}
-        </div>
+        {/* Floating Corner Dev/Physique Preview Trigger (Hidden until tapped) */}
         <button
-          onClick={() =>
-            store.equipOwnedAvatarItem('top', isBareTop ? 'top_black_tank' : 'top_bare_muscles')
-          }
-          className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 border transition ${
-            isBareTop
-              ? 'bg-amber-400 text-slate-950 border-amber-300'
-              : 'bg-slate-900 text-amber-300 border-amber-500/40'
-          }`}
+          onClick={() => setDevPreviewOpen((v) => !v)}
+          className="absolute bottom-14 right-2.5 z-20 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-400/50 text-amber-300 text-[10px] font-black flex items-center gap-1 shadow-lg active:scale-95 transition"
         >
-          {isBareTop ? '💪 赤膊中' : '👕 穿背心'}
+          <Wrench className="w-3 h-3" />
+          <span>🛠️ 體態外掛</span>
         </button>
+
+        {devPreviewOpen && (
+          <div className="absolute bottom-24 right-2.5 left-2.5 z-30 p-2.5 rounded-2xl bg-slate-950/95 backdrop-blur-md border-2 border-amber-400 shadow-2xl space-y-2">
+            <div className="flex items-center justify-between text-[11px] font-black text-amber-300">
+              <span>🛠️ MVP 體態進化與赤膊快速預覽</span>
+              <button
+                onClick={() => setDevPreviewOpen(false)}
+                className="p-0.5 rounded bg-slate-800 text-slate-300"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="grid grid-cols-4 gap-1 flex-1">
+                {STAGE_OPTIONS.map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => store.setBodyStage(st.id)}
+                    className={`py-1.5 rounded-xl text-[11px] font-black transition ${
+                      store.bodyStage === st.id
+                        ? 'bg-emerald-500 text-slate-950 shadow'
+                        : 'bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() =>
+                  store.equipOwnedAvatarItem(
+                    'top',
+                    isBareTop ? 'top_black_tank' : 'top_bare_muscles'
+                  )
+                }
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 border transition ${
+                  isBareTop
+                    ? 'bg-amber-400 text-slate-950 border-amber-300'
+                    : 'bg-slate-900 text-amber-300 border-amber-500/40'
+                }`}
+              >
+                {isBareTop ? '💪 赤膊' : '👕 背心'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 2. TWO CLEAN VISUAL CTA BUTTONS */}
-      <div className="grid grid-cols-2 gap-2.5">
+      {/* 2. CORE GAME LOOP DOCK: WORKOUT CHARGE ➔ BOSS RAID + PHOTO STUDIO */}
+      <div className="grid grid-cols-12 gap-2">
         <button
           onClick={() => store.setActiveTab('workout')}
-          className="retro-btn py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
+          className="col-span-5 retro-btn py-3 px-3 rounded-2xl bg-gradient-to-b from-emerald-400 to-teal-500 text-slate-950 font-black text-xs flex flex-col items-center justify-center gap-1 shadow-lg border-2 border-emerald-200"
         >
-          <Dumbbell className="w-5 h-5 stroke-[2.5px]" />
-          <span>開始運動</span>
+          <div className="flex items-center gap-1.5 text-sm">
+            <Dumbbell className="w-4 h-4 stroke-[2.5px]" />
+            <span>開始運動</span>
+          </div>
+          <span className="text-[10px] opacity-85 font-bold">
+            {isWorkoutCharged ? '✅ 今日已充能' : '⚡ 累積出拳能量'}
+          </span>
+        </button>
+
+        <button
+          onClick={() => store.setActiveTab('plaza')}
+          className="col-span-5 retro-btn py-3 px-3 rounded-2xl bg-gradient-to-b from-amber-400 via-orange-400 to-rose-500 text-slate-950 font-black text-xs flex flex-col items-center justify-center gap-1 shadow-lg border-2 border-amber-200"
+        >
+          <div className="flex items-center gap-1.5 text-sm">
+            <Swords className="w-4 h-4 stroke-[2.5px]" />
+            <span>討伐 Boss</span>
+          </div>
+          <span className="text-[10px] opacity-90 font-bold">
+            Stage {store.squadStage} · 組隊刷寶
+          </span>
         </button>
 
         <button
           onClick={() => store.setMemeStudioOpen(true)}
-          className="retro-btn py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-sm flex items-center justify-center gap-2"
+          title="拍貼工坊"
+          className="col-span-2 retro-btn py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-[11px] flex flex-col items-center justify-center gap-1"
         >
-          <Camera className="w-5 h-5 text-amber-400" />
-          <span>拍貼工坊</span>
+          <Camera className="w-4 h-4 text-amber-400" />
+          <span>拍貼</span>
         </button>
       </div>
 
-      {/* 3. ULTRA-CLEAN SINGLE-LINE DAILY QUESTS */}
-      <div className="retro-box rounded-2xl p-3.5 space-y-2">
+      {/* 3. COMPACT RPG DAILY BOUNTY BOARD (今日懸賞) */}
+      <div className="retro-box rounded-2xl p-3 space-y-2">
         <div className="flex items-center justify-between px-0.5">
-          <h3 className="text-xs font-black text-slate-300 tracking-wide">📋 今日任務</h3>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">📜</span>
+            <h3 className="text-xs font-black text-white tracking-wide">今日懸賞任務</h3>
+          </div>
           <button
             onClick={() => setQuizOpen(true)}
-            className="px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold flex items-center gap-1 hover:bg-cyan-500/25 transition"
+            className="px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 hover:bg-cyan-500/25 transition"
           >
             <Brain className="w-3.5 h-3.5" />
-            <span>每日問答 +15🪙</span>
+            <span>科普問答 +15🪙</span>
           </button>
         </div>
 
@@ -106,30 +158,33 @@ export const HomeTab: React.FC = () => {
             return (
               <div
                 key={q.id}
-                className={`px-3 py-2.5 rounded-xl border flex items-center justify-between gap-2 transition ${
+                className={`px-3 py-2 rounded-xl border flex items-center justify-between gap-2 transition ${
                   q.claimed
-                    ? 'bg-slate-900/40 border-slate-800/50 opacity-50'
+                    ? 'bg-slate-900/40 border-slate-800/50 opacity-55'
                     : isReady
-                    ? 'bg-amber-950/30 border-amber-500/60'
+                    ? 'bg-amber-950/40 border-amber-400'
                     : 'bg-slate-900/90 border-slate-800/90'
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-bold text-white truncate">{q.titleZh}</span>
-                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-300 font-mono text-[10px] font-bold shrink-0">
+                  <span className="text-xs font-black text-white truncate">{q.titleZh}</span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono text-[10px] font-black shrink-0">
                     +{q.rewardCoins * (store.doubleCoinActive ? 2 : 1)}🪙
                   </span>
                 </div>
 
                 {q.claimed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-[11px] font-black text-emerald-400 flex items-center gap-1 shrink-0">
+                    <CheckCircle2 className="w-4 h-4" />
+                    已領
+                  </span>
                 ) : isReady ? (
                   <button
                     onClick={() => store.claimQuest(q.id)}
                     className="retro-btn px-3 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-xs shrink-0 flex items-center gap-1 animate-bounce"
                   >
                     <Coins className="w-3.5 h-3.5" />
-                    領取
+                    領賞
                   </button>
                 ) : (
                   <button
@@ -140,9 +195,9 @@ export const HomeTab: React.FC = () => {
                         store.setActiveTab(q.targetTab);
                       }
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs font-bold shrink-0 flex items-center gap-1 hover:text-white"
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs font-black shrink-0 flex items-center gap-1 hover:text-white"
                   >
-                    <span>前往</span>
+                    <span>GO</span>
                     <ArrowRight className="w-3 h-3" />
                   </button>
                 )}
@@ -152,7 +207,7 @@ export const HomeTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. OPTIONAL POPUP MODAL FOR DAILY QUIZ (Zero Screen Clutter!) */}
+      {/* 4. POPUP MODAL FOR DAILY QUIZ */}
       {quizOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-sm retro-box rounded-2xl p-4 space-y-3 border-2 border-cyan-500/50">

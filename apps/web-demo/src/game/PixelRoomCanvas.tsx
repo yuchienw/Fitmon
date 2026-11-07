@@ -208,14 +208,14 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
         height={600}
         onClick={handleCanvasInteraction}
         className={`w-full ${
-          compact ? 'h-44 sm:h-48' : 'h-64 sm:h-72'
+          compact ? 'h-44 sm:h-48' : 'h-72 sm:h-80'
         } object-cover cursor-pointer block`}
       />
 
-      {/* Bottom Action & Quick Wardrobe/Room Customize Bar */}
+      {/* Floating Bottom Game HUD Overlay inside the Room Stage */}
       {!compact && (
-        <div className="bg-slate-900/95 border-t border-slate-800 px-3 py-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
+        <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
+          <div className="flex items-center gap-1 bg-slate-950/80 backdrop-blur-md p-1 rounded-xl border border-white/15 pointer-events-auto shadow-lg">
             {(
               [
                 { id: 'SQUAT', label: '🏋️ 深蹲' },
@@ -230,10 +230,10 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
                   animRef.current.stateTimer = 0;
                   store.interactWithRoomEntity('avatar');
                 }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                className={`px-2 py-1 rounded-lg text-[11px] font-black transition ${
                   aiState === m.id
-                    ? 'bg-emerald-500 text-slate-950 font-black'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-emerald-500 text-slate-950 shadow'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
                 {m.label}
@@ -244,7 +244,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
           {onOpenWardrobe && (
             <button
               onClick={onOpenWardrobe}
-              className="retro-btn px-3 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1 shrink-0"
+              className="pointer-events-auto retro-btn px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1 shrink-0 shadow-lg"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>換裝佈置</span>

@@ -308,6 +308,60 @@
 }
 
 /* ============================================================================
+   GAME STAGE VIEWPORT PROTECTION (.game-stage-dark)
+   Keep RPG battle arenas & dark game stages authentic in both Light & Dark themes
+   ============================================================================ */
+.theme-light .game-stage-dark {
+  background-color: #16131d !important;
+  color: #f8fafc !important;
+}
+
+.theme-light .game-stage-dark .text-white {
+  color: #ffffff !important;
+}
+
+.theme-light .game-stage-dark .text-slate-200,
+.theme-light .game-stage-dark .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+.theme-light .game-stage-dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+.theme-light .game-stage-dark .text-amber-300,
+.theme-light .game-stage-dark .text-amber-400 {
+  color: #fcd34d !important;
+}
+
+.theme-light .game-stage-dark .text-emerald-300,
+.theme-light .game-stage-dark .text-emerald-400 {
+  color: #6ee7b7 !important;
+}
+
+.theme-light .game-stage-dark .text-cyan-200,
+.theme-light .game-stage-dark .text-cyan-300 {
+  color: #67e8f9 !important;
+}
+
+.theme-light .game-stage-dark .text-rose-200,
+.theme-light .game-stage-dark .text-rose-300 {
+  color: #fda4af !important;
+}
+
+.theme-light .game-stage-dark .bg-slate-950\/90,
+.theme-light .game-stage-dark .bg-slate-950\/80,
+.theme-light .game-stage-dark .bg-slate-900\/90,
+.theme-light .game-stage-dark .bg-slate-900\/80 {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+}
+
+.theme-light .game-stage-dark .bg-slate-800 {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+/* ============================================================================
    2. COZY WARM DARK THEME (.theme-dark - Non-Techy Warm Cocoa/Charcoal)
    ============================================================================ */
 .theme-dark {

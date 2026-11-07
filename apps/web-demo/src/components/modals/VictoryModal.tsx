@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Flame, Coins, Camera, Share2, Sparkles, Check } from 'lucide-react';
+import { Trophy, Coins, Camera, Share2, Sparkles, Check, Swords } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 
 export const VictoryModal: React.FC = () => {
@@ -77,16 +77,28 @@ export const VictoryModal: React.FC = () => {
         <div className="space-y-2 pt-1">
           <button
             onClick={() => {
+              store.setTodayWorkoutStatus('legit_rest');
               store.closeVictoryModal();
-              store.setMemeStudioOpen(true);
+              store.setActiveTab('plaza');
             }}
-            className="retro-btn w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2"
+            className="retro-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
           >
-            <Camera className="w-4 h-4" />
-            <span>📸 製作今日運動拍貼</span>
+            <Swords className="w-4 h-4 stroke-[2.5px]" />
+            <span>⚔️ 帶著 100% 充能去痛扁 Boss！</span>
           </button>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              onClick={() => {
+                store.closeVictoryModal();
+                store.setMemeStudioOpen(true);
+              }}
+              className="retro-btn py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>運動拍貼</span>
+            </button>
+
             <button
               onClick={() => {
                 store.closeVictoryModal();
