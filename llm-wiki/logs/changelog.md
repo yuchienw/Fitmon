@@ -608,3 +608,49 @@
 - [tech_architecture.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)
 - [PROJECT_STATE.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)
 - [changelog.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
+
+---
+
+## [2026-11-07] 課表同器材隔離紀錄、成效分析月週切換引擎與冒險雙軌規範 (v2.9.4, TASK-029 ~ TASK-032)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出數項實作層與體驗層的關鍵需求與痛點：
+  1. **課表動作重複設定時組數連動 Bug**：使用者在課表中排定兩次同一項器材/動作（例如重重量深蹲與降重訓練），點擊「完成本組」時會同時在兩張卡片增加組數，且中途新增相同器材無法建立獨立卡片。
+  2. **建立課表介面空間優化**：建立課表彈窗高度需固定（`h-[90vh]`）且採 50/50 對半切分（上半部排程檢視、下半部開源動作庫）；課表標籤全面改用標準化下拉選單。
+  3. **我的紀錄（AnalyticsTab）週期定義與切換**：
+     - 月瀏覽週期必須為「1 號 ～ 月底」，頂部需提供 `< 上個月` / `下個月 >` 與 `[本月]` 快速切換按鈕。
+     - 週瀏覽週期必須為「週日 ～ 週六」（以週日為起點之一整週 7 天），頂部提供 `< 上週` / `下週 >` 與 `[本週]` 快速切換按鈕。
+     - 下方紀錄清單嚴格依當前檢視範圍連動過濾（月瀏覽只看該月、週瀏覽只看該週）。
+  4. **冒險雙軌、個人素質專頁與 Server-Authoritative 防作弊規範**：
+     - 正名為「冒險」，明確劃分「🗡️ 單人冒險」（1.0x HP，個人天梯）與「🛡️ 組隊冒險」（1.8x HP，隊友共享血量進度，戰隊天梯）。
+     - 抽離出獨立「✨ 個人素質」專頁，呈現全身配裝素質、屬性傷害加成、攻擊區間與生涯戰鬥數據。
+     - 每日 IAP 秒解冷卻次數嚴格限制最多 1 次；尾刀致命擊殺與稀有噴裝跳出專屬分享卡。
+     - 確認未來所有防作弊機制（組間休息檢查、冷卻驗證、Boss 血量扣減）皆由 Server 端（Postgres RPC）權威運算，零個資留存於本地沙盒。
+  5. **系統設定主題文案精簡**：標籤精簡為「🎨 主題」，選項為「淺色」、「深色」、「跟隨系統」。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **動作序列獨立 `queueItemId` 隔離架構**：
+   - 於 `useGameStore.ts` 引入 `TemplateQueueItem` 介面，為序列中每個卡片配置唯一 `id`。
+   - 新增 `selectedQueueItemId`，點擊「完成本組」僅對選取之區塊累加 `completedSets`，徹底隔離重複器材。
+   - 每組紀錄 `LoggedSet` 攜帶 `queueItemId`，結算時按區塊分組（`groupedMap.get(s.queueItemId || s.exerciseId)`），在歷史紀錄與課表明細中完整還原各區塊設定。
+2. **成效分析月瀏覽與週瀏覽切換引擎 (`AnalyticsTab.tsx`)**：
+   - 月瀏覽：動態計算該月份總天數（1 號 ～ 月底）與首日星期，7 欄日曆格由週日到週六補足留白，頂部支援自由切換上下月份。
+   - 週瀏覽：以週日為起始點計算該週 7 天（`週日 ～ 週六`），7 根長條柱清晰標記日期、星期與當日容量，支援切換上下週。
+   - 資料連動：下方明細清單及摘要 KPI 完全與當前檢視月份或週別嚴格綁定，點選單日柱狀圖/日曆格即時鎖定該日。
+3. **系統設定與導航膠囊微調**：
+   - 系統設定彈窗主題選項改為「淺色」、「深色」、「跟隨系統」。
+   - 底部導航中央冒險膠囊按鈕微擴寬（64px/68px，px-3），避免緊貼雙劍圖標。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [useGameStore.ts](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/stores/useGameStore.ts)
+- [WorkoutTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/WorkoutTab.tsx)
+- [AnalyticsTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/AnalyticsTab.tsx)
+- [SettingsModal.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/modals/SettingsModal.tsx)
+- [BottomNav.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/layout/BottomNav.tsx)
+- [PlazaTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/PlazaTab.tsx)
+- [00_INDEX.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
+- [dual_mode_experience.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/dual_mode_experience.md)
+- [game_mechanics_and_science.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/game_mechanics_and_science.md)
+- [tech_architecture.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)
+- [PROJECT_STATE.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)
+- [changelog.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
