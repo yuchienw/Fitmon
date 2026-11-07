@@ -92,15 +92,30 @@
   background-color: #faf6f0 !important;
 }
 
-.theme-light .bg-slate-800 {
+.theme-light .bg-slate-800,
+.theme-light .bg-slate-800\/90,
+.theme-light .bg-slate-800\/80,
+.theme-light .bg-slate-800\/70 {
   background-color: #efe8dc !important;
   color: #3b312b !important;
 }
 
-.theme-light .bg-slate-800:hover {
+.theme-light .bg-slate-700,
+.theme-light .bg-slate-700\/90,
+.theme-light .bg-slate-700\/80 {
   background-color: #e5dccb !important;
 }
 
+/* Hover remappings for slate buttons so hovering never turns buttons pitch dark */
+.theme-light .bg-slate-800:hover,
+.theme-light .hover\:bg-slate-700:hover,
+.theme-light .hover\:bg-slate-800:hover,
+.theme-light .hover\:bg-slate-900:hover {
+  background-color: #e2d8c5 !important;
+}
+
+.theme-light .border-slate-900,
+.theme-light .border-slate-850,
 .theme-light .border-slate-800,
 .theme-light .border-slate-800\/90,
 .theme-light .border-slate-800\/80,
@@ -127,12 +142,14 @@
   color: #786b63 !important;
 }
 
-/* Warm up accent text in light mode for crisp readability */
+/* Warm up accent text in light mode for crisp readability on light surfaces */
+.theme-light .text-amber-200,
 .theme-light .text-amber-300,
 .theme-light .text-amber-400 {
   color: #b45309 !important;
 }
 
+.theme-light .text-emerald-200,
 .theme-light .text-emerald-300,
 .theme-light .text-emerald-400 {
   color: #047857 !important;
@@ -145,36 +162,149 @@
 }
 
 .theme-light .text-rose-200,
-.theme-light .text-rose-300 {
+.theme-light .text-rose-300,
+.theme-light .text-rose-400 {
   color: #be123c !important;
 }
 
+.theme-light .text-orange-200,
+.theme-light .text-orange-300,
+.theme-light .text-orange-400 {
+  color: #c2410c !important;
+}
+
+.theme-light .text-purple-200,
+.theme-light .text-purple-300,
+.theme-light .text-purple-400 {
+  color: #7e22ce !important;
+}
+
+.theme-light .bg-emerald-950,
 .theme-light .bg-emerald-950\/90,
 .theme-light .bg-emerald-950\/70,
+.theme-light .bg-emerald-950\/60,
 .theme-light .bg-emerald-950\/50,
 .theme-light .bg-emerald-950\/40,
 .theme-light .bg-emerald-950\/20 {
   background-color: #ecfdf5 !important;
 }
 
+.theme-light .bg-amber-950,
+.theme-light .bg-amber-950\/60,
 .theme-light .bg-amber-950\/40,
 .theme-light .bg-amber-950\/30,
 .theme-light .bg-amber-950\/15 {
   background-color: #fffbeb !important;
 }
 
+.theme-light .bg-cyan-950,
 .theme-light .bg-cyan-950\/80,
+.theme-light .bg-cyan-950\/70,
 .theme-light .bg-cyan-950\/60,
 .theme-light .bg-cyan-950\/40,
 .theme-light .bg-cyan-950\/30 {
   background-color: #f0f9ff !important;
 }
 
+.theme-light .bg-rose-950,
+.theme-light .bg-rose-950\/90,
+.theme-light .bg-rose-950\/80,
 .theme-light .bg-rose-950\/70,
 .theme-light .bg-rose-950\/60,
 .theme-light .bg-rose-950\/50,
-.theme-light .bg-rose-950\/30 {
+.theme-light .bg-rose-950\/40,
+.theme-light .bg-rose-950\/30,
+.theme-light .bg-rose-950\/25,
+.theme-light .bg-rose-900,
+.theme-light .bg-rose-900\/80,
+.theme-light .bg-rose-900\/60,
+.theme-light .hover\:bg-rose-900\/60:hover,
+.theme-light .hover\:bg-rose-950\/60:hover {
   background-color: #fff1f2 !important;
+}
+
+.theme-light .bg-purple-950,
+.theme-light .bg-purple-950\/50 {
+  background-color: #faf5ff !important;
+}
+
+/* ============================================================================
+   LIGHT THEME BUTTON CONTRAST & VISIBILITY GUARANTEES
+   Preserve crisp white text on saturated solid-color buttons, pills & badges
+   ============================================================================ */
+.theme-light .bg-rose-500,
+.theme-light .bg-rose-600,
+.theme-light .bg-rose-700,
+.theme-light .bg-purple-500,
+.theme-light .bg-purple-600,
+.theme-light .bg-purple-700,
+.theme-light .bg-blue-500,
+.theme-light .bg-blue-600,
+.theme-light .bg-blue-700,
+.theme-light .bg-indigo-500,
+.theme-light .bg-indigo-600,
+.theme-light .bg-emerald-600,
+.theme-light .bg-emerald-700,
+.theme-light .from-emerald-600 {
+  color: #ffffff !important;
+}
+
+.theme-light .bg-rose-500 *,
+.theme-light .bg-rose-600 *,
+.theme-light .bg-rose-700 *,
+.theme-light .bg-purple-500 *,
+.theme-light .bg-purple-600 *,
+.theme-light .bg-purple-700 *,
+.theme-light .bg-blue-500 *,
+.theme-light .bg-blue-600 *,
+.theme-light .bg-blue-700 *,
+.theme-light .bg-indigo-500 *,
+.theme-light .bg-indigo-600 *,
+.theme-light .bg-emerald-600 *,
+.theme-light .bg-emerald-700 *,
+.theme-light .from-emerald-600 * {
+  color: #ffffff !important;
+}
+
+.theme-light .hover\:bg-rose-600:hover,
+.theme-light .hover\:bg-rose-500:hover,
+.theme-light .hover\:bg-rose-400:hover,
+.theme-light .hover\:bg-purple-500:hover,
+.theme-light .hover\:bg-emerald-600:hover,
+.theme-light .hover\:bg-blue-500:hover {
+  color: #ffffff !important;
+}
+
+.theme-light .hover\:bg-rose-600:hover *,
+.theme-light .hover\:bg-rose-500:hover *,
+.theme-light .hover\:bg-rose-400:hover *,
+.theme-light .hover\:bg-purple-500:hover *,
+.theme-light .hover\:bg-emerald-600:hover *,
+.theme-light .hover\:bg-blue-500:hover * {
+  color: #ffffff !important;
+}
+
+/* Prevent hover text white from turning text invisible on light surfaces */
+.theme-light .hover\:text-white:hover,
+.theme-light .hover\:text-slate-100:hover,
+.theme-light .hover\:text-slate-200:hover {
+  color: #171412 !important;
+}
+
+.theme-light .hover\:text-rose-300:hover {
+  color: #be123c !important;
+}
+
+.theme-light .hover\:text-amber-300:hover {
+  color: #b45309 !important;
+}
+
+.theme-light .hover\:text-cyan-300:hover {
+  color: #0369a1 !important;
+}
+
+.theme-light .hover\:text-emerald-300:hover {
+  color: #047857 !important;
 }
 
 /* ============================================================================

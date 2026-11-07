@@ -26,7 +26,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
       label: t.tabHome,
       icon: Home,
       badge: claimableQuests > 0 ? claimableQuests : undefined,
-      badgeColor: 'bg-amber-500 text-white',
+      badgeColor: 'bg-amber-400 text-slate-950 font-black',
     },
     {
       id: 'workout',
@@ -38,7 +38,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
         ? sessionSets.length
         : undefined,
       badgeColor: isRestRunning
-        ? 'bg-amber-500 text-white animate-pulse'
+        ? 'bg-amber-400 text-slate-950 font-black animate-pulse'
         : 'bg-emerald-600 text-white',
     },
     {
