@@ -529,3 +529,39 @@
 - [WardrobeModal.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/modals/WardrobeModal.tsx)
 - [capacitor.config.json](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/capacitor.config.json)
 - [PROJECT_STATE.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)
+
+---
+
+## [2026-11-07] 遊戲化社交大改版 (v2.9.0)：Tap Titans 關卡推圖、組間休息防作弊懲罰、Boss 隱藏噴裝、2~4人戰隊催促與 GitHub Pages 自動部署 (TASK-022 ~ TASK-026)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者讓朋友實測後反饋原「社交頁面」僅有單向貼文與送水，較為枯燥，希望進行全面遊戲化大改版，並確立以下核心原則：
+  1. 嚴謹健身數據與紀錄為根本地基，遊戲化為附加推動力。
+  2. 不鼓勵比拼大重量/大容量（避免逞強受傷），戰鬥力以「完成任務」與「連續簽到 (Streak)」為主。
+  3. 裝備 100% 靠運動解任務賺金幣取得（零 P2W），依運動風格賦予「🥊 物攻 / 🪄 魔攻 / 🛡️ 輔助」屬性。
+  4. 採《Tap Titans》關卡式推圖（個人試煉 ＋ 2~4 人彈性戰隊雙軌），Boss 為幽默現代生活系怪物，血條殘血累積保存不重置。
+  5. 以「組間休息計時完整度」作為防亂按交差判定：3 秒亂按作弊者嚴厲懲罰（傷害 -95% 刮痧拳 ＋ 禁掉寶），並讓戰隊好友可一鍵抓包處刑。
+  6. 每關 Boss 具備專屬隱藏掉落神裝 (`hiddenLoot`)，並可依當日運動類型（重訓/有氧/徒手）選擇技能與隊友打 Combo 連攜。
+  7. 設定每次 `git push` 自動編譯部署至公開 GitHub Pages。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **GitHub Pages CI/CD 自動化部署 (`.github/workflows/deploy-pages.yml`)**：配置 Node 20 自動打包 `apps/web-demo/dist` 並將 `vite.config.ts` 與 `manifest.json` 改為相對路徑 `./`。
+2. **導覽列更名 `[⚔️ 冒險]` 與三大子視角 (`PlazaTab.tsx`)**：整合 `[👹 討伐推圖]`、`[🏆 榮譽天梯]`（個人關卡榜、戰隊推圖榜、單次最高傷害榜）與 `[👥 戰友動態]`。
+3. **組間休息防作弊與隊友連攜技能 (`useGameStore.ts`)**：
+   - 實作 `todayWorkoutStatus`（`legit_rest` / `cheated_fast` / `none`）與 `todaySportType`（重訓 `🔨 破甲重擊`、有氧 `🔥 燃脂魔焰` 引爆 2 倍破甲連攜、核心 `🌪️ 聚氣暴擊陣` 掉寶率 ×2）。
+   - 實作戰隊成員公開稽核日誌，支援對未出勤隊友 `[🔔 拿啞鈴敲他]`、`[📲 LINE 討伐令]`，以及對作弊隊友 `[🚨 抓包作弊（沒收傷害罰他重練）]`。
+4. **Wiki 知識庫全面同步**：將 V2.9 遊戲機制與《FitMon 核心數值平衡總表》完整寫入 `wiki/game_mechanics_and_science.md` 與 `wiki/meme_and_social.md`。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [.github/workflows/deploy-pages.yml](file:///Users/yuchien/Project/Github/fitmon/.github/workflows/deploy-pages.yml)
+- [catalogConfig.ts](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/config/catalogConfig.ts)
+- [economyConfig.ts](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/config/economyConfig.ts)
+- [useGameStore.ts](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/stores/useGameStore.ts)
+- [BottomNav.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/layout/BottomNav.tsx)
+- [PlazaTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/PlazaTab.tsx)
+- [ShopTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/ShopTab.tsx)
+- [WardrobeModal.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/modals/WardrobeModal.tsx)
+- [game_mechanics_and_science.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/game_mechanics_and_science.md)
+- [meme_and_social.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)
+- [00_INDEX.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
+- [PROJECT_STATE.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)
