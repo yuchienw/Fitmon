@@ -98,10 +98,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
                 className="relative flex flex-col items-center justify-end pb-1 group focus:outline-none min-h-[48px]"
               >
                 <div
-                  className={`relative -mt-5 rounded-2xl flex items-center justify-center transition-all duration-150 border-2 ${
+                  className={`relative -mt-5 rounded-2xl flex items-center justify-center transition-all duration-150 border-2 px-3 ${
                     isActive
-                      ? 'w-14 h-12 bg-gradient-to-b from-amber-400 via-orange-400 to-rose-500 text-slate-950 border-amber-200 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.5),0_4px_0_#9a3412,0_6px_16px_rgba(244,63,94,0.45)] -translate-y-0.5'
-                      : 'w-13 h-11 bg-gradient-to-b from-emerald-400 to-teal-500 text-slate-950 border-emerald-200 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.45),0_4px_0_#065f46] hover:-translate-y-0.5 active:translate-y-0.5'
+                      ? 'w-[68px] h-12 bg-gradient-to-b from-amber-400 via-orange-400 to-rose-500 text-slate-950 border-amber-200 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.5),0_4px_0_#9a3412,0_6px_16px_rgba(244,63,94,0.45)] -translate-y-0.5'
+                      : 'w-[64px] h-11 bg-gradient-to-b from-emerald-400 to-teal-500 text-slate-950 border-emerald-200 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.45),0_4px_0_#065f46] hover:-translate-y-0.5 active:translate-y-0.5'
                   }`}
                 >
                   <Icon className="w-6 h-6 stroke-[2.5px] text-slate-950" aria-hidden="true" />
