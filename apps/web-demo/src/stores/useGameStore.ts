@@ -292,6 +292,8 @@ interface GameState {
   squadName: string;
   squadMembers: SquadMemberState[];
   adventureCooldownUntil: number;
+  dailyIapCooldownResetCount: number;
+  dailyIapCooldownResetDate: string;
   raidTickets: number;
   personalMaxStage: number;
   squadMaxStage: number;
@@ -896,6 +898,8 @@ export const useGameStore = create<GameState>()(
         },
       ],
       adventureCooldownUntil: 0,
+      dailyIapCooldownResetCount: 0,
+      dailyIapCooldownResetDate: '',
       raidTickets: 2,
       personalMaxStage: 1,
       squadMaxStage: 2,
@@ -2183,12 +2187,25 @@ export const useGameStore = create<GameState>()(
           });
           state.showToast('🎫 已消耗 1 張討伐挑戰券，冷卻立即歸零！');
         } else {
+          const todayDateStr = new Date().toISOString().slice(0, 10);
+          const currentCount =
+            state.dailyIapCooldownResetDate === todayDateStr
+              ? state.dailyIapCooldownResetCount || 0
+              : 0;
+
+          if (currentCount >= 1) {
+            state.showToast('🛑 今日秒解冷卻次數已達上限 (1/1 次)，請等待自然倒數或使用討伐券！');
+            return;
+          }
+
           soundFX.playCoin();
           set({
-            raidTickets: state.raidTickets + 2,
+            raidTickets: state.raidTickets + 1,
             adventureCooldownUntil: 0,
+            dailyIapCooldownResetCount: currentCount + 1,
+            dailyIapCooldownResetDate: todayDateStr,
           });
-          state.showToast('💎 模擬內購成功！冷卻已重置並額外獲得 2 張討伐券！');
+          state.showToast('💎 模擬內購成功！今日秒解冷卻已使用 (1/1 次)，冷卻立即歸零！');
         }
       },
 
@@ -2405,6 +2422,8 @@ export const useGameStore = create<GameState>()(
         squadName: state.squadName,
         squadMembers: state.squadMembers,
         adventureCooldownUntil: state.adventureCooldownUntil,
+        dailyIapCooldownResetCount: state.dailyIapCooldownResetCount,
+        dailyIapCooldownResetDate: state.dailyIapCooldownResetDate,
         raidTickets: state.raidTickets,
         personalMaxStage: state.personalMaxStage,
         squadMaxStage: state.squadMaxStage,

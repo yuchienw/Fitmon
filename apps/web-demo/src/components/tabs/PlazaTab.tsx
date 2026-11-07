@@ -163,6 +163,11 @@ export const PlazaTab: React.FC = () => {
   );
   const isOnCooldown = cooldownRemainingSec > 0;
 
+  const todayIsoDate = new Date().toISOString().slice(0, 10);
+  const iapResetUsedToday =
+    store.dailyIapCooldownResetDate === todayIsoDate &&
+    (store.dailyIapCooldownResetCount || 0) >= 1;
+
   const formatCooldown = (totalSec: number) => {
     const h = Math.floor(totalSec / 3600);
     const m = Math.floor((totalSec % 3600) / 60);
@@ -1455,10 +1460,17 @@ export const PlazaTab: React.FC = () => {
                   </button>
                   <button
                     onClick={() => store.resetAdventureCooldown('iap')}
-                    className="retro-btn py-2.5 px-3 rounded-xl bg-purple-600 text-white font-black text-xs flex items-center justify-center gap-1.5"
+                    disabled={iapResetUsedToday}
+                    className={`retro-btn py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition ${
+                      iapResetUsedToday
+                        ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                        : 'bg-purple-600 hover:bg-purple-500 text-white shadow'
+                    }`}
                   >
                     <Gem className="w-3.5 h-3.5" />
-                    <span>NT$30 秒解冷卻</span>
+                    <span>
+                      {iapResetUsedToday ? '今日秒解已用完 (1/1)' : 'NT$30 秒解冷卻 (限1次)'}
+                    </span>
                   </button>
                 </div>
               </div>
