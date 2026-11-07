@@ -380,6 +380,7 @@ interface GameState {
   // Biometrics & Demo Cheats
   updateBiometrics: (partial: Partial<GameState['biometrics']>) => void;
   setDevRoomPoseOverride: (pose: RoomPoseOverride) => void;
+  setDevBossHpToLow: () => void;
   addDemoCoins: (amount: number) => void;
   refillStaminaFull: () => void;
   resetDemoState: () => void;
@@ -2295,6 +2296,17 @@ export const useGameStore = create<GameState>()(
             ? '🤖 已恢復角色 AI 自主巡邏與動作'
             : `🔧 外掛已鎖定特定姿勢：【${labelMap[pose]}】`
         );
+      },
+
+      setDevBossHpToLow: () => {
+        soundFX.playBlip();
+        set({
+          squadBossHp: 10,
+          soloBossHp: 10,
+          todayWorkoutStatus: 'legit_rest',
+          adventureCooldownUntil: 0,
+        });
+        get().showToast('⚡ 外掛已將 Boss 血量設為 10 HP！現在揮拳即可觸發「最後一擊」戰報分享畫面！');
       },
 
       addDemoCoins: (amount) => {
