@@ -277,6 +277,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#ef4444',
     accentColor: '#271c19',
+    combatStat: { type: 'phy', value: 10, labelZh: '🥊 物攻 +10' },
   },
   {
     id: 'hair_spiky_gold',
@@ -287,6 +288,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'epic',
     primaryColor: '#facc15',
     accentColor: '#eab308',
+    combatStat: { type: 'phy', value: 40, labelZh: '🥊 物攻 +40' },
   },
   {
     id: 'hair_titan_crown',
@@ -298,6 +300,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#f59e0b',
     accentColor: '#ef4444',
     badgeText: '聯名',
+    combatStat: { type: 'phy', value: 65, labelZh: '🥊 物攻 +65' },
   },
   {
     id: 'hair_maple_cap',
@@ -308,6 +311,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#0284c7',
     accentColor: '#38bdf8',
+    combatStat: { type: 'mag', value: 25, labelZh: '🪄 魔攻 +25' },
   },
 
   // ================= 2. 臉部 / 表情飾品 (face) =================
@@ -320,6 +324,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#ffdfc4',
     accentColor: '#38bdf8',
+    combatStat: { type: 'support', value: 10, labelZh: '🛡️ 輔助 +10' },
   },
   {
     id: 'face_pixel_shades',
@@ -330,6 +335,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#0f172a',
     accentColor: '#38bdf8',
+    combatStat: { type: 'mag', value: 30, labelZh: '🪄 魔攻 +30' },
   },
   {
     id: 'face_fierce_grit',
@@ -340,6 +346,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#f43f5e',
     accentColor: '#ffffff',
+    combatStat: { type: 'phy', value: 25, labelZh: '🥊 物攻 +25' },
   },
 
   // ================= 3. 上衣 (top) =================

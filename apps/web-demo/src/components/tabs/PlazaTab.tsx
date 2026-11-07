@@ -96,17 +96,45 @@ export const PlazaTab: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate player's current gear stats
-  const equippedIds = Object.values(store.equipped);
-  let myPhyAtk = 20;
-  let myMagAtk = 10;
-  equippedIds.forEach((id) => {
+  // Calculate player's current gear stats & attack damage range
+  const slotLabels: { slot: keyof typeof store.equipped; labelZh: string }[] = [
+    { slot: 'hair', labelZh: '頭飾' },
+    { slot: 'face', labelZh: '臉部' },
+    { slot: 'top', labelZh: '上衣' },
+    { slot: 'bottom', labelZh: '下身' },
+    { slot: 'accessory', labelZh: '手持' },
+  ];
+  let phyBonus = 0;
+  let magBonus = 0;
+  let supportBonus = 0;
+  const equippedGearDetails = slotLabels.map(({ slot, labelZh }) => {
+    const id = store.equipped[slot];
     const item = AVATAR_ITEMS.find((a) => a.id === id);
     if (item?.combatStat) {
-      if (item.combatStat.type === 'phy') myPhyAtk += item.combatStat.value;
-      if (item.combatStat.type === 'mag') myMagAtk += item.combatStat.value;
+      if (item.combatStat.type === 'phy') phyBonus += item.combatStat.value;
+      if (item.combatStat.type === 'mag') magBonus += item.combatStat.value;
+      if (item.combatStat.type === 'support') supportBonus += item.combatStat.value;
     }
+    return {
+      slot,
+      slotLabelZh: labelZh,
+      nameZh: item?.nameZh || '基礎裝備',
+      statLabelZh: item?.combatStat?.labelZh || '基礎 +0',
+      statType: item?.combatStat?.type || 'phy',
+    };
   });
+  const myPhyAtk = 20 + phyBonus;
+  const myMagAtk = 10 + magBonus;
+  const mySupportAtk = 10 + supportBonus;
+
+  const completedQuestsCount = store.quests.filter((q) => q.progress >= q.target).length;
+  const baseWorkoutAtk = 340 + completedQuestsCount * 60 + store.streakDays * 25;
+  const phyNormalDmg = baseWorkoutAtk + phyBonus * 7 + magBonus * 4;
+  const magNormalDmg = baseWorkoutAtk + phyBonus * 4 + magBonus * 7;
+  const coreNormalDmg = Math.round((baseWorkoutAtk + phyBonus * 4 + magBonus * 4) * 1.4);
+  const minAttackDamage = Math.min(phyNormalDmg, magNormalDmg, coreNormalDmg);
+  const maxSoloCritDamage = Math.round(Math.max(phyNormalDmg, magNormalDmg) * 2.0);
+  const maxSquadComboDamage = Math.round(maxSoloCritDamage * 1.6);
 
   // Boss info calculation based on selected adventureMode ('solo' vs 'squad' — different monster strength!)
   const isSoloMode = adventureMode === 'solo';
@@ -1434,6 +1462,155 @@ export const PlazaTab: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 3. PERSONAL COMBAT ATTRIBUTES, CURRENT LOADOUT & ADVENTURE RECORDS */}
+          <div className="retro-box rounded-2xl p-3.5 space-y-3 border border-slate-800">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-xs font-black text-white flex items-center gap-1.5">
+                  <Swords className="w-4 h-4 text-cyan-400" />
+                  <span>個人戰鬥素質與討伐戰績</span>
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  依穿戴配裝、連勝天數（🔥{store.streakDays}天）與當日運動技能即時計算
+                </p>
+              </div>
+              <button
+                onClick={() => store.setWardrobeModalOpen(true)}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 shrink-0"
+              >
+                <Shirt className="w-3.5 h-3.5" />
+                <span>更換配裝</span>
+              </button>
+            </div>
+
+            {/* A. Elemental / Attribute Damage & Attack Range */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400">🥊 物理攻擊屬性</span>
+                  <span className="text-xs font-mono font-black text-rose-400">
+                    ATK {myPhyAtk}
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-white font-bold">
+                  重訓破甲基傷：<span className="text-amber-300">{phyNormalDmg} HP</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400">🪄 魔法攻擊屬性</span>
+                  <span className="text-xs font-mono font-black text-cyan-300">
+                    MATK {myMagAtk}
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-white font-bold">
+                  有氧魔焰基傷：<span className="text-cyan-300">{magNormalDmg} HP</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400">🌪️ 核心暴擊與輔助</span>
+                  <span className="text-xs font-mono font-black text-emerald-400">
+                    SUP {mySupportAtk}
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-white font-bold">
+                  聚氣暴擊基傷：<span className="text-emerald-300">{coreNormalDmg} HP</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-950/50 to-slate-900 border border-amber-500/40 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-amber-300">🎯 最大攻擊數值範圍</span>
+                  <span className="text-[9px] font-bold text-amber-200/80">
+                    {isSoloMode ? '單人弱點2x' : '含組隊連攜'}
+                  </span>
+                </div>
+                <div className="text-xs font-mono font-black text-white">
+                  {minAttackDamage.toLocaleString()} ～{' '}
+                  <span className="text-amber-300">
+                    {(isSoloMode ? maxSoloCritDamage : maxSquadComboDamage).toLocaleString()} HP
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* B. Currently Equipped 5-Slot Gear Loadout */}
+            <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-black text-slate-300">👕 目前配裝與屬性加成</span>
+                <span className="font-mono text-[10px] text-amber-300 font-bold">
+                  🎁 已啟用秘寶：{store.collectedBossLoots.length}/{ADVENTURE_BOSS_CATALOG.length} 件
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {equippedGearDetails.map((g) => (
+                  <div
+                    key={g.slot}
+                    onClick={() => store.setWardrobeModalOpen(true)}
+                    className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 cursor-pointer transition flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[9px] font-bold text-slate-400">{g.slotLabelZh}</span>
+                      <span className="text-[9px] font-mono font-black text-emerald-300">
+                        {g.statLabelZh}
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-black text-white truncate mt-0.5">
+                      {g.nameZh}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* C. Career Adventure Combat Records (Max Damage, Final Blows, Bosses Defeated, Total Output) */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-black text-slate-300">
+                🏆 生涯討伐數據紀錄
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 text-center">
+                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[9px] text-slate-400 font-bold">造成最大傷害</div>
+                  <div className="text-xs font-mono font-black text-amber-300 mt-0.5">
+                    {store.personalMaxDamage.toLocaleString()}
+                  </div>
+                  <div className="text-[9px] text-slate-500">單擊最高 HP</div>
+                </div>
+
+                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[9px] text-slate-400 font-bold">撿尾刀次數</div>
+                  <div className="text-xs font-mono font-black text-rose-400 mt-0.5">
+                    {store.totalFinalBlows ?? 2} 次
+                  </div>
+                  <div className="text-[9px] text-slate-500">最後一擊斬殺</div>
+                </div>
+
+                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[9px] text-slate-400 font-bold">擊敗 Boss</div>
+                  <div className="text-xs font-mono font-black text-emerald-400 mt-0.5">
+                    {store.totalBossesDefeated ?? 3} 隻
+                  </div>
+                  <div className="text-[9px] text-slate-500">
+                    單S.{store.personalMaxStage} / 隊S.{store.squadMaxStage}
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                  <div className="text-[9px] text-slate-400 font-bold">累計總輸出</div>
+                  <div className="text-xs font-mono font-black text-cyan-300 mt-0.5">
+                    {((store.totalDamageDealt ?? 6420) / 1000).toFixed(1)}k
+                  </div>
+                  <div className="text-[9px] text-slate-500">
+                    共揮 {store.totalStrikesCount ?? 11} 拳
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

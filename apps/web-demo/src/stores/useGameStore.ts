@@ -296,6 +296,10 @@ interface GameState {
   personalMaxStage: number;
   squadMaxStage: number;
   personalMaxDamage: number;
+  totalBossesDefeated: number;
+  totalFinalBlows: number;
+  totalStrikesCount: number;
+  totalDamageDealt: number;
   shareRaidModalOpen: boolean;
   todayWorkoutStatus: TodayWorkoutStatus;
   todaySportType: AdventureSportSkillType;
@@ -896,6 +900,10 @@ export const useGameStore = create<GameState>()(
       personalMaxStage: 1,
       squadMaxStage: 2,
       personalMaxDamage: 680,
+      totalBossesDefeated: 3,
+      totalFinalBlows: 2,
+      totalStrikesCount: 11,
+      totalDamageDealt: 6420,
       shareRaidModalOpen: false,
       todayWorkoutStatus: 'legit_rest',
       todaySportType: 'cardio',
@@ -2052,6 +2060,10 @@ export const useGameStore = create<GameState>()(
               soloBossHp: scaledHp,
               personalMaxStage: Math.max(state.personalMaxStage, nextStage),
               personalMaxDamage: newMaxDmg,
+              totalBossesDefeated: (state.totalBossesDefeated || 0) + 1,
+              totalFinalBlows: (state.totalFinalBlows || 0) + 1,
+              totalStrikesCount: (state.totalStrikesCount || 0) + 1,
+              totalDamageDealt: (state.totalDamageDealt || 0) + finalDamage,
               coins: state.coins + boss.rewardCoins,
               adventureCooldownUntil: now + cooldownMs,
               activeTeamComboBuff: nextComboBuff,
@@ -2075,6 +2087,8 @@ export const useGameStore = create<GameState>()(
             set({
               soloBossHp: remaining,
               personalMaxDamage: newMaxDmg,
+              totalStrikesCount: (state.totalStrikesCount || 0) + 1,
+              totalDamageDealt: (state.totalDamageDealt || 0) + finalDamage,
               adventureCooldownUntil: now + cooldownMs,
               activeTeamComboBuff: nextComboBuff,
               collectedBossLoots: updatedLoots,
@@ -2105,6 +2119,10 @@ export const useGameStore = create<GameState>()(
               squadBossHp: scaledHp,
               squadMaxStage: Math.max(state.squadMaxStage, nextStage),
               personalMaxDamage: newMaxDmg,
+              totalBossesDefeated: (state.totalBossesDefeated || 0) + 1,
+              totalFinalBlows: (state.totalFinalBlows || 0) + 1,
+              totalStrikesCount: (state.totalStrikesCount || 0) + 1,
+              totalDamageDealt: (state.totalDamageDealt || 0) + finalDamage,
               coins: state.coins + boss.rewardCoins,
               adventureCooldownUntil: now + cooldownMs,
               activeTeamComboBuff: nextComboBuff,
@@ -2128,6 +2146,8 @@ export const useGameStore = create<GameState>()(
             set({
               squadBossHp: remaining,
               personalMaxDamage: newMaxDmg,
+              totalStrikesCount: (state.totalStrikesCount || 0) + 1,
+              totalDamageDealt: (state.totalDamageDealt || 0) + finalDamage,
               adventureCooldownUntil: now + cooldownMs,
               activeTeamComboBuff: nextComboBuff,
               collectedBossLoots: updatedLoots,
@@ -2389,6 +2409,10 @@ export const useGameStore = create<GameState>()(
         personalMaxStage: state.personalMaxStage,
         squadMaxStage: state.squadMaxStage,
         personalMaxDamage: state.personalMaxDamage,
+        totalBossesDefeated: state.totalBossesDefeated,
+        totalFinalBlows: state.totalFinalBlows,
+        totalStrikesCount: state.totalStrikesCount,
+        totalDamageDealt: state.totalDamageDealt,
         todayWorkoutStatus: state.todayWorkoutStatus,
         todaySportType: state.todaySportType,
         activeTeamComboBuff: state.activeTeamComboBuff,
