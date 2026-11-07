@@ -151,6 +151,7 @@ export interface WorkoutSessionRecord {
   id: string;
   dateLabel: string;
   daysAgo?: number;
+  timestamp?: number;
   routineName: string;
   durationMinutes: number;
   totalVolume: number;
@@ -1708,6 +1709,7 @@ export const useGameStore = create<GameState>()(
           id: `hist_${Date.now()}`,
           dateLabel: '今日 剛剛',
           daysAgo: 0,
+          timestamp: Date.now(),
           routineName: routineTitle,
           durationMinutes: durationMin,
           totalVolume: calcResult.totalRawVolume,
@@ -1826,6 +1828,7 @@ export const useGameStore = create<GameState>()(
           id: `hist_${Date.now()}`,
           dateLabel: '今日 速記',
           daysAgo: 0,
+          timestamp: Date.now(),
           routineName: routine.nameZh,
           durationMinutes: 40,
           totalVolume: calcResult.totalRawVolume,

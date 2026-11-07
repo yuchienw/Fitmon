@@ -6,6 +6,7 @@ import {
   TrendingUp,
   BarChart3,
   ChevronRight,
+  ChevronLeft,
   Shirt,
   Clock,
   Activity,
@@ -23,7 +24,10 @@ export const AnalyticsTab: React.FC = () => {
   const store = useGameStore();
   const [subTab, setSubTab] = useState<MeSubTab>('history');
   const [historyMode, setHistoryMode] = useState<HistoryViewMode>('calendar');
-  const [selectedDaysAgo, setSelectedDaysAgo] = useState<number | null>(null);
+  const [calYear, setCalYear] = useState<number>(() => new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState<number>(() => new Date().getMonth() + 1);
+  const [weekOffset, setWeekOffset] = useState<number>(0);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [chartType, setChartType] = useState<ChartMetricType>('volume');
   const { biometrics } = store;
 
@@ -44,57 +48,103 @@ export const AnalyticsTab: React.FC = () => {
     Math.round((targetKcal - proteinGrams * 4 - fatGrams * 9) / 4)
   );
 
-  // Map workout sessions by daysAgo (0 = today, 1 = yesterday, etc.)
-  const getSessionDaysAgo = (s: WorkoutSessionRecord, idx: number): number => {
-    if (typeof s.daysAgo === 'number') return s.daysAgo;
-    if (s.dateLabel.includes('今日') || s.dateLabel.includes('剛剛')) return 0;
-    if (s.dateLabel.includes('昨天')) return 1;
-    return idx + 1;
-  };
-
-  const sessionsByDaysAgo = new Map<number, WorkoutSessionRecord[]>();
-  store.workoutHistory.forEach((s, idx) => {
-    const d = getSessionDaysAgo(s, idx);
-    const prev = sessionsByDaysAgo.get(d) || [];
-    prev.push(s);
-    sessionsByDaysAgo.set(d, prev);
-  });
-
   const todayObj = new Date();
-  const currentYear = todayObj.getFullYear();
-  const currentMonth = todayObj.getMonth() + 1;
   const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
 
-  const formatDateFromDaysAgo = (dAgo: number) => {
-    const dt = new Date(todayObj);
-    dt.setDate(todayObj.getDate() - dAgo);
-    const m = dt.getMonth() + 1;
-    const d = dt.getDate();
-    const wk = weekdayNames[dt.getDay()];
-    return {
-      month: m,
-      day: d,
-      weekday: wk,
-      mmdd: `${m}/${String(d).padStart(2, '0')}`,
-      fullLabel: `${m}月${d}日 (週${wk})`,
-    };
+  const getSessionDate = (s: WorkoutSessionRecord, idx: number): Date => {
+    if (s.timestamp) return new Date(s.timestamp);
+    const dAgo =
+      typeof s.daysAgo === 'number'
+        ? s.daysAgo
+        : s.dateLabel.includes('今日') || s.dateLabel.includes('剛剛')
+        ? 0
+        : s.dateLabel.includes('昨天')
+        ? 1
+        : idx + 1;
+    const d = new Date(todayObj);
+    d.setDate(todayObj.getDate() - dAgo);
+    return d;
   };
 
-  // Weekly 7-day data (6 days ago -> Today)
-  const weeklyDays = Array.from({ length: 7 }, (_, i) => {
-    const dAgo = 6 - i;
-    const daySessions = sessionsByDaysAgo.get(dAgo) || [];
+  const formatDateKey = (d: Date): string => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const sessionsByDateKey = new Map<string, WorkoutSessionRecord[]>();
+  store.workoutHistory.forEach((s, idx) => {
+    const d = getSessionDate(s, idx);
+    const key = formatDateKey(d);
+    const prev = sessionsByDateKey.get(key) || [];
+    prev.push(s);
+    sessionsByDateKey.set(key, prev);
+  });
+
+  // =========================================================================
+  // MONTHLY VIEW DATA: 1號 ～ 月底
+  // =========================================================================
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+  const firstDayWeekday = new Date(calYear, calMonth - 1, 1).getDay(); // 0 is Sunday, 6 is Saturday
+
+  const calendarDays = Array.from({ length: daysInMonth }, (_, i) => {
+    const dayNum = i + 1;
+    const cellDate = new Date(calYear, calMonth - 1, dayNum);
+    const dayKey = formatDateKey(cellDate);
+    const daySessions = sessionsByDateKey.get(dayKey) || [];
     const volume = daySessions.reduce((sum, s) => sum + s.totalVolume, 0);
     const sets = daySessions.reduce((sum, s) => sum + s.totalSets, 0);
-    const dateInfo = formatDateFromDaysAgo(dAgo);
-    const label = dAgo === 0 ? '今日' : `週${dateInfo.weekday}`;
+    const isToday = dayKey === formatDateKey(todayObj);
+    const weekday = weekdayNames[cellDate.getDay()];
     return {
-      dAgo,
-      label,
-      mmdd: dateInfo.mmdd,
-      fullLabel: dateInfo.fullLabel,
+      dayNum,
+      dayKey,
+      date: cellDate,
+      weekday,
+      mmdd: `${calMonth}/${String(dayNum).padStart(2, '0')}`,
+      isToday,
       volume,
       sets,
+      sessions: daySessions,
+    };
+  });
+
+  const monthSessions = store.workoutHistory.filter((s, idx) => {
+    const d = getSessionDate(s, idx);
+    return d.getFullYear() === calYear && d.getMonth() + 1 === calMonth;
+  });
+
+  const monthlyActiveDays = calendarDays.filter((c) => c.sets > 0).length;
+  const monthlyTotalVolume = calendarDays.reduce((sum, c) => sum + c.volume, 0);
+  const monthlyTotalSets = calendarDays.reduce((sum, c) => sum + c.sets, 0);
+
+  // =========================================================================
+  // WEEKLY VIEW DATA: 週期是週日到週六 (以週日為起點的一整週)
+  // =========================================================================
+  const sundayOfWeek = new Date(todayObj.getFullYear(), todayObj.getMonth(), todayObj.getDate());
+  sundayOfWeek.setDate(todayObj.getDate() - todayObj.getDay() + weekOffset * 7);
+
+  const weeklyDays = Array.from({ length: 7 }, (_, i) => {
+    const cellDate = new Date(sundayOfWeek);
+    cellDate.setDate(sundayOfWeek.getDate() + i);
+    const dayKey = formatDateKey(cellDate);
+    const daySessions = sessionsByDateKey.get(dayKey) || [];
+    const volume = daySessions.reduce((sum, s) => sum + s.totalVolume, 0);
+    const sets = daySessions.reduce((sum, s) => sum + s.totalSets, 0);
+    const isToday = dayKey === formatDateKey(todayObj);
+    const wk = weekdayNames[cellDate.getDay()];
+    const mmdd = `${cellDate.getMonth() + 1}/${String(cellDate.getDate()).padStart(2, '0')}`;
+    const label = isToday ? '今日' : `週${wk}`;
+    return {
+      dayKey,
+      date: cellDate,
+      label,
+      weekday: wk,
+      mmdd,
+      volume,
+      sets,
+      isToday,
       sessions: daySessions,
     };
   });
@@ -104,41 +154,22 @@ export const AnalyticsTab: React.FC = () => {
   const weeklyTotalSets = weeklyDays.reduce((sum, d) => sum + d.sets, 0);
   const weeklyActiveDays = weeklyDays.filter((d) => d.sets > 0).length;
 
-  // Monthly 28-day Calendar Grid (4 weeks ending today so today is always visible in the grid)
-  const calendarCells = Array.from({ length: 28 }, (_, i) => {
-    const dAgo = 27 - i;
-    const dateInfo = formatDateFromDaysAgo(dAgo);
-    const daySessions = sessionsByDaysAgo.get(dAgo) || [];
-    const volume = daySessions.reduce((sum, s) => sum + s.totalVolume, 0);
-    const sets = daySessions.reduce((sum, s) => sum + s.totalSets, 0);
-    return {
-      dAgo,
-      month: dateInfo.month,
-      dayNum: dateInfo.day,
-      mmdd: `${dateInfo.month}/${dateInfo.day}`,
-      weekday: dateInfo.weekday,
-      isToday: dAgo === 0,
-      volume,
-      sets,
-      sessions: daySessions,
-    };
+  const weekDateKeys = new Set(weeklyDays.map((d) => d.dayKey));
+  const weekSessions = store.workoutHistory.filter((s, idx) => {
+    const key = formatDateKey(getSessionDate(s, idx));
+    return weekDateKeys.has(key);
   });
-
-  const monthlyActiveDays = calendarCells.filter((c) => c.sets > 0).length;
-  const monthlyTotalVolume = calendarCells.reduce((sum, c) => sum + c.volume, 0);
-  const monthlyTotalSets = calendarCells.reduce((sum, c) => sum + c.sets, 0);
 
   // Filtered sessions for bottom list:
   // - If a specific day is clicked, show that day's sessions
-  // - Otherwise, if in 'weekly' (週瀏覽), show ONLY this week's sessions (dAgo <= 6)
-  // - If in 'calendar' (月瀏覽), show this month's sessions (dAgo <= 27)
+  // - Otherwise, if in 'weekly' (週瀏覽), show this week's sessions
+  // - If in 'calendar' (月瀏覽), show this month's sessions (1號~月底)
   const displayedSessions =
-    selectedDaysAgo !== null
-      ? sessionsByDaysAgo.get(selectedDaysAgo) || []
-      : store.workoutHistory.filter((s, idx) => {
-          const dAgo = getSessionDaysAgo(s, idx);
-          return historyMode === 'weekly' ? dAgo >= 0 && dAgo <= 6 : dAgo >= 0 && dAgo <= 27;
-        });
+    selectedDateKey !== null
+      ? sessionsByDateKey.get(selectedDateKey) || []
+      : historyMode === 'weekly'
+      ? weekSessions
+      : monthSessions;
 
   // Chronological sessions for trend chart (oldest -> newest)
   const chronologicalSessions = [...store.workoutHistory].reverse();
@@ -270,7 +301,7 @@ export const AnalyticsTab: React.FC = () => {
                   key={m.id}
                   onClick={() => {
                     setHistoryMode(m.id);
-                    setSelectedDaysAgo(null);
+                    setSelectedDateKey(null);
                   }}
                   className={`py-2 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition ${
                     active
@@ -288,18 +319,57 @@ export const AnalyticsTab: React.FC = () => {
           {/* VIEW A: MONTHLY CALENDAR GRID */}
           {historyMode === 'calendar' && (
             <div className="retro-box rounded-2xl p-3.5 space-y-3">
-              {/* Clear Year & Month Banner */}
+              {/* Month Navigation & Cycle Banner */}
               <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      setSelectedDateKey(null);
+                      if (calMonth === 1) {
+                        setCalYear((y) => y - 1);
+                        setCalMonth(12);
+                      } else {
+                        setCalMonth((m) => m - 1);
+                      }
+                    }}
+                    className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 active:scale-95 transition"
+                    title="上個月"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
                   <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black">
-                    📅 {currentYear} 年 {currentMonth} 月
+                    📅 {calYear} 年 {calMonth} 月
                   </span>
-                  <span className="text-[11px] font-mono text-slate-400 font-bold">
-                    ({calendarCells[0].mmdd} ～ {calendarCells[27].mmdd})
-                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedDateKey(null);
+                      if (calMonth === 12) {
+                        setCalYear((y) => y + 1);
+                        setCalMonth(1);
+                      } else {
+                        setCalMonth((m) => m + 1);
+                      }
+                    }}
+                    className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 active:scale-95 transition"
+                    title="下個月"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  {(calYear !== todayObj.getFullYear() || calMonth !== todayObj.getMonth() + 1) && (
+                    <button
+                      onClick={() => {
+                        setSelectedDateKey(null);
+                        setCalYear(todayObj.getFullYear());
+                        setCalMonth(todayObj.getMonth() + 1);
+                      }}
+                      className="text-[10px] font-bold text-cyan-400 px-2 py-0.5 rounded-lg bg-slate-800 border border-cyan-500/30"
+                    >
+                      本月
+                    </button>
+                  )}
                 </div>
-                <span className="text-[10px] font-bold text-cyan-300">
-                  點選日期可篩選單日
+                <span className="text-[10px] font-mono font-bold text-slate-400">
+                  週期：1 號 ～ {daysInMonth} 號
                 </span>
               </div>
 
@@ -325,46 +395,47 @@ export const AnalyticsTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* Weekday Column Headers aligned with the 7 columns */}
+              {/* Weekday Column Headers (Sun to Sat) */}
               <div className="grid grid-cols-7 gap-1.5 text-center px-0.5">
-                {calendarCells.slice(0, 7).map((c, idx) => (
+                {['週日', '週一', '週二', '週三', '週四', '週五', '週六'].map((name, idx) => (
                   <div
                     key={idx}
                     className="text-[10px] font-black text-slate-400 py-0.5"
                   >
-                    週{c.weekday}
+                    {name}
                   </div>
                 ))}
               </div>
 
-              {/* 7-Column Calendar Grid with Month/Day (MM/DD) clearly visible */}
+              {/* 7-Column Calendar Grid (Padding + 1 to daysInMonth) */}
               <div className="grid grid-cols-7 gap-1.5 text-center">
-                {calendarCells.map((cell) => {
+                {Array.from({ length: firstDayWeekday }).map((_, padIdx) => (
+                  <div
+                    key={`pad_${padIdx}`}
+                    className="py-2 px-0.5 rounded-xl border border-transparent opacity-10 pointer-events-none"
+                  />
+                ))}
+                {calendarDays.map((cell) => {
                   const hasWorkout = cell.sets > 0;
-                  const isSelected = selectedDaysAgo === cell.dAgo;
-                  const showMonthPrefix = cell.dayNum === 1 || cell.dAgo === 27 || cell.isToday;
+                  const isSelected = selectedDateKey === cell.dayKey;
                   return (
                     <button
-                      key={cell.dAgo}
+                      key={cell.dayKey}
                       onClick={() =>
-                        setSelectedDaysAgo(isSelected ? null : cell.dAgo)
+                        setSelectedDateKey(isSelected ? null : cell.dayKey)
                       }
                       className={`py-2 px-0.5 rounded-xl border flex flex-col items-center justify-center transition ${
                         isSelected
                           ? 'bg-cyan-500 text-slate-950 border-cyan-300 font-black'
                           : hasWorkout
-                          ? 'bg-emerald-500/20 border-emerald-500/60 text-white'
+                          ? 'bg-emerald-500/20 border-emerald-500/60 text-white ring-1 ring-emerald-500/30'
                           : cell.isToday
                           ? 'bg-slate-800 border-amber-400/60 text-amber-300'
                           : 'bg-slate-900/70 border-slate-800/80 text-slate-500'
                       }`}
                     >
                       <span className="text-[10px] font-mono font-black leading-tight">
-                        {cell.isToday
-                          ? `${cell.mmdd}今`
-                          : showMonthPrefix
-                          ? cell.mmdd
-                          : `${cell.month}/${cell.dayNum}`}
+                        {cell.isToday ? `${cell.dayNum}今` : cell.dayNum}
                       </span>
                       {hasWorkout ? (
                         <span
@@ -383,10 +454,10 @@ export const AnalyticsTab: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
-                <span>🟢 綠框代表有訓練紀錄與當日容量</span>
-                {selectedDaysAgo !== null && (
+                <span>🟢 綠框代表有訓練紀錄 · 點選日期可篩選單日</span>
+                {selectedDateKey !== null && (
                   <button
-                    onClick={() => setSelectedDaysAgo(null)}
+                    onClick={() => setSelectedDateKey(null)}
                     className="text-cyan-400 font-bold"
                   >
                     顯示本月全部紀錄
@@ -399,25 +470,47 @@ export const AnalyticsTab: React.FC = () => {
           {/* VIEW B: WEEKLY VOLUME BAR VIEW */}
           {historyMode === 'weekly' && (
             <div className="retro-box rounded-2xl p-3.5 space-y-3">
-              {/* Clear Week Date Range Header */}
+              {/* Week Navigation & Cycle Banner */}
               <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-black">
-                    📊 本週訓練（{weeklyDays[0].mmdd} ～ {weeklyDays[6].mmdd}）
-                  </span>
-                </div>
-                {selectedDaysAgo !== null ? (
+                <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => setSelectedDaysAgo(null)}
-                    className="text-[11px] text-cyan-400 font-black"
+                    onClick={() => {
+                      setSelectedDateKey(null);
+                      setWeekOffset((w) => w - 1);
+                    }}
+                    className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 active:scale-95 transition"
+                    title="上一週"
                   >
-                    顯示本週全部
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                ) : (
-                  <span className="text-[10px] font-bold text-slate-400">
-                    點選柱狀圖可看單日
+                  <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-black">
+                    📊 {weeklyDays[0].mmdd} (週日) ～ {weeklyDays[6].mmdd} (週六)
                   </span>
-                )}
+                  <button
+                    onClick={() => {
+                      setSelectedDateKey(null);
+                      setWeekOffset((w) => w + 1);
+                    }}
+                    className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 active:scale-95 transition"
+                    title="下一週"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  {weekOffset !== 0 && (
+                    <button
+                      onClick={() => {
+                        setSelectedDateKey(null);
+                        setWeekOffset(0);
+                      }}
+                      className="text-[10px] font-bold text-cyan-400 px-2 py-0.5 rounded-lg bg-slate-800 border border-cyan-500/30"
+                    >
+                      本週
+                    </button>
+                  )}
+                </div>
+                <span className="text-[10px] font-mono font-bold text-slate-400">
+                  週期：週日 ～ 週六
+                </span>
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -447,12 +540,12 @@ export const AnalyticsTab: React.FC = () => {
                   {weeklyDays.map((d) => {
                     const heightPct =
                       d.volume > 0 ? Math.max(16, Math.round((d.volume / maxWeeklyDayVol) * 100)) : 6;
-                    const isSelected = selectedDaysAgo === d.dAgo;
+                    const isSelected = selectedDateKey === d.dayKey;
                     return (
                       <button
-                        key={d.dAgo}
+                        key={d.dayKey}
                         onClick={() =>
-                          setSelectedDaysAgo(isSelected ? null : d.dAgo)
+                          setSelectedDateKey(isSelected ? null : d.dayKey)
                         }
                         className="flex flex-col items-center h-full justify-end group"
                       >
@@ -490,15 +583,15 @@ export const AnalyticsTab: React.FC = () => {
           <div className="space-y-2.5">
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-black text-slate-300">
-                {selectedDaysAgo !== null
-                  ? `📋 ${formatDateFromDaysAgo(selectedDaysAgo).fullLabel} 訓練明細（${displayedSessions.length} 筆）`
+                {selectedDateKey !== null
+                  ? `📋 ${selectedDateKey} 訓練明細（共 ${displayedSessions.length} 筆）`
                   : historyMode === 'weekly'
                   ? `📋 本週訓練明細（${weeklyDays[0].mmdd}～${weeklyDays[6].mmdd} · 共 ${displayedSessions.length} 筆）`
-                  : `📋 本月訓練明細（${currentYear}年${currentMonth}月 · 共 ${displayedSessions.length} 筆）`}
+                  : `📋 本月訓練明細（${calYear}年${calMonth}月 · 1號～${daysInMonth}號 · 共 ${displayedSessions.length} 筆）`}
               </span>
-              {selectedDaysAgo !== null && (
+              {selectedDateKey !== null && (
                 <button
-                  onClick={() => setSelectedDaysAgo(null)}
+                  onClick={() => setSelectedDateKey(null)}
                   className="text-[11px] font-black text-cyan-400"
                 >
                   查看{historyMode === 'weekly' ? '本週' : '本月'}全部
@@ -508,7 +601,7 @@ export const AnalyticsTab: React.FC = () => {
 
             {displayedSessions.length === 0 ? (
               <div className="retro-box rounded-2xl p-5 text-center text-xs text-slate-400">
-                {selectedDaysAgo !== null
+                {selectedDateKey !== null
                   ? '該日無訓練紀錄'
                   : historyMode === 'weekly'
                   ? '本週尚無訓練紀錄'
@@ -516,8 +609,9 @@ export const AnalyticsTab: React.FC = () => {
               </div>
             ) : (
               displayedSessions.map((session, sIdx) => {
-                const dAgo = getSessionDaysAgo(session, sIdx);
-                const dateInfo = formatDateFromDaysAgo(dAgo);
+                const sDate = getSessionDate(session, sIdx);
+                const sMmdd = `${sDate.getMonth() + 1}/${String(sDate.getDate()).padStart(2, '0')}`;
+                const sWk = weekdayNames[sDate.getDay()];
                 return (
                 <div
                   key={session.id}
@@ -527,7 +621,7 @@ export const AnalyticsTab: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2 text-[11px] font-mono text-emerald-400 font-bold">
-                        <span>📅 {dateInfo.mmdd} (週{dateInfo.weekday}) · {session.dateLabel}</span>
+                        <span>📅 {sMmdd} (週{sWk}) · {session.dateLabel}</span>
                         <span>·</span>
                         <span className="flex items-center gap-0.5 text-slate-400">
                           <Clock className="w-3 h-3" />

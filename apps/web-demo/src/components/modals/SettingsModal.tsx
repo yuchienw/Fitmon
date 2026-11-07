@@ -36,20 +36,20 @@ export const SettingsModal: React.FC = () => {
         <div className="space-y-2.5">
           <div className="flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-slate-800">
             <span className="text-xs font-bold text-slate-200">
-              🎨 外觀主題風格
+              🎨 主題
             </span>
             <div className="flex gap-1">
               {(
                 [
-                  { id: 'light', label: '☀️ 溫暖亮色' },
-                  { id: 'dark', label: '🌙 柔和深色' },
-                  { id: 'system', label: '📱 跟隨系統' },
+                  { id: 'light', label: '淺色' },
+                  { id: 'dark', label: '深色' },
+                  { id: 'system', label: '跟隨系統' },
                 ] as const
               ).map((tm) => (
                 <button
                   key={tm.id}
                   onClick={() => store.setThemeMode(tm.id)}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-black ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black ${
                     store.themeMode === tm.id
                       ? 'bg-amber-400 text-slate-950'
                       : 'bg-slate-800 text-slate-400'
