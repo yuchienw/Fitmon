@@ -26,6 +26,9 @@ import {
   EXERCISE_LIBRARY,
   ExerciseItem,
   RoutineExerciseConfig,
+  ROUTINE_TAG_OPTIONS,
+  RoutineTagZh,
+  normalizeRoutineTag,
   SportType,
   WorkoutTemplate,
 } from '../../config/catalogConfig';
@@ -36,6 +39,7 @@ type RoutineCategoryTab = 'favorite' | 'my_custom' | 'referenced' | 'recommended
 export const WorkoutTab: React.FC = () => {
   const store = useGameStore();
   const [routineTab, setRoutineTab] = useState<RoutineCategoryTab>('favorite');
+  const [routineTagFilter, setRoutineTagFilter] = useState<'all' | RoutineTagZh>('all');
   const [detailRoutine, setDetailRoutine] = useState<WorkoutTemplate | null>(null);
   const [quickEditRoutine, setQuickEditRoutine] = useState<WorkoutTemplate | null>(null);
   const [quickEditExercises, setQuickEditExercises] = useState<RoutineExerciseConfig[]>([]);
@@ -43,7 +47,7 @@ export const WorkoutTab: React.FC = () => {
   // Routine Builder Modal state
   const [builderOpen, setBuilderOpen] = useState(false);
   const [newRoutineName, setNewRoutineName] = useState('');
-  const [newRoutineTag, setNewRoutineTag] = useState('自訂課表');
+  const [newRoutineTag, setNewRoutineTag] = useState<RoutineTagZh>('臀腿訓練');
   const [builderSportFilter, setBuilderSportFilter] = useState<'all' | SportType>('all');
   const [builderSearch, setBuilderSearch] = useState('');
   const [builderItems, setBuilderItems] = useState<RoutineExerciseConfig[]>([
@@ -66,8 +70,28 @@ export const WorkoutTab: React.FC = () => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Filtered routines for current tab
-  const filteredRoutines = store.savedRoutines.filter((r) => r.category === routineTab);
+  // Filtered routines for current tab + tag filter
+  const getTagDisplay = (tagZh?: string, routineId?: string) => {
+    const normalized = normalizeRoutineTag(tagZh, routineId);
+    return (
+      ROUTINE_TAG_OPTIONS.find((t) => t.id === normalized) || {
+        id: normalized,
+        label: normalized,
+      }
+    );
+  };
+
+  const matchesTagFilter = (r: WorkoutTemplate) =>
+    routineTagFilter === 'all' || normalizeRoutineTag(r.tagZh, r.id) === routineTagFilter;
+
+  const filteredRoutines = store.savedRoutines.filter(
+    (r) => r.category === routineTab && matchesTagFilter(r)
+  );
+
+  const otherTabMatchedRoutines =
+    routineTagFilter !== 'all' && filteredRoutines.length === 0
+      ? store.savedRoutines.filter((r) => r.category !== routineTab && matchesTagFilter(r))
+      : [];
 
   // Open Quick-Log / Modify-Before-Log modal
   const handleOpenQuickLogModal = (routine: WorkoutTemplate) => {
@@ -92,16 +116,17 @@ export const WorkoutTab: React.FC = () => {
     }
     const created: WorkoutTemplate = {
       id: `custom_${Date.now()}`,
-      nameZh: newRoutineName.trim() || '我的專屬訓練課表',
+      nameZh: newRoutineName.trim() || `我的${newRoutineTag}課表`,
       nameEn: 'Custom Workout Routine',
       category: 'my_custom',
       authorName: store.nickname,
-      tagZh: newRoutineTag || '自訂課表',
+      tagZh: newRoutineTag,
       exercises: builderItems,
     };
     store.saveCustomRoutine(created);
     setBuilderOpen(false);
     setNewRoutineName('');
+    setRoutineTagFilter('all');
     if (startImmediately) {
       store.startWorkoutFocus(created);
     } else {
@@ -633,7 +658,9 @@ export const WorkoutTab: React.FC = () => {
         ).map((tab) => {
           const Icon = tab.icon;
           const active = routineTab === tab.id;
-          const count = store.savedRoutines.filter((r) => r.category === tab.id).length;
+          const count = store.savedRoutines.filter(
+            (r) => r.category === tab.id && matchesTagFilter(r)
+          ).length;
           return (
             <button
               key={tab.id}
@@ -654,39 +681,117 @@ export const WorkoutTab: React.FC = () => {
         })}
       </div>
 
+      {/* 2B. STANDARDIZED ROUTINE TAG FILTER BAR */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+        <button
+          onClick={() => setRoutineTagFilter('all')}
+          className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 border transition ${
+            routineTagFilter === 'all'
+              ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow'
+              : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:text-white'
+          }`}
+        >
+          🏷️ 全部標籤
+        </button>
+        {ROUTINE_TAG_OPTIONS.map((tagOpt) => {
+          const active = routineTagFilter === tagOpt.id;
+          const totalWithTag = store.savedRoutines.filter(
+            (r) => normalizeRoutineTag(r.tagZh, r.id) === tagOpt.id
+          ).length;
+          return (
+            <button
+              key={tagOpt.id}
+              onClick={() => setRoutineTagFilter(active ? 'all' : tagOpt.id)}
+              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 border flex items-center gap-1 transition ${
+                active
+                  ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow'
+                  : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:border-cyan-500/40'
+              }`}
+            >
+              <span>{tagOpt.label}</span>
+              <span
+                className={`text-[10px] font-mono ${
+                  active ? 'text-slate-900 font-black' : 'text-slate-500'
+                }`}
+              >
+                {totalWithTag}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* 3. ROUTINE CARDS LIST */}
       <div className="space-y-3">
-        {filteredRoutines.length === 0 ? (
+        {filteredRoutines.length === 0 && otherTabMatchedRoutines.length === 0 ? (
           <div className="retro-box rounded-2xl p-6 text-center space-y-2">
-            <p className="text-xs font-bold text-slate-400">此分類尚無課表</p>
-            <button
-              onClick={() => setBuilderOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-black"
-            >
-              ＋ 建立課表
-            </button>
+            <p className="text-xs font-bold text-slate-400">
+              {routineTagFilter === 'all'
+                ? '此分類尚無課表'
+                : `目前沒有「${routineTagFilter}」標籤的課表`}
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              {routineTagFilter !== 'all' && (
+                <button
+                  onClick={() => setRoutineTagFilter('all')}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-black border border-slate-700"
+                >
+                  顯示全部標籤
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (routineTagFilter !== 'all') setNewRoutineTag(routineTagFilter);
+                  setBuilderOpen(true);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-cyan-500 text-slate-950 text-xs font-black"
+              >
+                ＋ 建立課表
+              </button>
+            </div>
           </div>
         ) : (
-          filteredRoutines.map((routine) => (
-            <div
-              key={routine.id}
-              className="retro-box rounded-2xl p-3.5 space-y-3 hover:border-slate-700 transition"
-            >
-              {/* Title + Author + Favorite Star */}
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black">
-                      {routine.tagZh}
-                    </span>
-                    {routine.authorName && (
-                      <span className="text-[10px] text-cyan-300 font-bold">
-                        👤 {routine.authorName}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-sm font-black text-white mt-1">{routine.nameZh}</h3>
-                </div>
+          <>
+            {filteredRoutines.length === 0 && otherTabMatchedRoutines.length > 0 && (
+              <div className="px-3 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between text-[11px] text-cyan-200">
+                <span>
+                  目前頁籤無「{routineTagFilter}」，已為您顯示其他分類符合的課表：
+                </span>
+                <button
+                  onClick={() => setRoutineTagFilter('all')}
+                  className="text-cyan-400 font-black underline ml-2 shrink-0"
+                >
+                  重置篩選
+                </button>
+              </div>
+            )}
+            {(filteredRoutines.length > 0 ? filteredRoutines : otherTabMatchedRoutines).map(
+              (routine) => (
+                <div
+                  key={routine.id}
+                  className="retro-box rounded-2xl p-3.5 space-y-3 hover:border-slate-700 transition"
+                >
+                  {/* Title + Author + Favorite Star */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() =>
+                            setRoutineTagFilter(normalizeRoutineTag(routine.tagZh, routine.id))
+                          }
+                          className="px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] font-black transition"
+                          title="點擊以此標籤篩選"
+                        >
+                          {getTagDisplay(routine.tagZh, routine.id).label}
+                        </button>
+                        {routine.authorName && (
+                          <span className="text-[10px] text-cyan-300 font-bold">
+                            👤 {routine.authorName}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-black text-white mt-1">{routine.nameZh}</h3>
+                    </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
@@ -749,25 +854,27 @@ export const WorkoutTab: React.FC = () => {
                 })}
               </div>
 
-              {/* Action Buttons: 3-Sec Quick Log vs Start Focus Workout */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  onClick={() => handleOpenQuickLogModal(routine)}
-                  className="retro-btn py-2.5 px-3 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/50 text-amber-300 font-black text-xs flex items-center justify-center gap-1.5"
-                >
-                  <Zap className="w-4 h-4" />
-                  <span>⚡ 3秒速記</span>
-                </button>
-                <button
-                  onClick={() => store.startWorkoutFocus(routine)}
-                  className="retro-btn py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>開始訓練</span>
-                </button>
-              </div>
-            </div>
-          ))
+                  {/* Action Buttons: 3-Sec Quick Log vs Start Focus Workout */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      onClick={() => handleOpenQuickLogModal(routine)}
+                      className="retro-btn py-2.5 px-3 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/50 text-amber-300 font-black text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>⚡ 3秒速記</span>
+                    </button>
+                    <button
+                      onClick={() => store.startWorkoutFocus(routine)}
+                      className="retro-btn py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>開始訓練</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            )}
+          </>
         )}
       </div>
 
@@ -886,7 +993,7 @@ export const WorkoutTab: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-black text-emerald-400">
-                  {detailRoutine.tagZh}
+                  {getTagDisplay(detailRoutine.tagZh, detailRoutine.id).label}
                 </span>
                 <h3 className="text-base font-black text-white">{detailRoutine.nameZh}</h3>
               </div>
@@ -990,15 +1097,19 @@ export const WorkoutTab: React.FC = () => {
       )}
 
       {/* =====================================================================
-          MODAL 3: CREATE NEW CUSTOM ROUTINE BUILDER
+          MODAL 3: CREATE NEW CUSTOM ROUTINE BUILDER (Fixed Max Height + 50/50 Split + Selectable Tag)
          ===================================================================== */}
       {builderOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3">
-          <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3 border-2 border-cyan-500/50 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black text-cyan-300">
-                ＋ 建立課表
-              </h3>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
+          <div className="w-full max-w-md retro-box rounded-2xl p-3.5 border-2 border-cyan-500/50 h-[90vh] max-h-[90vh] flex flex-col gap-2.5 overflow-hidden">
+            {/* Top Bar: Title + Close */}
+            <div className="flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-black text-cyan-300">＋ 建立課表</h3>
+                <span className="text-[10px] text-slate-400 font-bold">
+                  上下對半配置 · 點選分類標籤
+                </span>
+              </div>
               <button
                 onClick={() => setBuilderOpen(false)}
                 className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
@@ -1007,204 +1118,265 @@ export const WorkoutTab: React.FC = () => {
               </button>
             </div>
 
-            {/* Routine Name & Tag */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* Routine Name + Selectable Standardized Tag Chips (shrink-0) */}
+            <div className="space-y-1.5 shrink-0">
               <input
                 type="text"
                 value={newRoutineName}
                 onChange={(e) => setNewRoutineName(e.target.value)}
-                placeholder="課表名稱"
-                className="col-span-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-cyan-400"
+                placeholder="輸入課表名稱（未填預設為「我的＋標籤課表」）"
+                className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-cyan-400"
               />
-              <input
-                type="text"
-                value={newRoutineTag}
-                onChange={(e) => setNewRoutineTag(e.target.value)}
-                placeholder="標籤"
-                className="px-2.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-emerald-300 outline-none"
-              />
-            </div>
-
-            {/* Added Exercises Sequence with Direct Inputs */}
-            <div className="space-y-2 overflow-y-auto max-h-48 pr-1 border-b border-slate-800 pb-2">
-              <div className="text-[11px] font-black text-slate-400">
-                課表動作 · {builderItems.length} 項
-              </div>
-              {builderItems.map((item, idx) => {
-                const ex =
-                  EXERCISE_LIBRARY.find((e) => e.id === item.exerciseId) || EXERCISE_LIBRARY[0];
-                return (
-                  <div
-                    key={`${item.exerciseId}_${idx}`}
-                    className="p-2 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <ExerciseThumbnail exercise={ex} size={30} />
-                        <span className="text-xs font-black text-white">
-                          {idx + 1}. {ex.nameZh}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() =>
-                          setBuilderItems((prev) => prev.filter((_, i) => i !== idx))
-                        }
-                        className="p-1 text-slate-500 hover:text-rose-400"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1.5 text-center">
-                      <div>
-                        <span className="text-[9px] text-slate-400 block">組數</span>
-                        <input
-                          type="number"
-                          value={item.sets}
-                          onChange={(e) => {
-                            const v = Math.max(1, parseInt(e.target.value, 10) || 1);
-                            setBuilderItems((prev) =>
-                              prev.map((row, i) => (i === idx ? { ...row, sets: v } : row))
-                            );
-                          }}
-                          className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-white"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 block">
-                          重量 {ex.unitLabel}
-                        </span>
-                        <input
-                          type="number"
-                          step="any"
-                          value={item.weightKg}
-                          onChange={(e) => {
-                            const v = Math.max(0, parseFloat(e.target.value) || 0);
-                            setBuilderItems((prev) =>
-                              prev.map((row, i) => (i === idx ? { ...row, weightKg: v } : row))
-                            );
-                          }}
-                          className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-amber-300"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 block">次數</span>
-                        <input
-                          type="number"
-                          value={item.reps}
-                          onChange={(e) => {
-                            const v = Math.max(1, parseInt(e.target.value, 10) || 1);
-                            setBuilderItems((prev) =>
-                              prev.map((row, i) => (i === idx ? { ...row, reps: v } : row))
-                            );
-                          }}
-                          className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-emerald-400"
-                        />
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 block">休息秒</span>
-                        <input
-                          type="number"
-                          value={item.restSeconds}
-                          onChange={(e) => {
-                            const v = Math.max(10, parseInt(e.target.value, 10) || 60);
-                            setBuilderItems((prev) =>
-                              prev.map((row, i) =>
-                                i === idx ? { ...row, restSeconds: v } : row
-                              )
-                            );
-                          }}
-                          className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-cyan-300"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Search & Add Exercise Library */}
-            <div className="space-y-1.5 flex-1 overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between gap-1">
-                <div className="flex items-center gap-1">
-                  {(
-                    [
-                      { id: 'all', label: '全部' },
-                      { id: 'strength', label: '重訓' },
-                      { id: 'cardio', label: '有氧' },
-                      { id: 'bodyweight', label: '徒手' },
-                    ] as const
-                  ).map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => setBuilderSportFilter(f.id)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-black ${
-                        builderSportFilter === f.id
-                          ? 'bg-cyan-500 text-slate-950'
-                          : 'bg-slate-900 text-slate-400'
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-400">
+                    🏷️ 選擇課表分類標籤（作為運動菜單分類與篩選條件）
+                  </span>
+                  <span className="text-[10px] font-black text-emerald-300">
+                    目前：{newRoutineTag}
+                  </span>
                 </div>
-                <input
-                  type="text"
-                  value={builderSearch}
-                  onChange={(e) => setBuilderSearch(e.target.value)}
-                  placeholder="搜尋動作..."
-                  className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] text-white outline-none w-36"
-                />
-              </div>
-
-              <div className="space-y-1.5 overflow-y-auto pr-1 flex-1">
-                {EXERCISE_LIBRARY.filter((ex) => {
-                  if (builderSportFilter !== 'all' && ex.sportType !== builderSportFilter)
-                    return false;
-                  if (
-                    builderSearch.trim() &&
-                    !ex.nameZh.includes(builderSearch.trim()) &&
-                    !ex.muscleLabelZh.includes(builderSearch.trim())
-                  )
-                    return false;
-                  return true;
-                }).map((ex) => (
-                  <div
-                    key={ex.id}
-                    className="p-2 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between gap-2"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <ExerciseThumbnail exercise={ex} size={32} />
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-white break-words">{ex.nameZh}</div>
-                        <div className="text-[10px] text-slate-400">
-                          {ex.muscleLabelZh} · {ex.defaultWeightKg}
-                          {ex.unitLabel}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() =>
-                        setBuilderItems((prev) => [
-                          ...prev,
-                          {
-                            exerciseId: ex.id,
-                            sets: 4,
-                            reps: ex.defaultReps,
-                            weightKg: ex.defaultWeightKg,
-                            restSeconds: ex.defaultRestSec,
-                          },
-                        ])
-                      }
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black shrink-0"
-                    >
-                      ＋ 加入
-                    </button>
-                  </div>
-                ))}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {ROUTINE_TAG_OPTIONS.map((tagOpt) => {
+                    const selected = newRoutineTag === tagOpt.id;
+                    return (
+                      <button
+                        key={tagOpt.id}
+                        type="button"
+                        onClick={() => setNewRoutineTag(tagOpt.id)}
+                        className={`py-1.5 px-2 rounded-lg text-[11px] font-black border transition flex items-center justify-center gap-1 ${
+                          selected
+                            ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow'
+                            : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-cyan-500/40'
+                        }`}
+                      >
+                        <span>{tagOpt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            {/* 50% / 50% Equal Vertical Split Workspace */}
+            <div className="flex-1 min-h-0 grid grid-rows-2 gap-2.5">
+              {/* TOP HALF (50%): Added Exercises Sequence */}
+              <div className="min-h-0 flex flex-col rounded-xl bg-slate-950/80 border border-cyan-500/35 p-2.5">
+                <div className="flex items-center justify-between shrink-0 mb-1.5">
+                  <span className="text-[11px] font-black text-cyan-300">
+                    📋 已安排進課表的動作 · {builderItems.length} 項
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400 font-bold">
+                    共 {builderItems.reduce((sum, item) => sum + item.sets, 0)} 組
+                  </span>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+                  {builderItems.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500">
+                      <p className="text-xs font-bold">尚未安排任何動作</p>
+                      <p className="text-[10px] mt-0.5">
+                        請從下方動作庫點擊「＋ 加入」將項目排入課表
+                      </p>
+                    </div>
+                  ) : (
+                    builderItems.map((item, idx) => {
+                      const ex =
+                        EXERCISE_LIBRARY.find((e) => e.id === item.exerciseId) ||
+                        EXERCISE_LIBRARY[0];
+                      return (
+                        <div
+                          key={`${item.exerciseId}_${idx}`}
+                          className="p-2 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ExerciseThumbnail exercise={ex} size={28} />
+                              <span className="text-xs font-black text-white truncate">
+                                {idx + 1}. {ex.nameZh}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() =>
+                                setBuilderItems((prev) => prev.filter((_, i) => i !== idx))
+                              }
+                              className="p-1 text-slate-500 hover:text-rose-400 shrink-0"
+                              title="移除此動作"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1.5 text-center">
+                            <div>
+                              <span className="text-[9px] text-slate-400 block">組數</span>
+                              <input
+                                type="number"
+                                value={item.sets}
+                                onChange={(e) => {
+                                  const v = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                  setBuilderItems((prev) =>
+                                    prev.map((row, i) => (i === idx ? { ...row, sets: v } : row))
+                                  );
+                                }}
+                                className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-white"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-slate-400 block">
+                                重量 {ex.unitLabel}
+                              </span>
+                              <input
+                                type="number"
+                                step="any"
+                                value={item.weightKg}
+                                onChange={(e) => {
+                                  const v = Math.max(0, parseFloat(e.target.value) || 0);
+                                  setBuilderItems((prev) =>
+                                    prev.map((row, i) =>
+                                      i === idx ? { ...row, weightKg: v } : row
+                                    )
+                                  );
+                                }}
+                                className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-amber-300"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-slate-400 block">次數</span>
+                              <input
+                                type="number"
+                                value={item.reps}
+                                onChange={(e) => {
+                                  const v = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                  setBuilderItems((prev) =>
+                                    prev.map((row, i) => (i === idx ? { ...row, reps: v } : row))
+                                  );
+                                }}
+                                className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-emerald-400"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-slate-400 block">休息秒</span>
+                              <input
+                                type="number"
+                                value={item.restSeconds}
+                                onChange={(e) => {
+                                  const v = Math.max(10, parseInt(e.target.value, 10) || 60);
+                                  setBuilderItems((prev) =>
+                                    prev.map((row, i) =>
+                                      i === idx ? { ...row, restSeconds: v } : row
+                                    )
+                                  );
+                                }}
+                                className="w-full text-center bg-slate-950 border border-slate-700 rounded py-0.5 text-xs font-mono text-cyan-300"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* BOTTOM HALF (50%): Search & Add Exercise Library */}
+              <div className="min-h-0 flex flex-col rounded-xl bg-slate-950/80 border border-slate-800 p-2.5">
+                <div className="flex items-center justify-between gap-1 shrink-0 mb-1.5">
+                  <div className="flex items-center gap-1">
+                    {(
+                      [
+                        { id: 'all', label: '全部' },
+                        { id: 'strength', label: '重訓' },
+                        { id: 'cardio', label: '有氧' },
+                        { id: 'bodyweight', label: '徒手' },
+                      ] as const
+                    ).map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setBuilderSportFilter(f.id)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                          builderSportFilter === f.id
+                            ? 'bg-cyan-500 text-slate-950'
+                            : 'bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={builderSearch}
+                    onChange={(e) => setBuilderSearch(e.target.value)}
+                    placeholder="搜尋動作..."
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] text-white outline-none w-36 focus:border-cyan-400"
+                  />
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1">
+                  {EXERCISE_LIBRARY.filter((ex) => {
+                    if (builderSportFilter !== 'all' && ex.sportType !== builderSportFilter)
+                      return false;
+                    if (
+                      builderSearch.trim() &&
+                      !ex.nameZh.includes(builderSearch.trim()) &&
+                      !ex.muscleLabelZh.includes(builderSearch.trim())
+                    )
+                      return false;
+                    return true;
+                  }).map((ex) => {
+                    const addedCount = builderItems.filter(
+                      (item) => item.exerciseId === ex.id
+                    ).length;
+                    return (
+                      <div
+                        key={ex.id}
+                        className="p-2 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <ExerciseThumbnail exercise={ex} size={30} />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-white break-words">
+                                {ex.nameZh}
+                              </span>
+                              {addedCount > 0 && (
+                                <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[9px] font-black shrink-0">
+                                  已排 ×{addedCount}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {ex.muscleLabelZh} · {ex.defaultWeightKg}
+                              {ex.unitLabel}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            setBuilderItems((prev) => [
+                              ...prev,
+                              {
+                                exerciseId: ex.id,
+                                sets: 4,
+                                reps: ex.defaultReps,
+                                weightKg: ex.defaultWeightKg,
+                                restSeconds: ex.defaultRestSec,
+                              },
+                            ])
+                          }
+                          className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-black shrink-0"
+                        >
+                          ＋ 加入
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions (shrink-0) */}
+            <div className="grid grid-cols-2 gap-2 shrink-0">
               <button
                 onClick={() => handleCreateCustomRoutine(false)}
                 className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-black border border-slate-700"

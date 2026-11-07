@@ -15,6 +15,7 @@ import {
   RoomSlot,
   ConsumableItem,
   WorkoutTemplate,
+  normalizeRoutineTag,
 } from '../config/catalogConfig';
 import { soundFX } from '../audio/SoundManager';
 
@@ -1270,7 +1271,7 @@ export const useGameStore = create<GameState>()(
               ? {
                   ...r,
                   category: r.category === 'favorite' ? 'my_custom' : 'favorite',
-                  tagZh: r.category === 'favorite' ? '自訂課表' : '我的最愛',
+                  tagZh: normalizeRoutineTag(r.tagZh, r.id),
                 }
               : r
           ),
@@ -1279,15 +1280,19 @@ export const useGameStore = create<GameState>()(
 
       saveCustomRoutine: (routine) => {
         soundFX.playSetComplete();
+        const normalized: WorkoutTemplate = {
+          ...routine,
+          tagZh: normalizeRoutineTag(routine.tagZh, routine.id),
+        };
         set((state) => {
-          const exists = state.savedRoutines.some((r) => r.id === routine.id);
+          const exists = state.savedRoutines.some((r) => r.id === normalized.id);
           return {
             savedRoutines: exists
-              ? state.savedRoutines.map((r) => (r.id === routine.id ? routine : r))
-              : [routine, ...state.savedRoutines],
+              ? state.savedRoutines.map((r) => (r.id === normalized.id ? normalized : r))
+              : [normalized, ...state.savedRoutines],
           };
         });
-        get().showToast(`📋 已儲存課表：${routine.nameZh}`);
+        get().showToast(`📋 已儲存課表：${normalized.nameZh}（${normalized.tagZh}）`);
       },
 
       deleteRoutine: (routineId) => {
@@ -1309,7 +1314,7 @@ export const useGameStore = create<GameState>()(
           ...routine,
           id: exists ? `ref_${Date.now()}` : routine.id,
           category: 'referenced',
-          tagZh: '引用課表',
+          tagZh: normalizeRoutineTag(routine.tagZh, routine.id),
         };
         set({
           savedRoutines: [refCopy, ...state.savedRoutines],

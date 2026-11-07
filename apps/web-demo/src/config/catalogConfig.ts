@@ -215,6 +215,29 @@ export interface RoutineExerciseConfig {
   restSeconds: number;
 }
 
+export const ROUTINE_TAG_OPTIONS = [
+  { id: '臀腿訓練', label: '🦵 臀腿訓練' },
+  { id: '胸肩推日', label: '💪 胸肩推日' },
+  { id: '背手拉日', label: '🦅 背手拉日' },
+  { id: '全身綜合', label: '⚡ 全身綜合' },
+  { id: '有氧燃脂', label: '🏃 有氧燃脂' },
+  { id: '核心徒手', label: '🧘 核心徒手' },
+] as const;
+
+export type RoutineTagZh = (typeof ROUTINE_TAG_OPTIONS)[number]['id'];
+
+export function normalizeRoutineTag(tagZh?: string, routineId?: string): RoutineTagZh {
+  const validIds = ROUTINE_TAG_OPTIONS.map((t) => t.id) as string[];
+  if (tagZh && validIds.includes(tagZh)) {
+    return tagZh as RoutineTagZh;
+  }
+  if (tagZh === '我的最愛' || routineId?.includes('leg')) return '臀腿訓練';
+  if (tagZh === '自訂課表' || routineId?.includes('push')) return '胸肩推日';
+  if (tagZh === '有氧徒手' || routineId?.includes('cardio')) return '有氧燃脂';
+  if (routineId?.includes('jay') || routineId?.includes('pull')) return '背手拉日';
+  return '全身綜合';
+}
+
 export interface WorkoutTemplate {
   id: string;
   nameZh: string;
@@ -990,7 +1013,7 @@ export const INITIAL_SAVED_ROUTINES: WorkoutTemplate[] = [
     nameZh: '🔥 黃金臀腿增肌主課表',
     nameEn: 'Golden Leg & Glute Power',
     category: 'favorite',
-    tagZh: '我的最愛',
+    tagZh: '臀腿訓練',
     exercises: [
       { exerciseId: 'barbell_squat', sets: 4, reps: 8, weightKg: 85, restSeconds: 120 },
       { exerciseId: 'leg_press', sets: 3, reps: 10, weightKg: 120, restSeconds: 90 },
@@ -1003,7 +1026,7 @@ export const INITIAL_SAVED_ROUTINES: WorkoutTemplate[] = [
     nameZh: '💪 週三下班快速推日 (胸/肩)',
     nameEn: 'After-Work Express Push',
     category: 'my_custom',
-    tagZh: '自訂課表',
+    tagZh: '胸肩推日',
     exercises: [
       { exerciseId: 'barbell_bench_press', sets: 4, reps: 8, weightKg: 65, restSeconds: 120 },
       { exerciseId: 'overhead_press', sets: 3, reps: 8, weightKg: 40, restSeconds: 90 },
@@ -1015,7 +1038,7 @@ export const INITIAL_SAVED_ROUTINES: WorkoutTemplate[] = [
     nameZh: '🏃 週末有氧燃脂＋核心恢復',
     nameEn: 'Weekend Cardio & Core',
     category: 'my_custom',
-    tagZh: '有氧徒手',
+    tagZh: '有氧燃脂',
     exercises: [
       { exerciseId: 'cardio_incline_run', sets: 1, reps: 25, weightKg: 4, restSeconds: 60 },
       { exerciseId: 'cardio_hiit_bike', sets: 1, reps: 15, weightKg: 6, restSeconds: 45 },
@@ -1029,7 +1052,7 @@ export const INITIAL_SAVED_ROUTINES: WorkoutTemplate[] = [
     nameEn: 'Rock Chen SBD Power Routine',
     category: 'referenced',
     authorName: '陳巨石 (Rock Chen)',
-    tagZh: '引用名人',
+    tagZh: '全身綜合',
     exercises: [
       { exerciseId: 'barbell_squat', sets: 4, reps: 5, weightKg: 120, restSeconds: 150 },
       { exerciseId: 'barbell_bench_press', sets: 4, reps: 5, weightKg: 90, restSeconds: 120 },
@@ -1042,7 +1065,7 @@ export const INITIAL_SAVED_ROUTINES: WorkoutTemplate[] = [
     nameEn: 'Jay Lin V-Taper Aesthetic',
     category: 'referenced',
     authorName: '林健美 (Jay Lin)',
-    tagZh: '引用名人',
+    tagZh: '背手拉日',
     exercises: [
       { exerciseId: 'pull_ups', sets: 4, reps: 10, weightKg: 70, restSeconds: 90 },
       { exerciseId: 'barbell_row', sets: 4, reps: 10, weightKg: 60, restSeconds: 90 },
@@ -1056,7 +1079,7 @@ export const INITIAL_SAVED_ROUTINES: WorkoutTemplate[] = [
     nameZh: '🌱 全身三大複合黃金新手課表',
     nameEn: 'Beginner Full-Body Compound',
     category: 'recommended',
-    tagZh: '官方推薦',
+    tagZh: '全身綜合',
     exercises: [
       { exerciseId: 'barbell_squat', sets: 3, reps: 8, weightKg: 60, restSeconds: 120 },
       { exerciseId: 'barbell_bench_press', sets: 3, reps: 8, weightKg: 50, restSeconds: 90 },
