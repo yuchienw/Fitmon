@@ -165,6 +165,19 @@ export const WardrobeModal: React.FC = () => {
                       <ItemSpriteThumbnail item={item} sizeClass="w-12 h-12" />
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-black text-white truncate">{item.nameZh}</div>
+                        {item.combatStat && (
+                          <div
+                            className={`text-[9px] font-black mt-0.5 ${
+                              item.combatStat.type === 'phy'
+                                ? 'text-orange-300'
+                                : item.combatStat.type === 'mag'
+                                ? 'text-cyan-300'
+                                : 'text-emerald-300'
+                            }`}
+                          >
+                            {item.combatStat.labelZh}
+                          </div>
+                        )}
                         <div className="text-[10px] font-bold mt-1 flex items-center gap-1">
                           {isEquipped ? (
                             <span className="text-emerald-400 flex items-center gap-0.5">

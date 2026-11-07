@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Dumbbell, ShoppingBag, Globe, User } from 'lucide-react';
+import { Home, Dumbbell, ShoppingBag, Swords, User } from 'lucide-react';
 import { MainTab, useGameStore } from '../../stores/useGameStore';
 import { I18N } from '../../config/economyConfig';
 
@@ -49,7 +49,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
     {
       id: 'plaza',
       label: t.tabPlaza,
-      icon: Globe,
+      icon: Swords,
     },
     {
       id: 'analytics',

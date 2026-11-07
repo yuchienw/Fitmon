@@ -10,17 +10,23 @@
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、Meme 拍貼、開源科學動作庫 |
 | **目前階段** | **Phase 1：Web Demo & Native iOS/Android App v2.8 實機測試期** | 🚀 **【已完成 V2.8 七大體感升級 ＋ Capacitor iOS/Android 原生專案封裝】** |
-| **當前版本** | `v2.8.0-mobile-native-and-ux-polish` | 專注模式中途新增動作、極簡無括號介面、加好友模擬、模擬內購儲值、月曆/週檢視訓練量、高反差六塊肌紙娃娃、Capacitor 雙端封裝 |
-| **最後更新時間** | `2026-11-07 12:00 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `131af37` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 於 iPhone 實機測試 `apps/web-demo`（Web / PWA / GitHub Pages 或 Xcode Native iOS App） |
+| **當前版本** | `v2.9.0-adventure-rpg-redesign` | 遊戲化冒險大改版：Tap Titans 關卡推圖、幽默生活系 Boss、2~4人戰隊同儕催促、雙天梯排行榜 |
+| **最後更新時間** | `2026-11-07 12:35 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `e873b66` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 實裝 Phase 2 遊戲化冒險系統（導航更名「冒險」、裝備物魔攻屬性、生活 Boss 推圖、戰隊催促與雙天梯） |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [ ] **MVP-V2-PLAYTEST**：使用者實機體驗驗收 V2 升級版（18 項功能全數上線）
+- [ ] **MVP-V2.9-ADVENTURE-PLAYTEST**：實機與朋友測試新版 `[🏰 冒險]`（Tap Titans 關卡推圖、生活系 Boss、戰隊催促與天梯榜）
+
+### 🟢 已完成：V2.9 遊戲化冒險與同儕督促系統 (Adventure RPG & Peer-Urging Completed)
+- [x] **TASK-023 [冒險系統底層重構]**：底部導航列更名為 `[⚔️ 冒險]`，商城與衣櫃裝備注入物攻/魔攻/輔助屬性，擴充 6 大生活系 Boss 與關卡狀態機
+- [x] **TASK-024 [Tap Titans 關卡推圖與手動戰鬥儀式]**：支援個人/戰隊雙軌關卡式推圖、殘血累積保存機制、手動出擊紙娃娃揮拳動效與暴擊紅字
+- [x] **TASK-025 [2~4人戰隊同儕催促系統]**：實作高糖護盾弱點鎖定、全員到齊狂暴 Buff (1.5x)、一鍵「拿啞鈴敲他」、LINE/IG 像素討伐令卡片與「模擬隊友打卡破盾」體驗鈕
+- [x] **TASK-026 [雙天梯排行榜與冷卻內購]**：個人最高關卡/戰隊最高關卡/單次最高傷害三大天梯榜、12小時自然冷卻倒數與討伐券/內購秒重置機制
 
 ### 🟢 已完成：首輪 MVP 試玩反饋 18 項優化全數落地 (Playtest Feedback V2 Completed)
 

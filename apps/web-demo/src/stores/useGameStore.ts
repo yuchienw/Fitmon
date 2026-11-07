@@ -9,6 +9,7 @@ import {
   INITIAL_SAVED_ROUTINES,
   IAP_PACKAGES,
   FRIEND_PROFILES,
+  ADVENTURE_BOSS_CATALOG,
   AvatarBodyStage,
   EquipSlot,
   RoomSlot,
@@ -18,6 +19,17 @@ import {
 import { soundFX } from '../audio/SoundManager';
 
 export type MainTab = 'home' | 'workout' | 'shop' | 'plaza' | 'analytics';
+
+export interface SquadMemberState {
+  id: string;
+  nameZh: string;
+  roleType: 'phy' | 'mag' | 'support';
+  roleBadgeZh: string;
+  gearDescZh: string;
+  hasWorkedOutToday: boolean;
+  damageDealt: number;
+  nudgedCount: number;
+}
 
 export interface LoggedSet {
   id: string;
@@ -179,6 +191,20 @@ interface GameState {
   dailySocialMaxTotal: number;
   dailySentPerAuthor: Record<string, number>;
 
+  // Adventure & Raid State (V2.9 Tap Titans & Squad Boss)
+  soloStage: number;
+  soloBossHp: number;
+  squadStage: number;
+  squadBossHp: number;
+  squadName: string;
+  squadMembers: SquadMemberState[];
+  adventureCooldownUntil: number;
+  raidTickets: number;
+  personalMaxStage: number;
+  squadMaxStage: number;
+  personalMaxDamage: number;
+  shareRaidModalOpen: boolean;
+
   // UI Actions
   setActiveTab: (tab: MainTab) => void;
   setLocale: (locale: Locale) => void;
@@ -191,6 +217,7 @@ interface GameState {
   setWardrobeModalOpen: (open: boolean) => void;
   setSelectedProfileId: (id: string | null) => void;
   setSelectedHistorySessionId: (id: string | null) => void;
+  setShareRaidModalOpen: (open: boolean) => void;
   closeVictoryModal: () => void;
   showToast: (msg: string) => void;
 
@@ -229,11 +256,20 @@ interface GameState {
   discardWorkoutSession: () => void;
   quickLogSavedRoutine: (routine: WorkoutTemplate) => void;
 
-  // Social Actions (V2-12, V2-16)
+  // Social & Adventure Actions (V2.9)
   toggleFriend: (profileId: string) => void;
   tipPost: (postId: string) => void;
   giftWaterPost: (postId: string) => void;
   publishPost: (caption: string, stickerText?: string, customImageDataUrl?: string) => void;
+  attackAdventureBoss: (mode: 'solo' | 'squad') => {
+    damage: number;
+    isCrit: boolean;
+    defeated: boolean;
+    attackTypeLabel: string;
+  } | null;
+  resetAdventureCooldown: (method: 'ticket' | 'iap') => void;
+  nudgeSquadMember: (memberId: string) => void;
+  simulateFriendWorkoutJoin: (memberId: string) => void;
 
   // Biometrics & Demo Cheats
   updateBiometrics: (partial: Partial<GameState['biometrics']>) => void;
@@ -696,6 +732,40 @@ export const useGameStore = create<GameState>()(
       dailySocialMaxTotal: 5,
       dailySentPerAuthor: {},
 
+      soloStage: 1,
+      soloBossHp: 720,
+      squadStage: 2,
+      squadBossHp: 1150,
+      squadName: '🔥 腿日絕不缺席戰隊',
+      squadMembers: [
+        {
+          id: 'friend_akai',
+          nameZh: '重訓狂人 · 阿凱',
+          roleType: 'phy',
+          roleBadgeZh: '🥊 物攻專精',
+          gearDescZh: '紅黑健力服 + 奧林匹亞金槓',
+          hasWorkedOutToday: true,
+          damageDealt: 650,
+          nudgedCount: 0,
+        },
+        {
+          id: 'friend_alice',
+          nameZh: '有氧女神 · 小愛',
+          roleType: 'mag',
+          roleBadgeZh: '🪄 魔攻破盾',
+          gearDescZh: '綠光泵感寬T + 迷彩跑褲',
+          hasWorkedOutToday: false,
+          damageDealt: 0,
+          nudgedCount: 0,
+        },
+      ],
+      adventureCooldownUntil: 0,
+      raidTickets: 2,
+      personalMaxStage: 1,
+      squadMaxStage: 2,
+      personalMaxDamage: 680,
+      shareRaidModalOpen: false,
+
       setActiveTab: (tab) => {
         soundFX.playBlip();
         set({ activeTab: tab });
@@ -749,6 +819,11 @@ export const useGameStore = create<GameState>()(
       setSelectedHistorySessionId: (id) => {
         soundFX.playBlip();
         set({ selectedHistorySessionId: id });
+      },
+
+      setShareRaidModalOpen: (open) => {
+        soundFX.playBlip();
+        set({ shareRaidModalOpen: open });
       },
 
       closeVictoryModal: () => set({ victoryModalData: null }),
@@ -1646,7 +1721,178 @@ export const useGameStore = create<GameState>()(
             q.id === 'q_create_meme' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
           ),
         });
-        state.showToast('📸 已發布至社交動態！');
+        state.showToast('📸 已發布至戰隊動態！');
+      },
+
+      attackAdventureBoss: (mode) => {
+        const state = get();
+        const now = Date.now();
+        if (state.adventureCooldownUntil > now) {
+          state.showToast('⏳ 出擊冷卻中，請等待倒數或使用討伐券重置！');
+          return null;
+        }
+
+        // Calculate gear attributes
+        const equippedIds = Object.values(state.equipped);
+        let phyBonus = 0;
+        let magBonus = 0;
+        equippedIds.forEach((id) => {
+          const item = AVATAR_ITEMS.find((a) => a.id === id);
+          if (item?.combatStat) {
+            if (item.combatStat.type === 'phy') phyBonus += item.combatStat.value;
+            if (item.combatStat.type === 'mag') magBonus += item.combatStat.value;
+          }
+        });
+
+        const stageNum = mode === 'solo' ? state.soloStage : state.squadStage;
+        const bossIndex = (stageNum - 1) % ADVENTURE_BOSS_CATALOG.length;
+        const boss = ADVENTURE_BOSS_CATALOG[bossIndex];
+
+        // Base attack from task completion & streak (No weight/tonnage comparison!)
+        const completedQuests = state.quests.filter((q) => q.progress >= q.target).length;
+        const baseDmg = 320 + completedQuests * 60 + state.streakDays * 25;
+
+        let isWeaknessHit = false;
+        let attackTypeLabel = '🥊 物理重擊';
+        let rawDmg = baseDmg + phyBonus * 4 + magBonus * 4;
+
+        if (boss.weakness === 'phy' && phyBonus >= magBonus) {
+          isWeaknessHit = true;
+          rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
+          attackTypeLabel = '🥊 弱點粉碎重拳';
+        } else if (boss.weakness === 'mag' && magBonus > 0) {
+          isWeaknessHit = true;
+          rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
+          attackTypeLabel = '🪄 高溫有氧魔法';
+        } else if (boss.weakness === 'balanced') {
+          isWeaknessHit = true;
+          rawDmg = Math.round(rawDmg * 1.5);
+          attackTypeLabel = '⚡ 物魔雙修合擊';
+        }
+
+        // Full Squad Attendance Berserk (1.5x)
+        const allSquadAttended = state.squadMembers.every((m) => m.hasWorkedOutToday);
+        if (mode === 'squad' && allSquadAttended) {
+          rawDmg = Math.round(rawDmg * 1.5);
+          isWeaknessHit = true;
+          attackTypeLabel = '🔥 全勤狂暴合擊 (×1.5)';
+        }
+
+        const finalDamage = Math.max(250, rawDmg);
+        const cooldownMs = 12 * 60 * 60 * 1000; // 12 hours cooldown
+        const newMaxDmg = Math.max(state.personalMaxDamage, finalDamage);
+
+        if (mode === 'solo') {
+          const remaining = state.soloBossHp - finalDamage;
+          if (remaining <= 0) {
+            const nextStage = state.soloStage + 1;
+            const nextBoss = ADVENTURE_BOSS_CATALOG[(nextStage - 1) % ADVENTURE_BOSS_CATALOG.length];
+            const scaledHp = Math.round(nextBoss.maxHp * (1 + (nextStage - 1) * 0.25));
+            soundFX.playVictory();
+            set({
+              soloStage: nextStage,
+              soloBossHp: scaledHp,
+              personalMaxStage: Math.max(state.personalMaxStage, nextStage),
+              personalMaxDamage: newMaxDmg,
+              coins: state.coins + boss.rewardCoins,
+              adventureCooldownUntil: now + cooldownMs,
+            });
+            state.showToast(`🎉 擊破【${boss.nameZh}】！晉升 Stage ${nextStage} (+${boss.rewardCoins} 🪙)`);
+            return { damage: finalDamage, isCrit: isWeaknessHit, defeated: true, attackTypeLabel };
+          } else {
+            soundFX.playPRFanfare();
+            set({
+              soloBossHp: remaining,
+              personalMaxDamage: newMaxDmg,
+              adventureCooldownUntil: now + cooldownMs,
+            });
+            state.showToast(`⚔️ 對【${boss.nameZh}】造成 -${finalDamage} HP！`);
+            return { damage: finalDamage, isCrit: isWeaknessHit, defeated: false, attackTypeLabel };
+          }
+        } else {
+          const remaining = state.squadBossHp - finalDamage;
+          if (remaining <= 0) {
+            const nextStage = state.squadStage + 1;
+            const nextBoss = ADVENTURE_BOSS_CATALOG[(nextStage - 1) % ADVENTURE_BOSS_CATALOG.length];
+            const scaledHp = Math.round(nextBoss.maxHp * 1.8 * (1 + (nextStage - 1) * 0.25));
+            soundFX.playVictory();
+            set({
+              squadStage: nextStage,
+              squadBossHp: scaledHp,
+              squadMaxStage: Math.max(state.squadMaxStage, nextStage),
+              personalMaxDamage: newMaxDmg,
+              coins: state.coins + boss.rewardCoins,
+              adventureCooldownUntil: now + cooldownMs,
+            });
+            state.showToast(`🏆 戰隊合力擊破【${boss.nameZh}】！推進至 Stage ${nextStage}！`);
+            return { damage: finalDamage, isCrit: isWeaknessHit, defeated: true, attackTypeLabel };
+          } else {
+            soundFX.playPRFanfare();
+            set({
+              squadBossHp: remaining,
+              personalMaxDamage: newMaxDmg,
+              adventureCooldownUntil: now + cooldownMs,
+            });
+            state.showToast(`⚔️ 戰隊出擊！造成 -${finalDamage} HP！`);
+            return { damage: finalDamage, isCrit: isWeaknessHit, defeated: false, attackTypeLabel };
+          }
+        }
+      },
+
+      resetAdventureCooldown: (method) => {
+        const state = get();
+        if (method === 'ticket') {
+          if (state.raidTickets <= 0) {
+            state.showToast('⚠️ 討伐挑戰券不足，可使用模擬內購補充！');
+            return;
+          }
+          soundFX.playSetComplete();
+          set({
+            raidTickets: state.raidTickets - 1,
+            adventureCooldownUntil: 0,
+          });
+          state.showToast('🎫 已消耗 1 張討伐挑戰券，冷卻立即歸零！');
+        } else {
+          soundFX.playCoin();
+          set({
+            raidTickets: state.raidTickets + 2,
+            adventureCooldownUntil: 0,
+          });
+          state.showToast('💎 模擬內購成功！冷卻已重置並額外獲得 2 張討伐券！');
+        }
+      },
+
+      nudgeSquadMember: (memberId) => {
+        const state = get();
+        const target = state.squadMembers.find((m) => m.id === memberId);
+        if (!target) return;
+        soundFX.playSetComplete();
+        set({
+          squadMembers: state.squadMembers.map((m) =>
+            m.id === memberId ? { ...m, nudgedCount: m.nudgedCount + 1 } : m
+          ),
+        });
+        state.showToast(`🔔 哐噹！已拿 20kg 啞鈴敲了【${target.nameZh}】提醒他快去運動破盾！`);
+      },
+
+      simulateFriendWorkoutJoin: (memberId) => {
+        const state = get();
+        const target = state.squadMembers.find((m) => m.id === memberId);
+        if (!target) return;
+        const friendDmg = 580;
+        const remaining = Math.max(50, state.squadBossHp - friendDmg);
+        soundFX.playPRFanfare();
+        set({
+          squadBossHp: remaining,
+          squadMembers: state.squadMembers.map((m) =>
+            m.id === memberId
+              ? { ...m, hasWorkedOutToday: true, damageDealt: m.damageDealt + friendDmg }
+              : m
+          ),
+        });
+        state.showToast(
+          `⚡ 【${target.nameZh}】完成運動打卡！破除高糖護盾並打出 -${friendDmg} HP！全員狂暴已啟動！`
+        );
       },
 
       updateBiometrics: (partial) => {
@@ -1700,6 +1946,17 @@ export const useGameStore = create<GameState>()(
         friendIds: state.friendIds,
         dailySocialSentTotal: state.dailySocialSentTotal,
         dailySentPerAuthor: state.dailySentPerAuthor,
+        soloStage: state.soloStage,
+        soloBossHp: state.soloBossHp,
+        squadStage: state.squadStage,
+        squadBossHp: state.squadBossHp,
+        squadName: state.squadName,
+        squadMembers: state.squadMembers,
+        adventureCooldownUntil: state.adventureCooldownUntil,
+        raidTickets: state.raidTickets,
+        personalMaxStage: state.personalMaxStage,
+        squadMaxStage: state.squadMaxStage,
+        personalMaxDamage: state.personalMaxDamage,
       }),
     }
   )

@@ -331,6 +331,19 @@ export const ShopTab: React.FC = () => {
                     </div>
 
                     <div className="text-xs font-black text-white truncate">{item.nameZh}</div>
+                    {item.combatStat && (
+                      <div
+                        className={`mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-black border ${
+                          item.combatStat.type === 'phy'
+                            ? 'bg-orange-500/20 border-orange-400/50 text-orange-300'
+                            : item.combatStat.type === 'mag'
+                            ? 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300'
+                            : 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
+                        }`}
+                      >
+                        {item.combatStat.labelZh}
+                      </div>
+                    )}
                   </div>
 
                   {/* Bottom Action Button */}

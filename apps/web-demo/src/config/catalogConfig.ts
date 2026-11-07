@@ -6,6 +6,12 @@ export type EquipSlot = 'hair' | 'face' | 'top' | 'bottom' | 'accessory';
 export type RoomSlot = 'wallpaper' | 'floor' | 'slotLeft' | 'slotCenter' | 'slotRight';
 export type SportType = 'strength' | 'cardio' | 'bodyweight';
 
+export interface CombatStat {
+  type: 'phy' | 'mag' | 'support';
+  value: number;
+  labelZh: string;
+}
+
 export interface CosmeticItem {
   id: string;
   slot: EquipSlot | 'wallpaper' | 'floor' | 'ReadysetDecor';
@@ -18,7 +24,105 @@ export interface CosmeticItem {
   primaryColor: string;
   accentColor: string;
   badgeText?: string;
+  combatStat?: CombatStat;
 }
+
+export interface AdventureBoss {
+  id: string;
+  stageNumber: number;
+  nameZh: string;
+  emoji: string;
+  subtitleZh: string;
+  descriptionZh: string;
+  maxHp: number;
+  weakness: 'phy' | 'mag' | 'balanced';
+  weaknessLabelZh: string;
+  weaknessMultiplier: number;
+  rewardCoins: number;
+  isWorldBoss?: boolean;
+}
+
+export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
+  {
+    id: 'boss_potato',
+    stageNumber: 1,
+    nameZh: '沙發馬鈴薯怪',
+    emoji: '🥔',
+    subtitleZh: '陷在沙發爬不起來的怠惰巨物',
+    descriptionZh: '肚子彈出洋芋片包裝，極度討厭站立與出汗！',
+    maxHp: 1000,
+    weakness: 'phy',
+    weaknessLabelZh: '🥊 弱物理 (200% 暴擊)',
+    weaknessMultiplier: 2.0,
+    rewardCoins: 150,
+  },
+  {
+    id: 'boss_boba',
+    stageNumber: 2,
+    nameZh: '宵夜珍奶巨魔',
+    emoji: '🧋',
+    subtitleZh: '深夜 11 點誘惑發作的糖分史萊姆',
+    descriptionZh: '全身覆蓋黑糖珍珠糖霜，物理打擊容易陷進去，怕高溫有氧魔法！',
+    maxHp: 1800,
+    weakness: 'mag',
+    weaknessLabelZh: '🪄 弱魔法 (200% 暴擊)',
+    weaknessMultiplier: 2.0,
+    rewardCoins: 250,
+  },
+  {
+    id: 'boss_screen_zombie',
+    stageNumber: 3,
+    nameZh: '熬夜低頭幽靈',
+    emoji: '📱',
+    subtitleZh: '駝背滑手機、黑眼圈深重的幽魂',
+    descriptionZh: '圓肩與烏龜頸防禦極高，需要深蹲引體向上的強大力量打破姿勢！',
+    maxHp: 2600,
+    weakness: 'phy',
+    weaknessLabelZh: '🥊 弱物理 (180% 暴擊)',
+    weaknessMultiplier: 1.8,
+    rewardCoins: 350,
+  },
+  {
+    id: 'boss_cheese_slime',
+    stageNumber: 4,
+    nameZh: '熔岩起司黏怪',
+    emoji: '🧀',
+    subtitleZh: '牽絲高熱量的碳水油膩霸主',
+    descriptionZh: '油膩防禦超強，唯有大排汗的有氧心肺魔法才能高溫蒸發！',
+    maxHp: 3500,
+    weakness: 'mag',
+    weaknessLabelZh: '🪄 弱魔法 (200% 暴擊)',
+    weaknessMultiplier: 2.0,
+    rewardCoins: 450,
+  },
+  {
+    id: 'boss_snooze_demon',
+    stageNumber: 5,
+    nameZh: '賴床貪睡魔神',
+    emoji: '⏰',
+    subtitleZh: '按了 8 次貪睡鬧鐘的棉被封印怪',
+    descriptionZh: '厚重棉被阻擋攻擊，需要晨型重訓者揮出千鈞重拳破除封印！',
+    maxHp: 4800,
+    weakness: 'phy',
+    weaknessLabelZh: '🥊 弱物理 (180% 暴擊)',
+    weaknessMultiplier: 1.8,
+    rewardCoins: 600,
+  },
+  {
+    id: 'boss_fried_chicken_lord',
+    stageNumber: 6,
+    nameZh: '暴食炸雞領主',
+    emoji: '🍗',
+    subtitleZh: '戰隊世界 Boss · 金黃酥脆的萬卡霸王',
+    descriptionZh: '外層硬油炸酥皮需物攻破盾，內層飽和脂肪需魔攻蒸發，需戰隊合作！',
+    maxHp: 8000,
+    weakness: 'balanced',
+    weaknessLabelZh: '⚡ 物魔協同 (需全員出勤)',
+    weaknessMultiplier: 1.5,
+    rewardCoins: 1200,
+    isWorldBoss: true,
+  },
+];
 
 export interface ConsumableItem {
   id: 'bcaa_water' | 'double_coin_card' | 'streak_freeze' | 'gacha_ticket';
@@ -175,6 +279,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#ffdfc4',
     accentColor: '#f59e0b',
     badgeText: '秀肌肉',
+    combatStat: { type: 'phy', value: 20, labelZh: '🥊 物攻 +20' },
   },
   {
     id: 'top_black_tank',
@@ -185,6 +290,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#1e293b',
     accentColor: '#10b981',
+    combatStat: { type: 'phy', value: 15, labelZh: '🥊 物攻 +15' },
   },
   {
     id: 'top_crimson_sbd',
@@ -196,6 +302,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#991b1b',
     accentColor: '#f87171',
     badgeText: '熱門',
+    combatStat: { type: 'phy', value: 35, labelZh: '🥊 物攻 +35' },
   },
   {
     id: 'top_pump_cover',
@@ -206,6 +313,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#065f46',
     accentColor: '#34d399',
+    combatStat: { type: 'mag', value: 30, labelZh: '🪄 魔攻 +30' },
   },
   {
     id: 'top_spartan_cape',
@@ -217,6 +325,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#dc2626',
     accentColor: '#fbbf24',
     badgeText: '傳奇',
+    combatStat: { type: 'phy', value: 60, labelZh: '🥊 物攻 +60' },
   },
 
   // ================= 4. 下身 (bottom) =================
@@ -229,6 +338,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#1e3a8a',
     accentColor: '#60a5fa',
+    combatStat: { type: 'phy', value: 10, labelZh: '🥊 物攻 +10' },
   },
   {
     id: 'bottom_camo_joggers',
@@ -239,6 +349,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#3f6212',
     accentColor: '#a3e635',
+    combatStat: { type: 'mag', value: 25, labelZh: '🪄 魔攻 +25' },
   },
   {
     id: 'bottom_gold_tights',
@@ -249,6 +360,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'epic',
     primaryColor: '#312e81',
     accentColor: '#facc15',
+    combatStat: { type: 'support', value: 20, labelZh: '🛡️ 輔助 +20' },
   },
 
   // ================= 5. 手持裝備 (accessory) =================
@@ -261,6 +373,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#64748b',
     accentColor: '#cbd5e1',
+    combatStat: { type: 'phy', value: 25, labelZh: '🥊 物攻 +25' },
   },
   {
     id: 'acc_protein_shaker',
@@ -271,6 +384,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#10b981',
     accentColor: '#ecfdf5',
+    combatStat: { type: 'support', value: 25, labelZh: '🛡️ 輔助 +25' },
   },
   {
     id: 'acc_gold_barbell',
@@ -282,6 +396,7 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#f59e0b',
     accentColor: '#fef08a',
     badgeText: '尊榮',
+    combatStat: { type: 'phy', value: 80, labelZh: '🥊 物攻 +80' },
   },
 ];
 
