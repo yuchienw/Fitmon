@@ -6,12 +6,9 @@ import {
   VolumeX,
   Music,
   Sparkles,
-  User,
-  Dumbbell,
-  Flame,
-  Footprints,
   Home,
   MessageCircle,
+  Wrench,
 } from 'lucide-react';
 import { useGameStore } from '../stores/useGameStore';
 import { AvatarBodyStage, EquipSlot, RoomSlot } from '../config/catalogConfig';
@@ -75,8 +72,18 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
   });
 
   useEffect(() => {
-    animRef.current.currentState = aiState;
-  }, [aiState]);
+    if (store.devRoomPoseOverride !== 'AUTO') {
+      setAiState(store.devRoomPoseOverride);
+      animRef.current.currentState = store.devRoomPoseOverride;
+      animRef.current.stateTimer = 0;
+      if (store.devRoomPoseOverride !== 'WALK') {
+        animRef.current.x = 92;
+        animRef.current.facingRight = true;
+      }
+    } else {
+      animRef.current.currentState = aiState;
+    }
+  }, [aiState, store.devRoomPoseOverride]);
 
   useEffect(() => {
     let rafId: number;
@@ -115,7 +122,9 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
       st.tick += 1;
       st.stateTimer += 1;
 
-      if (!compact && st.stateTimer > 260) {
+      if (store.devRoomPoseOverride !== 'AUTO') {
+        st.currentState = store.devRoomPoseOverride;
+      } else if (!compact && st.stateTimer > 260) {
         st.stateTimer = 0;
         const states: ('WALK' | 'SQUAT' | 'CURL' | 'IDLE')[] = ['WALK', 'SQUAT', 'CURL', 'IDLE'];
         const next = states[Math.floor(Math.random() * states.length)];
@@ -145,7 +154,15 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
 
     rafId = requestAnimationFrame(renderLoop);
     return () => cancelAnimationFrame(rafId);
-  }, [isActive, bodyStage, equipped, room, store.isNightModeRoom, visitorAvatar]);
+  }, [
+    isActive,
+    bodyStage,
+    equipped,
+    room,
+    store.isNightModeRoom,
+    store.devRoomPoseOverride,
+    visitorAvatar,
+  ]);
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -160,10 +177,6 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
       store.interactWithRoomEntity('pet');
       setSpeechBubble('❤️ 開心互動！');
     } else {
-      const order: ('SQUAT' | 'CURL' | 'WALK' | 'IDLE')[] = ['SQUAT', 'CURL', 'WALK', 'IDLE'];
-      const next = order[(order.indexOf(aiState) + 1) % order.length];
-      setAiState(next);
-      animRef.current.stateTimer = 0;
       setSpeechBubble(SPEECH_LINES[Math.floor(Math.random() * SPEECH_LINES.length)]);
       store.interactWithRoomEntity('avatar');
     }
@@ -171,7 +184,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
 
   return (
     <div className="game-stage-dark relative rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-[#0d111a] shadow-2xl">
-      {/* Top Floating Room Controls: Left Speech Bubble + Right Pose Switcher Bar */}
+      {/* Top Floating Room Info: Speech Bubble (Pose manual selection moved to Settings Dev Cheats) */}
       <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-start justify-between pointer-events-none gap-1.5 flex-wrap">
         <div className="bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/15 text-[11px] font-bold text-white shadow flex items-center gap-1.5 break-words">
           {customOverride ? (
@@ -190,47 +203,15 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
           )}
         </div>
 
-        {/* Top-Right Pose Switcher Bar (Never blocks the character!) */}
-        <div
-          role="group"
-          aria-label="角色動作切換"
-          className="ml-auto flex items-center gap-0.5 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-white/20 pointer-events-auto shadow-lg"
-        >
-          {(
-            [
-              { id: 'IDLE', label: '站姿', icon: User },
-              { id: 'SQUAT', label: '深蹲', icon: Dumbbell },
-              { id: 'CURL', label: '彎舉', icon: Flame },
-              ...(compact ? [] : ([{ id: 'WALK', label: '散步', icon: Footprints }] as const)),
-            ] as const
-          ).map((m) => {
-            const PoseIcon = m.icon;
-            const isSelected = aiState === m.id;
-            return (
-              <button
-                key={m.id}
-                aria-pressed={isSelected}
-                onClick={() => {
-                  setAiState(m.id);
-                  animRef.current.stateTimer = 0;
-                  if (m.id !== 'WALK') {
-                    animRef.current.x = 92;
-                    animRef.current.facingRight = true;
-                  }
-                  store.interactWithRoomEntity('avatar');
-                }}
-                className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-black transition whitespace-nowrap flex items-center gap-1 ${
-                  isSelected
-                    ? 'bg-emerald-400 text-slate-950 shadow'
-                    : 'text-slate-200 hover:text-white'
-                }`}
-              >
-                <PoseIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
-                <span>{m.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {store.devRoomPoseOverride !== 'AUTO' && !compact && (
+          <button
+            onClick={() => store.setSettingsOpen(true)}
+            className="ml-auto pointer-events-auto bg-amber-500/20 hover:bg-amber-500/30 backdrop-blur-md px-2 py-0.5 rounded-full border border-amber-400/50 text-[10px] font-black text-amber-300 flex items-center gap-1 shadow"
+          >
+            <Wrench className="w-3 h-3 shrink-0" aria-hidden="true" />
+            <span>外掛鎖定：{store.devRoomPoseOverride}</span>
+          </button>
+        )}
       </div>
 
       {/* 960x600 Retina HD MapleStory 2D Chibi Scene Canvas */}

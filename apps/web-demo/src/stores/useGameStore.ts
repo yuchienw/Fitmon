@@ -22,6 +22,7 @@ export type MainTab = 'home' | 'workout' | 'shop' | 'plaza' | 'analytics';
 
 export type TodayWorkoutStatus = 'none' | 'legit_rest' | 'cheated_fast';
 export type AdventureSportSkillType = 'strength' | 'cardio' | 'bodyweight';
+export type RoomPoseOverride = 'AUTO' | 'IDLE' | 'SQUAT' | 'CURL' | 'WALK';
 
 export interface SquadMemberState {
   id: string;
@@ -202,6 +203,7 @@ interface GameState {
   soundEnabled: boolean;
   bgmEnabled: boolean;
   isNightModeRoom: boolean;
+  devRoomPoseOverride: RoomPoseOverride;
   memeStudioOpen: boolean;
   shareStudioContext: 'workout_photo' | 'boss_victory';
   settingsOpen: boolean;
@@ -377,6 +379,7 @@ interface GameState {
 
   // Biometrics & Demo Cheats
   updateBiometrics: (partial: Partial<GameState['biometrics']>) => void;
+  setDevRoomPoseOverride: (pose: RoomPoseOverride) => void;
   addDemoCoins: (amount: number) => void;
   refillStaminaFull: () => void;
   resetDemoState: () => void;
@@ -739,6 +742,7 @@ export const useGameStore = create<GameState>()(
       soundEnabled: true,
       bgmEnabled: false,
       isNightModeRoom: false,
+      devRoomPoseOverride: 'AUTO',
       memeStudioOpen: false,
       shareStudioContext: 'workout_photo',
       settingsOpen: false,
@@ -2274,6 +2278,23 @@ export const useGameStore = create<GameState>()(
         set((state) => ({
           biometrics: { ...state.biometrics, ...partial },
         }));
+      },
+
+      setDevRoomPoseOverride: (pose) => {
+        soundFX.playBlip();
+        set({ devRoomPoseOverride: pose });
+        const labelMap: Record<RoomPoseOverride, string> = {
+          AUTO: '🤖 AI 自主行動',
+          IDLE: '站姿',
+          SQUAT: '深蹲',
+          CURL: '彎舉',
+          WALK: '散步',
+        };
+        get().showToast(
+          pose === 'AUTO'
+            ? '🤖 已恢復角色 AI 自主巡邏與動作'
+            : `🔧 外掛已鎖定特定姿勢：【${labelMap[pose]}】`
+        );
       },
 
       addDemoCoins: (amount) => {

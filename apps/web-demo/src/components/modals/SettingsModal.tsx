@@ -1,6 +1,19 @@
 import React from 'react';
-import { X, Globe, Volume2, RotateCcw, Coins, Zap, Wrench } from 'lucide-react';
-import { useGameStore } from '../../stores/useGameStore';
+import {
+  X,
+  Globe,
+  Volume2,
+  RotateCcw,
+  Coins,
+  Zap,
+  Wrench,
+  Bot,
+  User,
+  Dumbbell,
+  Flame,
+  Footprints,
+} from 'lucide-react';
+import { useGameStore, RoomPoseOverride } from '../../stores/useGameStore';
 
 export const SettingsModal: React.FC = () => {
   const store = useGameStore();
@@ -109,8 +122,44 @@ export const SettingsModal: React.FC = () => {
         <div className="bg-slate-900/90 border border-amber-500/40 rounded-xl p-3 space-y-2.5">
           <div className="text-xs font-black text-amber-300 flex items-center gap-1.5">
             <Wrench className="w-3.5 h-3.5" />
-            <span>MVP 驗收快速測試工具 (Sandbox Cheats)</span>
+            <span>MVP 驗收快速測試工具 (測試外掛)</span>
           </div>
+
+          {/* Room Avatar Pose Override (Moved from Room Canvas to Dev Cheats) */}
+          <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
+              <span>房間娃娃姿勢控制（一般玩家由 AI 自主行動）</span>
+            </div>
+            <div className="grid grid-cols-5 gap-1">
+              {(
+                [
+                  { id: 'AUTO', label: 'AI自主', icon: Bot },
+                  { id: 'IDLE', label: '站姿', icon: User },
+                  { id: 'SQUAT', label: '深蹲', icon: Dumbbell },
+                  { id: 'CURL', label: '彎舉', icon: Flame },
+                  { id: 'WALK', label: '散步', icon: Footprints },
+                ] as { id: RoomPoseOverride; label: string; icon: React.FC<{ className?: string }> }[]
+              ).map((p) => {
+                const PoseIcon = p.icon;
+                const active = store.devRoomPoseOverride === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => store.setDevRoomPoseOverride(p.id)}
+                    className={`py-1.5 px-1 rounded-lg text-[10px] font-black flex flex-col items-center justify-center gap-0.5 border transition ${
+                      active
+                        ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow'
+                        : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <PoseIcon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{p.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => store.addDemoCoins(500)}
