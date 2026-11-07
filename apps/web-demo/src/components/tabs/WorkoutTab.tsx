@@ -124,7 +124,7 @@ export const WorkoutTab: React.FC = () => {
                 訓練中 · {formatMMSS(store.workoutElapsedSeconds)}
               </span>
             </div>
-            <h2 className="text-sm font-black text-white truncate mt-0.5">
+            <h2 className="text-sm font-black text-white break-words leading-snug mt-0.5">
               📋 {store.activeTemplateName || '自由訓練'}
             </h2>
           </div>
@@ -186,7 +186,7 @@ export const WorkoutTab: React.FC = () => {
                   >
                     <ExerciseThumbnail exercise={ex} size={34} />
                     <div>
-                      <div className="text-xs font-black truncate max-w-[105px]">{ex.nameZh}</div>
+                      <div className="text-xs font-black whitespace-nowrap">{ex.nameZh}</div>
                       <div className="text-[10px] font-mono text-slate-300">
                         {q.completedSets}/{q.targetSets}組
                       </div>
@@ -253,12 +253,12 @@ export const WorkoutTab: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <h3 className="text-base font-black text-white group-hover:text-cyan-300 transition mt-0.5 truncate flex items-center gap-1">
+                <h3 className="text-base font-black text-white group-hover:text-cyan-300 transition mt-0.5 break-words leading-snug flex items-center gap-1 flex-wrap">
                   <span>{selectedExercise.nameZh}</span>
                   <BookOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 </h3>
                 {selectedExercise.primaryMusclesZh && (
-                  <p className="text-[11px] text-slate-400 truncate">
+                  <p className="text-[11px] text-slate-400 break-words leading-snug">
                     🎯 {selectedExercise.primaryMusclesZh}
                   </p>
                 )}
@@ -447,7 +447,7 @@ export const WorkoutTab: React.FC = () => {
                           <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
                             #{idx + 1}
                           </span>
-                          <span className="font-black text-white truncate">
+                          <span className="font-black text-white break-words">
                             {s.exerciseNameZh}
                           </span>
                           <span className="text-[10px] text-cyan-400 font-bold">📖</span>
@@ -549,7 +549,7 @@ export const WorkoutTab: React.FC = () => {
                     <div className="flex items-center gap-2.5 min-w-0">
                       <ExerciseThumbnail exercise={ex} size={40} />
                       <div className="min-w-0">
-                        <div className="text-xs font-black text-white truncate">{ex.nameZh}</div>
+                        <div className="text-xs font-black text-white break-words">{ex.nameZh}</div>
                         <div className="text-[10px] text-slate-400">
                           {ex.muscleLabelZh} · {ex.defaultWeightKg}
                           {ex.unitLabel} × {ex.defaultReps}
@@ -688,7 +688,7 @@ export const WorkoutTab: React.FC = () => {
                   <h3 className="text-sm font-black text-white mt-1">{routine.nameZh}</h3>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => setDetailRoutine(routine)}
                     className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
@@ -709,6 +709,13 @@ export const WorkoutTab: React.FC = () => {
                       className={`w-4 h-4 ${routine.category === 'favorite' ? 'fill-amber-300' : ''}`}
                     />
                   </button>
+                  <button
+                    onClick={() => store.deleteRoutine(routine.id)}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/50 transition"
+                    title="刪除此課表"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
@@ -725,7 +732,7 @@ export const WorkoutTab: React.FC = () => {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <ExerciseThumbnail exercise={ex} size={32} />
-                        <span className="font-bold text-white group-hover:text-cyan-300 truncate">
+                        <span className="font-bold text-white group-hover:text-cyan-300 break-words leading-snug">
                           {ex.nameZh}
                         </span>
                         <BookOpen className="w-3 h-3 text-cyan-400/80 shrink-0" />
@@ -945,7 +952,18 @@ export const WorkoutTab: React.FC = () => {
               })}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => {
+                  const id = detailRoutine.id;
+                  setDetailRoutine(null);
+                  store.deleteRoutine(id);
+                }}
+                className="py-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/70 border border-rose-500/50 text-rose-300 text-xs font-black flex items-center justify-center gap-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>刪除課表</span>
+              </button>
               <button
                 onClick={() => {
                   const r = detailRoutine;
@@ -1157,7 +1175,7 @@ export const WorkoutTab: React.FC = () => {
                     <div className="flex items-center gap-2 min-w-0">
                       <ExerciseThumbnail exercise={ex} size={32} />
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate">{ex.nameZh}</div>
+                        <div className="text-xs font-bold text-white break-words">{ex.nameZh}</div>
                         <div className="text-[10px] text-slate-400">
                           {ex.muscleLabelZh} · {ex.defaultWeightKg}
                           {ex.unitLabel}

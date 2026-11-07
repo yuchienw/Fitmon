@@ -50,8 +50,8 @@ export const ExerciseGuideModal: React.FC = () => {
                   </span>
                 )}
               </div>
-              <h3 className="text-base font-black text-white mt-1 truncate">{exercise.nameZh}</h3>
-              <p className="text-[11px] font-mono text-slate-400 truncate">{exercise.nameEn}</p>
+              <h3 className="text-base font-black text-white mt-1 break-words leading-snug">{exercise.nameZh}</h3>
+              <p className="text-[11px] font-mono text-slate-400 break-words">{exercise.nameEn}</p>
             </div>
           </div>
 

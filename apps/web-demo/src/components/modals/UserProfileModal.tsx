@@ -135,7 +135,7 @@ export const UserProfileModal: React.FC = () => {
                 key={idx}
                 className="p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-center"
               >
-                <div className="text-[10px] text-slate-400 truncate">{pr.label}</div>
+                <div className="text-[10px] text-slate-400 break-words">{pr.label}</div>
                 <div className="text-xs font-black font-mono text-amber-300 mt-0.5">
                   {pr.value}
                 </div>

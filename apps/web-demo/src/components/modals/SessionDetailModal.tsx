@@ -111,7 +111,7 @@ export const SessionDetailModal: React.FC = () => {
                   <div className="flex items-center gap-2.5 min-w-0">
                     <ExerciseThumbnail exercise={exObj} size={38} />
                     <div className="min-w-0">
-                      <div className="text-xs font-black text-white group-hover:text-cyan-300 transition truncate">
+                      <div className="text-xs font-black text-white group-hover:text-cyan-300 transition break-words leading-snug">
                         {exIdx + 1}. {log.exerciseNameZh}
                       </div>
                       <div className="text-[10px] text-slate-400">

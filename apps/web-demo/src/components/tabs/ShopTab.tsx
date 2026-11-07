@@ -337,7 +337,7 @@ export const ShopTab: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="text-xs font-black text-white truncate">{item.nameZh}</div>
+                    <div className="text-xs font-black text-white break-words leading-snug">{item.nameZh}</div>
                     {item.combatStat && (
                       <div
                         className={`mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-black border ${
@@ -440,8 +440,8 @@ export const ShopTab: React.FC = () => {
                       {c.iconEmoji}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-black text-white truncate">{c.nameZh}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-black text-white break-words">{c.nameZh}</span>
                         <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[10px] font-bold shrink-0">
                           ×{count}
                         </span>

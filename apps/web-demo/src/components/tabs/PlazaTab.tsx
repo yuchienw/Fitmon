@@ -25,12 +25,16 @@ import {
   Gift,
   Lock,
   Wrench,
+  UserPlus,
+  UserMinus,
+  Edit3,
 } from 'lucide-react';
 import {
   useGameStore,
   TodayWorkoutStatus,
   AdventureSportSkillType,
   SquadMemberState,
+  SQUAD_CANDIDATE_POOL,
 } from '../../stores/useGameStore';
 import {
   ADVENTURE_BOSS_CATALOG,
@@ -40,7 +44,7 @@ import {
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 
-type AdventureMainSubTab = 'raid' | 'ladder' | 'social';
+type AdventureMainSubTab = 'raid' | 'squad_builder' | 'ladder' | 'social';
 type RaidMode = 'solo' | 'squad';
 type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
 type SocialSubFilter = 'all_public' | 'friends_feed' | 'my_posts' | 'friends_directory';
@@ -52,6 +56,11 @@ export const PlazaTab: React.FC = () => {
   const [ladderCat, setLadderCat] = useState<LadderCategory>('solo_stage');
   const [socialFilter, setSocialFilter] = useState<SocialSubFilter>('all_public');
   const [visitingPostId, setVisitingPostId] = useState<string | null>(null);
+
+  // Squad Builder state
+  const [squadNameInput, setSquadNameInput] = useState(store.squadName);
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [recruitFilter, setRecruitFilter] = useState<'all' | 'phy' | 'mag' | 'support'>('all');
 
   // Floating HUD popovers & modals
   const [devCheatOpen, setDevCheatOpen] = useState(false);
@@ -193,12 +202,13 @@ export const PlazaTab: React.FC = () => {
 
   return (
     <div className="p-3 space-y-2.5 pb-10 relative">
-      {/* 1. COMPACT GAME HUD TOP BAR: 3 VIEW PILLS + TICKETS + DEV CHEAT BUTTON */}
-      <div className="flex items-center justify-between gap-1.5">
+      {/* 1. COMPACT GAME HUD TOP BAR: 4 VIEW PILLS + LOOT BAG + DEV CHEAT BUTTON */}
+      <div className="flex items-center justify-between gap-1.5 flex-wrap">
         <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
           {(
             [
               { id: 'raid', label: '⚔️ 戰場' },
+              { id: 'squad_builder', label: `🛡️ 組隊(${1 + store.squadMembers.length}/4)` },
               { id: 'ladder', label: '🏆 天梯' },
               { id: 'social', label: '💬 動態' },
             ] as const
@@ -208,7 +218,7 @@ export const PlazaTab: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setMainSubTab(tab.id)}
-                className={`py-1.5 px-2.5 rounded-lg text-xs font-black transition ${
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-black transition whitespace-nowrap ${
                   active
                     ? 'bg-emerald-500 text-slate-950 shadow'
                     : 'text-slate-400 hover:text-white'
@@ -352,16 +362,16 @@ export const PlazaTab: React.FC = () => {
 
             {/* Boss Name Banner + Chunky Arcade HP Bar */}
             <div className="relative z-10 space-y-1">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="px-1.5 py-0.5 rounded bg-rose-500 text-white text-[10px] font-black">
+              <div className="flex items-center justify-between px-1 gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="px-1.5 py-0.5 rounded bg-rose-500 text-white text-[10px] font-black shrink-0">
                     STAGE {currentStage}
                   </span>
-                  <h3 className="text-sm font-black text-white truncate">
+                  <h3 className="text-sm font-black text-white break-words">
                     {bossTemplate.nameZh}
                   </h3>
                 </div>
-                <span className="text-[11px] font-mono font-black text-amber-300">
+                <span className="text-[11px] font-mono font-black text-amber-300 shrink-0">
                   賞金 +{bossTemplate.rewardCoins}🪙
                 </span>
               </div>
@@ -451,7 +461,7 @@ export const PlazaTab: React.FC = () => {
                     <span className="absolute -top-2 -right-2 text-2xl animate-ping">💥</span>
                   )}
                 </div>
-                <span className="mt-1.5 px-2 py-0.5 rounded-full bg-rose-950/90 border border-rose-500/40 text-rose-200 text-[10px] font-black max-w-[130px] truncate">
+                <span className="mt-1.5 px-2 py-0.5 rounded-full bg-rose-950/90 border border-rose-500/40 text-rose-200 text-[10px] font-black text-center leading-tight">
                   {bossTemplate.subtitleZh}
                 </span>
               </div>
@@ -460,9 +470,9 @@ export const PlazaTab: React.FC = () => {
             {/* Bottom of Stage: 4-Player RPG Party Formation Dock (Squad Mode) */}
             {raidMode === 'squad' && (
               <div className="relative z-10 pt-2 border-t border-white/10 space-y-2">
-                <div className="flex items-center justify-between px-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-black text-white">
+                <div className="flex items-center justify-between px-0.5 gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-black text-white break-words">
                       🛡️ {store.squadName}
                     </span>
                     <span
@@ -476,16 +486,25 @@ export const PlazaTab: React.FC = () => {
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => store.setShareRaidModalOpen(true)}
-                    className="px-2 py-0.5 rounded-lg bg-emerald-500 text-slate-950 font-black text-[10px] flex items-center gap-1 shadow"
-                  >
-                    <Share2 className="w-3 h-3" />
-                    <span>發討伐令</span>
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setMainSubTab('squad_builder')}
+                      className="px-2 py-0.5 rounded-lg bg-cyan-500/20 border border-cyan-400/60 text-cyan-300 font-black text-[10px] flex items-center gap-1 hover:bg-cyan-500/30 transition"
+                    >
+                      <Users className="w-3 h-3" />
+                      <span>編組隊伍</span>
+                    </button>
+                    <button
+                      onClick={() => store.setShareRaidModalOpen(true)}
+                      className="px-2 py-0.5 rounded-lg bg-emerald-500 text-slate-950 font-black text-[10px] flex items-center gap-1 shadow"
+                    >
+                      <Share2 className="w-3 h-3" />
+                      <span>發討伐令</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* 4-Slot Horizontal RPG Party Cards (Tap to urge or catch cheater!) */}
+                {/* 4-Slot Horizontal RPG Party Cards (Tap to urge, catch cheater, or recruit!) */}
                 <div className="grid grid-cols-4 gap-1.5">
                   {/* Slot 1: Me */}
                   <div
@@ -504,10 +523,10 @@ export const PlazaTab: React.FC = () => {
                         ? '🤥'
                         : '😴'}
                     </div>
-                    <div className="text-[10px] font-black text-white truncate w-full">
+                    <div className="text-[10px] font-black text-white break-words leading-tight w-full">
                       {store.nickname}
                     </div>
-                    <span className="mt-1 px-1.5 py-0.5 rounded bg-black/50 text-[9px] font-black text-emerald-300 w-full truncate">
+                    <span className="mt-1 px-1 py-0.5 rounded bg-black/50 text-[9px] font-black text-emerald-300 w-full leading-tight">
                       {store.todayWorkoutStatus === 'legit_rest'
                         ? '✅ 已充能'
                         : store.todayWorkoutStatus === 'cheated_fast'
@@ -516,8 +535,23 @@ export const PlazaTab: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Slots 2~4: Squad Teammates */}
-                  {store.squadMembers.map((member) => {
+                  {/* Slots 2~4: Squad Teammates or Empty Recruitment Slots */}
+                  {[0, 1, 2].map((slotIdx) => {
+                    const member = store.squadMembers[slotIdx];
+                    if (!member) {
+                      return (
+                        <button
+                          key={`empty_slot_${slotIdx}`}
+                          onClick={() => setMainSubTab('squad_builder')}
+                          className="p-1.5 rounded-xl border border-dashed border-cyan-400/50 bg-slate-900/50 hover:bg-cyan-950/40 text-center flex flex-col items-center justify-center gap-1 transition min-h-[72px]"
+                        >
+                          <UserPlus className="w-4 h-4 text-cyan-400" />
+                          <span className="text-[10px] font-black text-cyan-300 leading-tight">
+                            ＋ 招募隊友
+                          </span>
+                        </button>
+                      );
+                    }
                     const isShaking = shakingMemberId === member.id;
                     return (
                       <div
@@ -542,11 +576,15 @@ export const PlazaTab: React.FC = () => {
                               : '💤'}
                           </span>
                           <span className="text-[9px] font-black text-slate-300">
-                            {member.roleType === 'phy' ? '🥊' : '🪄'}
+                            {member.roleType === 'phy'
+                              ? '🥊'
+                              : member.roleType === 'mag'
+                              ? '🪄'
+                              : '🛡️'}
                           </span>
                         </div>
 
-                        <div className="text-[10px] font-black text-white truncate w-full">
+                        <div className="text-[10px] font-black text-white break-words leading-tight w-full">
                           {member.nameZh.split(' · ').pop()}
                         </div>
 
@@ -568,7 +606,7 @@ export const PlazaTab: React.FC = () => {
                             🔨 敲他{member.nudgedCount > 0 ? `(${member.nudgedCount})` : ''}
                           </button>
                         ) : (
-                          <span className="mt-1 px-1 py-0.5 rounded bg-black/50 text-[9px] font-black text-emerald-300 w-full truncate">
+                          <span className="mt-1 px-1 py-0.5 rounded bg-black/50 text-[9px] font-black text-emerald-300 w-full leading-tight">
                             ✅ +{member.damageDealt}
                           </span>
                         )}
@@ -693,6 +731,339 @@ export const PlazaTab: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* TAB 1.5: 🛡️ 組隊大廳 (Squad Formation, Name, Invite Code & Recruit) */}
+      {/* ================================================================= */}
+      {mainSubTab === 'squad_builder' && (
+        <div className="space-y-3">
+          {/* 1. SQUAD BANNER, NAME EDITOR & INVITE CODE */}
+          <div className="retro-box rounded-2xl p-3.5 space-y-3 border-2 border-cyan-500/40">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[10px] font-black">
+                  🛡️ 4人遠征戰隊編成大廳
+                </span>
+                <h2 className="text-sm font-black text-white mt-1 break-words">
+                  目前戰隊：{store.squadName}（{1 + store.squadMembers.length}/4 人）
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  setRaidMode('squad');
+                  setMainSubTab('raid');
+                }}
+                className="retro-btn px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black flex items-center gap-1"
+              >
+                <Swords className="w-3.5 h-3.5" />
+                <span>返回戰場開打</span>
+              </button>
+            </div>
+
+            {/* Edit Squad Name */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Edit3 className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={squadNameInput}
+                  onChange={(e) => setSquadNameInput(e.target.value)}
+                  placeholder="輸入戰隊名稱..."
+                  className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white outline-none focus:border-cyan-400"
+                />
+              </div>
+              <button
+                onClick={() => store.setSquadName(squadNameInput)}
+                className="px-3 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black shrink-0"
+              >
+                改隊名
+              </button>
+            </div>
+
+            {/* Invite Code & Join by Code */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-800">
+              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[10px] text-slate-400 font-bold">我的戰隊邀請碼</div>
+                  <div className="text-xs font-mono font-black text-amber-300">FIT-8842</div>
+                </div>
+                <button
+                  onClick={() => {
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(
+                        `🛡️ 邀請你加入我的 FitMon 遠征戰隊【${store.squadName}】！輸入邀請碼 FIT-8842 一起運動刷 Boss 神裝：https://yuchienw.github.io/Fitmon/`
+                      );
+                    }
+                    store.showToast('📲 已複製戰隊邀請碼 FIT-8842 與連結！快傳給好友組隊！');
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-[11px] font-black flex items-center gap-1 shrink-0"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>複製邀好友</span>
+                </button>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={inviteCodeInput}
+                  onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase())}
+                  placeholder="輸入好友邀請碼 (如 FIT-999)"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-mono text-white outline-none focus:border-emerald-400"
+                />
+                <button
+                  onClick={() => {
+                    if (!inviteCodeInput.trim()) {
+                      store.showToast('⚠️ 請先輸入好友的戰隊邀請碼！');
+                      return;
+                    }
+                    const nextCandidate =
+                      SQUAD_CANDIDATE_POOL.find(
+                        (c) => !store.squadMembers.some((m) => m.id === c.id)
+                      ) || SQUAD_CANDIDATE_POOL[3];
+                    store.recruitSquadMember(nextCandidate);
+                    setInviteCodeInput('');
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-[11px] font-black shrink-0"
+                >
+                  加入
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. CURRENT 4-SLOT SQUAD ROSTER */}
+          <div className="retro-box rounded-2xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs font-black text-white flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-emerald-400" />
+                當前出戰陣容（{1 + store.squadMembers.length}/4 人）
+              </span>
+              <span className="text-[11px] font-bold text-amber-300">
+                💡 建議搭配：物攻破甲 ＋ 魔攻破盾 ＋ 輔助掉寶
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {/* Slot 1: Player Leader */}
+              <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/50 flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 border border-emerald-400 flex items-center justify-center text-xl shrink-0">
+                    🦸
+                  </div>
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 text-[10px] font-black">
+                        隊長 · 你
+                      </span>
+                      <span className="text-xs font-black text-white break-words">
+                        {store.nickname}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 text-[10px] font-bold">
+                        🥊物攻 {myPhyAtk} / 🪄魔攻 {myMagAtk}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-emerald-300 font-bold break-words">
+                      {store.todayWorkoutStatus === 'legit_rest'
+                        ? '✅ 今日已完成真實運動與組間休息（100% 充能完畢）'
+                        : store.todayWorkoutStatus === 'cheated_fast'
+                        ? '🤥 今日疑似 3 秒快速打卡（傷害 -95% 刮痧懲罰中）'
+                        : '🔒 今日尚未完成運動打卡'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Slots 2~4: 3 Teammate Slots */}
+              {[0, 1, 2].map((slotIdx) => {
+                const member = store.squadMembers[slotIdx];
+                if (!member) {
+                  return (
+                    <div
+                      key={`builder_empty_${slotIdx}`}
+                      className="p-3.5 rounded-xl border-2 border-dashed border-cyan-500/40 bg-slate-900/50 flex items-center justify-between gap-2"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-950 border border-dashed border-cyan-400/50 flex items-center justify-center text-cyan-400">
+                          <UserPlus className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-cyan-300">
+                            隊友槽位 #{slotIdx + 2}（空缺中）
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            請從下方「戰友與傭兵招募大廳」點擊【＋招募入隊】補齊人數！
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={member.id}
+                    className={`p-3 rounded-xl border flex items-start justify-between gap-2.5 ${
+                      member.isSuspectedCheater
+                        ? 'bg-amber-950/30 border-amber-400/60'
+                        : member.hasWorkedOutToday
+                        ? 'bg-slate-900/90 border-slate-700'
+                        : 'bg-rose-950/25 border-rose-500/40'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center text-xl shrink-0 mt-0.5">
+                        {member.isSuspectedCheater
+                          ? '🤥'
+                          : member.hasWorkedOutToday
+                          ? '💪'
+                          : '💤'}
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-black text-white break-words">
+                            {member.nameZh}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[10px] font-black">
+                            {member.roleBadgeZh}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-amber-300">
+                            今日輸出 {member.damageDealt} HP
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-300 break-words">
+                          👕 裝備：{member.gearDescZh}
+                        </div>
+                        <div className="text-[11px] text-emerald-300 font-bold break-words">
+                          {member.workoutAuditZh}
+                        </div>
+                        {member.comboSkillAppliedZh && (
+                          <div className="text-[11px] text-cyan-300 font-bold break-words">
+                            {member.comboSkillAppliedZh}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => store.kickSquadMember(member.id)}
+                      className="px-2.5 py-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 text-[11px] font-black flex items-center gap-1 shrink-0 transition"
+                    >
+                      <UserMinus className="w-3.5 h-3.5" />
+                      <span>移出</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 3. RECRUITMENT HALL (FRIEND & GUILD CANDIDATES) */}
+          <div className="retro-box rounded-2xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <h3 className="text-xs font-black text-white flex items-center gap-1.5">
+                  <UserPlus className="w-4 h-4 text-cyan-400" />
+                  戰友與酒館招募大廳（點擊即可拉進隊伍）
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  可根據本關 Boss 弱點自由更換物攻手、魔攻手或掉寶輔助隊友！
+                </p>
+              </div>
+            </div>
+
+            {/* Role Filter */}
+            <div className="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              {(
+                [
+                  { id: 'all', label: '全部職業' },
+                  { id: 'phy', label: '🥊 物攻' },
+                  { id: 'mag', label: '🪄 魔攻' },
+                  { id: 'support', label: '🛡️ 輔助' },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setRecruitFilter(f.id)}
+                  className={`py-1.5 px-1 rounded-lg text-[11px] font-black transition ${
+                    recruitFilter === f.id
+                      ? 'bg-cyan-500 text-slate-950 shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              {SQUAD_CANDIDATE_POOL.filter(
+                (c) => recruitFilter === 'all' || c.roleType === recruitFilter
+              ).map((cand) => {
+                const inSquad = store.squadMembers.some((m) => m.id === cand.id);
+                return (
+                  <div
+                    key={cand.id}
+                    className={`p-3 rounded-xl border flex items-start justify-between gap-2.5 transition ${
+                      inSquad
+                        ? 'bg-emerald-950/25 border-emerald-500/50'
+                        : 'bg-slate-900/90 border-slate-800 hover:border-cyan-500/40'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center text-xl shrink-0 mt-0.5">
+                        {cand.roleType === 'phy'
+                          ? '🥊'
+                          : cand.roleType === 'mag'
+                          ? '🪄'
+                          : '🛡️'}
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-black text-white break-words">
+                            {cand.nameZh}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 text-[10px] font-black">
+                            {cand.roleBadgeZh}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-300 break-words">
+                          👕 {cand.gearDescZh}
+                        </div>
+                        <div className="text-[11px] text-emerald-300 font-bold break-words">
+                          {cand.workoutAuditZh}
+                        </div>
+                        {cand.comboSkillAppliedZh && (
+                          <div className="text-[11px] text-amber-300 font-bold break-words">
+                            {cand.comboSkillAppliedZh}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {inSquad ? (
+                      <button
+                        onClick={() => store.kickSquadMember(cand.id)}
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-emerald-300 border border-emerald-500/40 text-[11px] font-black shrink-0"
+                      >
+                        ✓ 已入隊
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => store.recruitSquadMember(cand)}
+                        className="retro-btn px-3 py-1.5 rounded-xl bg-cyan-400 text-slate-950 text-[11px] font-black flex items-center gap-1 shrink-0 shadow"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>{store.squadMembers.length >= 3 ? '替換入隊' : '＋招募'}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -991,15 +1362,15 @@ export const PlazaTab: React.FC = () => {
                         {friend.isVerified ? '👑' : '🏋️'}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-black text-white truncate">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-black text-white break-words">
                             {friend.nameZh}
                           </span>
                           {friend.isVerified && (
                             <BadgeCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400 truncate">
+                        <div className="text-[10px] text-slate-400 break-words">
                           {friend.titleZh} · 🔥 {friend.streakDays}天
                         </div>
                       </div>
@@ -1052,8 +1423,8 @@ export const PlazaTab: React.FC = () => {
                           🏋️
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-white truncate">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-black text-white break-words">
                               {post.authorName}
                             </span>
                             <span
@@ -1062,7 +1433,7 @@ export const PlazaTab: React.FC = () => {
                               {visBadge.label}
                             </span>
                           </div>
-                          <div className="text-[10px] text-emerald-400 font-bold truncate">
+                          <div className="text-[10px] text-emerald-400 font-bold break-words">
                             {post.workoutSummary}
                           </div>
                         </div>
@@ -1225,6 +1596,30 @@ export const PlazaTab: React.FC = () => {
                 </button>
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800">
+              <button
+                onClick={() => {
+                  const id = liveInspectedMember.id;
+                  setInspectedMember(null);
+                  store.kickSquadMember(id);
+                }}
+                className="py-2 px-2.5 rounded-xl bg-rose-950/70 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-black flex items-center justify-center gap-1"
+              >
+                <UserMinus className="w-3.5 h-3.5" />
+                <span>踢出隊伍</span>
+              </button>
+              <button
+                onClick={() => {
+                  setInspectedMember(null);
+                  setMainSubTab('squad_builder');
+                }}
+                className="py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 text-xs font-black flex items-center justify-center gap-1"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>去編隊換人</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1263,10 +1658,10 @@ export const PlazaTab: React.FC = () => {
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="text-2xl shrink-0">{b.hiddenLoot.emoji}</span>
                       <div className="min-w-0">
-                        <div className="text-xs font-black text-white truncate">
+                        <div className="text-xs font-black text-white break-words">
                           {b.hiddenLoot.nameZh}
                         </div>
-                        <div className="text-[10px] text-amber-300 font-bold">
+                        <div className="text-[10px] text-amber-300 font-bold break-words">
                           {b.hiddenLoot.statDescZh} · 出處：{b.nameZh}
                         </div>
                       </div>

@@ -37,6 +37,87 @@ export interface SquadMemberState {
   nudgedCount: number;
 }
 
+export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
+  {
+    id: 'friend_akai',
+    nameZh: '重訓狂人 · 阿凱',
+    roleType: 'phy',
+    roleBadgeZh: '🥊 物攻專精',
+    gearDescZh: '紅黑競技健力服 + 24K 奧林匹亞金槓',
+    hasWorkedOutToday: true,
+    workoutAuditZh: '✅ 胸背重訓 8組 · 組間計時完整 (38分鐘)',
+    isSuspectedCheater: false,
+    comboSkillAppliedZh: '🔨 連攜技【破甲重擊】：使下位隊友魔攻 ×2.0 倍',
+    damageDealt: 650,
+    nudgedCount: 0,
+  },
+  {
+    id: 'friend_alice',
+    nameZh: '有氧女神 · 小愛',
+    roleType: 'mag',
+    roleBadgeZh: '🪄 魔攻破盾',
+    gearDescZh: '綠光泵感寬T + 暗夜迷彩束口褲',
+    hasWorkedOutToday: false,
+    workoutAuditZh: '⚠️ 今日尚未運動打卡（可敲她提醒上線）',
+    isSuspectedCheater: false,
+    comboSkillAppliedZh: '🔥 連攜技【燃脂魔焰】：引爆破甲並融化高糖護盾',
+    damageDealt: 0,
+    nudgedCount: 0,
+  },
+  {
+    id: 'friend_leo',
+    nameZh: '街頭健體 · Leo',
+    roleType: 'phy',
+    roleBadgeZh: '🥊 力量型',
+    gearDescZh: '黑魂訓練吊嘎 + 鑄鐵 20kg 啞鈴',
+    hasWorkedOutToday: true,
+    workoutAuditZh: '🤥 耗時 5 秒狂按 6 組深蹲 (組間休息 0秒 · 疑似空氣健身)',
+    isSuspectedCheater: true,
+    comboSkillAppliedZh: '⚠️ 未通過組間休息驗證（無法觸發連攜技）',
+    damageDealt: 15,
+    nudgedCount: 0,
+  },
+  {
+    id: 'celeb_titan_chen',
+    nameZh: '健力金牌 · 陳巨石',
+    roleType: 'phy',
+    roleBadgeZh: '👑 泰坦物攻王',
+    gearDescZh: '斯巴達戰神披風 + 24K 奧林匹亞金槓',
+    hasWorkedOutToday: true,
+    workoutAuditZh: '✅ 大重量深蹲硬舉 10組 · 組間計時完整 (52分鐘)',
+    isSuspectedCheater: false,
+    comboSkillAppliedZh: '🔨 連攜技【泰坦破甲】：全隊物攻與破甲倍率大幅提升',
+    damageDealt: 920,
+    nudgedCount: 0,
+  },
+  {
+    id: 'celeb_aesthetic_lin',
+    nameZh: '古典健體 · 林健美',
+    roleType: 'mag',
+    roleBadgeZh: '✨ 魔攻暴擊手',
+    gearDescZh: '超賽亞金焰髮 + 賽博金邊壓縮褲',
+    hasWorkedOutToday: true,
+    workoutAuditZh: '✅ 肩臂超級組 + 飛輪燃脂 35分鐘 · 組間完整',
+    isSuspectedCheater: false,
+    comboSkillAppliedZh: '🔥 連攜技【燃脂魔焰】：對護盾型 Boss 造成 2.0 倍魔傷',
+    damageDealt: 780,
+    nudgedCount: 0,
+  },
+  {
+    id: 'friend_chloe',
+    nameZh: '核心瑜珈 · 小柔',
+    roleType: 'support',
+    roleBadgeZh: '🛡️ 輔助增益',
+    gearDescZh: '熱血赤紅頭帶 + 翡翠乳清搖搖杯',
+    hasWorkedOutToday: true,
+    workoutAuditZh: '✅ 核心棒式與徒手流瑜珈 6組 · 組間計時完整 (30分鐘)',
+    isSuspectedCheater: false,
+    comboSkillAppliedZh: '🌪️ 連攜技【聚氣暴擊】：全隊掉寶率 ×2 倍、弱點暴擊加成',
+    damageDealt: 540,
+    nudgedCount: 0,
+  },
+];
+
 export interface LoggedSet {
   id: string;
   exerciseId: string;
@@ -253,6 +334,7 @@ interface GameState {
   // Routine & Workout Focus Actions (V2-06, V2-14, V2-15)
   toggleFavoriteRoutine: (routineId: string) => void;
   saveCustomRoutine: (routine: WorkoutTemplate) => void;
+  deleteRoutine: (routineId: string) => void;
   copyOrReferenceRoutine: (routine: WorkoutTemplate) => void;
   startWorkoutFocus: (routine?: WorkoutTemplate) => void;
   swapActiveExercise: (oldExerciseId: string, newExerciseId: string) => void;
@@ -285,6 +367,9 @@ interface GameState {
   nudgeSquadMember: (memberId: string) => void;
   simulateFriendWorkoutJoin: (memberId: string) => void;
   reportCheatingMember: (memberId: string) => void;
+  setSquadName: (name: string) => void;
+  recruitSquadMember: (candidate: SquadMemberState) => void;
+  kickSquadMember: (memberId: string) => void;
   setTodayWorkoutStatus: (status: TodayWorkoutStatus) => void;
   setTodaySportType: (sport: AdventureSportSkillType) => void;
 
@@ -1189,6 +1274,17 @@ export const useGameStore = create<GameState>()(
           };
         });
         get().showToast(`📋 已儲存課表：${routine.nameZh}`);
+      },
+
+      deleteRoutine: (routineId) => {
+        const state = get();
+        const target = state.savedRoutines.find((r) => r.id === routineId);
+        if (!target) return;
+        soundFX.playBlip();
+        set({
+          savedRoutines: state.savedRoutines.filter((r) => r.id !== routineId),
+        });
+        state.showToast(`🗑️ 已刪除課表：${target.nameZh}`);
       },
 
       copyOrReferenceRoutine: (routine) => {
@@ -2103,6 +2199,46 @@ export const useGameStore = create<GameState>()(
         state.showToast(
           `🚨 抓包成功！已公開處刑【${target.nameZh}】的 5 秒空氣深蹲，沒收刮痧傷害並罰他重練！`
         );
+      },
+
+      setSquadName: (name) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        soundFX.playSetComplete();
+        set({ squadName: trimmed });
+        get().showToast(`🛡️ 戰隊名稱已更新為：${trimmed}`);
+      },
+
+      recruitSquadMember: (candidate) => {
+        const state = get();
+        if (state.squadMembers.some((m) => m.id === candidate.id)) {
+          state.showToast(`⚠️ 【${candidate.nameZh}】已經在你的戰隊中囉！`);
+          return;
+        }
+        soundFX.playSetComplete();
+        if (state.squadMembers.length >= 3) {
+          // Replace the last slot or any non-active slot automatically
+          const replaced = state.squadMembers[state.squadMembers.length - 1];
+          const nextMembers = [...state.squadMembers.slice(0, 2), { ...candidate }];
+          set({ squadMembers: nextMembers });
+          state.showToast(`🤝 已招募【${candidate.nameZh}】入隊（替換掉 ${replaced.nameZh}）！`);
+          return;
+        }
+        set({
+          squadMembers: [...state.squadMembers, { ...candidate }],
+        });
+        state.showToast(`🎉 成功招募【${candidate.nameZh}】加入戰隊！`);
+      },
+
+      kickSquadMember: (memberId) => {
+        const state = get();
+        const target = state.squadMembers.find((m) => m.id === memberId);
+        if (!target) return;
+        soundFX.playBlip();
+        set({
+          squadMembers: state.squadMembers.filter((m) => m.id !== memberId),
+        });
+        state.showToast(`🚪 已將【${target.nameZh}】移出戰隊，可從下方招募新戰友！`);
       },
 
       setTodayWorkoutStatus: (status) => {

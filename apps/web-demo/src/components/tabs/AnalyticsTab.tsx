@@ -870,8 +870,8 @@ export const AnalyticsTab: React.FC = () => {
                   >
                     <ExerciseThumbnail exercise={ex} size={36} />
                     <div className="min-w-0">
-                      <div className="text-[11px] font-bold text-slate-300 group-hover:text-cyan-300 truncate flex items-center gap-1">
-                        <span className="truncate">{ex.nameZh}</span>
+                      <div className="text-[11px] font-bold text-slate-300 group-hover:text-cyan-300 break-words leading-snug flex items-center gap-1 flex-wrap">
+                        <span>{ex.nameZh}</span>
                         <span className="text-[10px] text-cyan-400 shrink-0">📖</span>
                       </div>
                       <div className="text-sm font-black font-mono text-amber-300 mt-0.5">

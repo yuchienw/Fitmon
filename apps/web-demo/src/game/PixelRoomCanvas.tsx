@@ -160,7 +160,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
     <div className="relative rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-[#0d111a] shadow-2xl">
       {/* Top Floating Room Controls */}
       <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none gap-2">
-        <div className="bg-slate-950/85 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white shadow truncate">
+        <div className="bg-slate-950/85 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-bold text-white shadow break-words">
           {customOverride
             ? `🏠 ${customOverride.ownerName}${visitorAvatar ? ' · 同框串門' : ''}`
             : `💬 ${speechBubble}`}
