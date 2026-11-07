@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Coins, Camera, Share2, Sparkles, Check, Swords } from 'lucide-react';
+import { Trophy, Coins, Camera, Sparkles, Check, Swords } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 
 export const VictoryModal: React.FC = () => {
@@ -87,30 +87,16 @@ export const VictoryModal: React.FC = () => {
             <span>⚔️ 帶著 100% 充能去痛扁 Boss！</span>
           </button>
 
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => {
                 store.closeVictoryModal();
                 store.setMemeStudioOpen(true);
               }}
-              className="retro-btn py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1"
+              className="retro-btn py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5"
             >
-              <Camera className="w-3.5 h-3.5" />
-              <span>運動拍貼</span>
-            </button>
-
-            <button
-              onClick={() => {
-                store.closeVictoryModal();
-                store.publishPost(
-                  `剛剛完成了 ${data.topExerciseName} 共 ${data.setsCount} 組，總容量 ${data.calcResult.totalRawVolume} kg！🔥`,
-                  '🏆 NEW PR! 地心引力阻止不了我'
-                );
-              }}
-              className="retro-btn py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>發佈動態</span>
+              <Camera className="w-3.5 h-3.5 stroke-[2.5px]" />
+              <span>與我的娃合照分享</span>
             </button>
 
             <button

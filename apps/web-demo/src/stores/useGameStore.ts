@@ -355,6 +355,7 @@ interface GameState {
   tipPost: (postId: string) => void;
   giftWaterPost: (postId: string) => void;
   publishPost: (caption: string, stickerText?: string, customImageDataUrl?: string) => void;
+  completePhotoWithAvatarQuest: () => void;
   attackAdventureBoss: (mode: 'solo' | 'squad') => {
     damage: number;
     isCrit: boolean;
@@ -401,7 +402,7 @@ const INITIAL_QUESTS: DailyQuest[] = [
   },
   {
     id: 'q_social_cheer',
-    titleZh: '於社交動態打賞或送水 1 次',
+    titleZh: '出拳討伐 Boss 或督促戰隊隊友 1 次',
     rewardCoins: ECONOMY_CONFIG.dailyTipQuestCoins,
     progress: 0,
     target: 1,
@@ -410,12 +411,12 @@ const INITIAL_QUESTS: DailyQuest[] = [
   },
   {
     id: 'q_create_meme',
-    titleZh: '製作或發布一張運動拍貼',
+    titleZh: '拍攝或合成 1 張「與我的娃合照」',
     rewardCoins: ECONOMY_CONFIG.dailyMemeQuestCoins,
     progress: 0,
     target: 1,
     claimed: false,
-    targetTab: 'plaza',
+    targetTab: 'home',
   },
 ];
 
@@ -1884,7 +1885,17 @@ export const useGameStore = create<GameState>()(
             q.id === 'q_create_meme' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
           ),
         });
-        state.showToast('📸 已發布至戰隊動態！');
+        state.showToast('📸 已完成合照合成！');
+      },
+
+      completePhotoWithAvatarQuest: () => {
+        const state = get();
+        soundFX.playSetComplete();
+        set({
+          quests: state.quests.map((q) =>
+            q.id === 'q_create_meme' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
+          ),
+        });
       },
 
       attackAdventureBoss: (mode) => {
@@ -2145,6 +2156,9 @@ export const useGameStore = create<GameState>()(
         set({
           squadMembers: state.squadMembers.map((m) =>
             m.id === memberId ? { ...m, nudgedCount: m.nudgedCount + 1 } : m
+          ),
+          quests: state.quests.map((q) =>
+            q.id === 'q_social_cheer' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
           ),
         });
         state.showToast(`🔔 哐噹！已拿 20kg 啞鈴敲了【${target.nameZh}】提醒他快去運動破盾！`);

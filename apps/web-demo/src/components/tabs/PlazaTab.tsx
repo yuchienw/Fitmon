@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Coins,
-  Droplets,
-  BadgeCheck,
-  Home,
-  Globe,
   Users,
-  UserCheck,
-  Contact,
   ShieldAlert,
   Check,
   Swords,
@@ -28,6 +22,7 @@ import {
   UserPlus,
   UserMinus,
   Edit3,
+  Camera,
 } from 'lucide-react';
 import {
   useGameStore,
@@ -39,23 +34,18 @@ import {
 import {
   ADVENTURE_BOSS_CATALOG,
   AVATAR_ITEMS,
-  FRIEND_PROFILES,
 } from '../../config/catalogConfig';
-import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 
-type AdventureMainSubTab = 'raid' | 'squad_builder' | 'ladder' | 'social';
+type AdventureMainSubTab = 'raid' | 'squad_builder' | 'ladder';
 type RaidMode = 'solo' | 'squad';
 type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
-type SocialSubFilter = 'all_public' | 'friends_feed' | 'my_posts' | 'friends_directory';
 
 export const PlazaTab: React.FC = () => {
   const store = useGameStore();
   const [mainSubTab, setMainSubTab] = useState<AdventureMainSubTab>('raid');
   const [raidMode, setRaidMode] = useState<RaidMode>('squad');
   const [ladderCat, setLadderCat] = useState<LadderCategory>('solo_stage');
-  const [socialFilter, setSocialFilter] = useState<SocialSubFilter>('all_public');
-  const [visitingPostId, setVisitingPostId] = useState<string | null>(null);
 
   // Squad Builder state
   const [squadNameInput, setSquadNameInput] = useState(store.squadName);
@@ -167,34 +157,6 @@ export const PlazaTab: React.FC = () => {
     setTimeout(() => setShakingMemberId(null), 600);
   };
 
-  const filteredPosts = store.posts.filter((post) => {
-    const isAuthorFriend = store.friendIds.includes(post.authorId);
-    if (socialFilter === 'all_public') return true;
-    if (socialFilter === 'friends_feed') return post.visibility === 'friends' || isAuthorFriend;
-    if (socialFilter === 'my_posts')
-      return post.visibility === 'mine' || post.authorId === 'me_player' || post.authorId === 'me';
-    return true;
-  });
-
-  const getVisibilityBadge = (vis: 'public' | 'friends' | 'mine', isFriendAuthor: boolean) => {
-    if (vis === 'mine') {
-      return {
-        label: '我的',
-        cls: 'bg-amber-500/20 border-amber-400/50 text-amber-300',
-      };
-    }
-    if (vis === 'friends' || isFriendAuthor) {
-      return {
-        label: '好友',
-        cls: 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300',
-      };
-    }
-    return {
-      label: '公開',
-      cls: 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300',
-    };
-  };
-
   // Sync inspectedMember with latest store state
   const liveInspectedMember = inspectedMember
     ? store.squadMembers.find((m) => m.id === inspectedMember.id) || null
@@ -202,7 +164,7 @@ export const PlazaTab: React.FC = () => {
 
   return (
     <div className="p-3 space-y-2.5 pb-10 relative">
-      {/* 1. COMPACT GAME HUD TOP BAR: 4 VIEW PILLS + LOOT BAG + DEV CHEAT BUTTON */}
+      {/* 1. COMPACT GAME HUD TOP BAR: 3 RPG VIEW PILLS + PHOTO + LOOT BAG + DEV CHEAT BUTTON */}
       <div className="flex items-center justify-between gap-1.5 flex-wrap">
         <div
           role="tablist"
@@ -218,7 +180,6 @@ export const PlazaTab: React.FC = () => {
                 icon: Users,
               },
               { id: 'ladder', label: '天梯', icon: Trophy },
-              { id: 'social', label: '動態', icon: Globe },
             ] as const
           ).map((tab) => {
             const TabIcon = tab.icon;
@@ -244,6 +205,15 @@ export const PlazaTab: React.FC = () => {
 
         <div className="flex items-center gap-1.5">
           <button
+            onClick={() => store.setMemeStudioOpen(true)}
+            title="與我的娃合照分享"
+            className="px-2 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-[11px] font-black text-emerald-300 flex items-center gap-1 active:scale-95 transition"
+          >
+            <Camera className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>合照</span>
+          </button>
+
+          <button
             onClick={() => setLootBagOpen(true)}
             title="查看掉落寶物袋"
             className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-amber-500/40 text-[11px] font-black text-amber-300 flex items-center gap-1"
@@ -255,7 +225,7 @@ export const PlazaTab: React.FC = () => {
 
           <button
             onClick={() => setDevCheatOpen((v) => !v)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 active:scale-95 transition"
+            className="px-2 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 active:scale-95 transition"
           >
             <Wrench className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             <span>外掛</span>
@@ -1322,202 +1292,6 @@ export const PlazaTab: React.FC = () => {
                   </div>
                 ))}
           </div>
-        </div>
-      )}
-
-      {/* ================================================================= */}
-      {/* TAB 3: 💬 戰友動態 (Friends Directory & Meme Posts Feed)          */}
-      {/* ================================================================= */}
-      {mainSubTab === 'social' && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
-            {(
-              [
-                { id: 'all_public', label: '公開', icon: Globe },
-                { id: 'friends_feed', label: '好友', icon: Users },
-                { id: 'my_posts', label: '我的', icon: UserCheck },
-                { id: 'friends_directory', label: '找戰友', icon: Contact },
-              ] as const
-            ).map((t) => {
-              const Icon = t.icon;
-              const active = socialFilter === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setSocialFilter(t.id)}
-                  className={`py-1.5 px-1 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition ${
-                    active
-                      ? 'bg-cyan-500 text-slate-950 shadow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {socialFilter === 'friends_directory' ? (
-            <div className="space-y-2.5">
-              {FRIEND_PROFILES.map((friend) => {
-                const isFriend = store.friendIds.includes(friend.id);
-                return (
-                  <div
-                    key={friend.id}
-                    className="retro-box rounded-2xl p-3 flex items-center justify-between gap-2.5"
-                  >
-                    <div
-                      onClick={() => store.setSelectedProfileId(friend.id)}
-                      className="flex items-center gap-3 min-w-0 cursor-pointer flex-1"
-                    >
-                      <div className="w-11 h-11 rounded-xl bg-slate-950 border border-slate-700 flex items-center justify-center text-lg shrink-0">
-                        {friend.isVerified ? '👑' : '🏋️'}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-black text-white break-words">
-                            {friend.nameZh}
-                          </span>
-                          {friend.isVerified && (
-                            <BadgeCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                          )}
-                        </div>
-                        <div className="text-[10px] text-slate-400 break-words">
-                          {friend.titleZh} · 🔥 {friend.streakDays}天
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => store.toggleFriend(friend.id)}
-                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 shrink-0 transition ${
-                        isFriend
-                          ? 'bg-slate-800 text-emerald-400 border border-emerald-500/40'
-                          : 'bg-emerald-500 text-slate-950 shadow'
-                      }`}
-                    >
-                      {isFriend ? (
-                        <>
-                          <Check className="w-3 h-3" />
-                          <span>戰友</span>
-                        </>
-                      ) : (
-                        <span>＋加戰友</span>
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredPosts.map((post) => {
-                const linkedFriend = FRIEND_PROFILES.find(
-                  (f) => f.id === post.authorId || f.nameZh === post.authorName
-                );
-                const isAuthorFriend = linkedFriend
-                  ? store.friendIds.includes(linkedFriend.id)
-                  : false;
-                const isMe = post.authorId === 'me_player' || post.authorId === 'me';
-                const visBadge = getVisibilityBadge(post.visibility, isAuthorFriend);
-                const isVisiting = visitingPostId === post.id;
-
-                return (
-                  <div key={post.id} className="retro-box rounded-2xl p-3.5 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div
-                        onClick={() => {
-                          if (linkedFriend) store.setSelectedProfileId(linkedFriend.id);
-                        }}
-                        className="flex items-center gap-2.5 min-w-0 cursor-pointer"
-                      >
-                        <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center text-sm shrink-0">
-                          🏋️
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-black text-white break-words">
-                              {post.authorName}
-                            </span>
-                            <span
-                              className={`px-1.5 py-0.2 rounded text-[9px] font-black border ${visBadge.cls}`}
-                            >
-                              {visBadge.label}
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-emerald-400 font-bold break-words">
-                            {post.workoutSummary}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        {!isMe && linkedFriend && (
-                          <button
-                            onClick={() => store.toggleFriend(linkedFriend.id)}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-black border transition ${
-                              isAuthorFriend
-                                ? 'bg-slate-900 border-slate-700 text-emerald-400'
-                                : 'bg-emerald-500 border-emerald-400 text-slate-950'
-                            }`}
-                          >
-                            {isAuthorFriend ? '✓ 戰友' : '＋ 加戰友'}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setVisitingPostId(isVisiting ? null : post.id)}
-                          className="px-2 py-1 rounded-lg text-[10px] font-black bg-slate-900 text-cyan-300 border border-slate-700"
-                        >
-                          <Home className="w-3 h-3 inline mr-0.5" />
-                          {isVisiting ? '收起' : '串門'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {isVisiting && (
-                      <div className="rounded-xl overflow-hidden border border-cyan-500/40">
-                        <PixelRoomCanvas
-                          isActive={true}
-                          customOverride={{
-                            ownerName: post.authorName,
-                            bodyStage: post.bodyStage,
-                            equipped: post.equipped,
-                            room: post.room,
-                          }}
-                          visitorAvatar={{
-                            nickname: store.nickname,
-                            bodyStage: store.bodyStage,
-                            equipped: store.equipped,
-                          }}
-                          compact
-                        />
-                      </div>
-                    )}
-
-                    <p className="text-xs text-slate-200 leading-relaxed">{post.caption}</p>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button
-                        onClick={() => store.tipPost(post.id)}
-                        className="py-1.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-black text-amber-300 flex items-center justify-center gap-1"
-                      >
-                        <Coins className="w-3.5 h-3.5" />
-                        <span>打賞 ({post.tipsCount})</span>
-                      </button>
-                      <button
-                        onClick={() => store.giftWaterPost(post.id)}
-                        className="py-1.5 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-black text-cyan-300 flex items-center justify-center gap-1"
-                      >
-                        <Droplets className="w-3.5 h-3.5" />
-                        <span>送水 ({post.waterCount})</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 

@@ -167,11 +167,11 @@ export const HomeTab: React.FC = () => {
 
         <button
           onClick={() => store.setMemeStudioOpen(true)}
-          title="拍貼工坊"
+          title="與我的娃合照（照片合成）"
           className="col-span-2 retro-btn py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-[11px] flex flex-col items-center justify-center gap-1"
         >
           <Camera className="w-4 h-4 text-amber-400" aria-hidden="true" />
-          <span>拍貼</span>
+          <span>合照</span>
         </button>
       </div>
 

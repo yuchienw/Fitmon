@@ -1,33 +1,61 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Download, Share2, Upload, Sparkles, Move, Smile, Activity } from 'lucide-react';
+import {
+  X,
+  Download,
+  Share2,
+  Camera,
+  Move,
+  FlipHorizontal2,
+  RotateCcw,
+  ZoomIn,
+  Stamp,
+  User,
+  Dumbbell,
+  Flame,
+  Sparkles,
+  Footprints,
+} from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
-import { MEME_STICKERS } from '../../config/catalogConfig';
-import { drawPixelGymScene } from '../../game/pixelSpriteDrawer';
+import { drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
 import { BRAND_CONFIG } from '../../config/economyConfig';
 
-type PoseOption = 'CURL' | 'SQUAT' | 'CHEER' | 'WALK' | 'IDLE';
-type ExpressionOption = 'smile' | 'strain' | 'cool' | 'cry';
+type PoseOption = 'IDLE' | 'SQUAT' | 'CURL' | 'CHEER' | 'WALK';
+type ExpressionOption = 'smile' | 'strain' | 'cool';
 
 export const MemeStudioModal: React.FC = () => {
   const store = useGameStore();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const [aspectRatio, setAspectRatio] = useState<'9:16' | '1:1'>('1:1');
-  const [selectedSticker, setSelectedSticker] = useState<string>(MEME_STICKERS[0].text);
-  const [caption, setCaption] = useState<string>('今日份鋼鐵修煉完成！再一組就回家！💪');
-  const [uploadedBgUrl, setUploadedBgUrl] = useState<string | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<'1:1' | '9:16'>('1:1');
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+  const [loadedPhotoImg, setLoadedPhotoImg] = useState<HTMLImageElement | null>(null);
 
-  // V2-03: Pose & Expression Selectors
-  const [selectedPose, setSelectedPose] = useState<PoseOption>('CURL');
+  // Avatar placement & pose controls (normalized 0..1 coordinates on canvas)
+  const [avatarNormPos, setAvatarNormPos] = useState<{ x: number; y: number }>({
+    x: 0.72,
+    y: 0.76,
+  });
+  const [avatarScale, setAvatarScale] = useState<number>(1.35);
+  const [facingRight, setFacingRight] = useState<boolean>(false);
+  const [selectedPose, setSelectedPose] = useState<PoseOption>('CHEER');
   const [selectedExpression, setSelectedExpression] = useState<ExpressionOption>('smile');
-
-  // V2-03: Interactive Draggable Sticker & Character Coordinates
-  const [stickerPos, setStickerPos] = useState<{ x: number; y: number }>({ x: 32, y: 268 });
-  const [avatarScenePos, setAvatarScenePos] = useState<{ x: number; y: number }>({ x: 96, y: 78 });
-  const [dragTarget, setDragTarget] = useState<'sticker' | 'avatar' | null>(null);
+  const [showWatermark, setShowWatermark] = useState<boolean>(true);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const latestHist = store.workoutHistory[0];
 
+  // Preload uploaded photo into an HTMLImageElement
+  useEffect(() => {
+    if (!uploadedPhotoUrl) {
+      setLoadedPhotoImg(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => setLoadedPhotoImg(img);
+    img.src = uploadedPhotoUrl;
+  }, [uploadedPhotoUrl]);
+
+  // Render composite canvas (Real Photo + Transparent Chibi Avatar + Optional Watermark)
   useEffect(() => {
     if (!store.memeStudioOpen) return;
     const canvas = canvasRef.current;
@@ -35,182 +63,175 @@ export const MemeStudioModal: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const W = 480;
-    const H = aspectRatio === '9:16' ? 680 : 480;
+    const W = 720;
+    const H = aspectRatio === '9:16' ? 1080 : 720;
     canvas.width = W;
     canvas.height = H;
 
-    const renderCard = (bgImg?: HTMLImageElement) => {
-      // 1. Background
-      ctx.fillStyle = '#0b0d13';
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // 1. Draw Real Photo (center-cropped cover) OR Realistic Gym Mirror Preview Backdrop
+    if (loadedPhotoImg) {
+      const imgRatio = loadedPhotoImg.width / loadedPhotoImg.height;
+      const canvasRatio = W / H;
+      let drawW = W;
+      let drawH = H;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (imgRatio > canvasRatio) {
+        drawH = H;
+        drawW = H * imgRatio;
+        offsetX = (W - drawW) / 2;
+      } else {
+        drawW = W;
+        drawH = W / imgRatio;
+        offsetY = (H - drawH) / 2;
+      }
+      ctx.drawImage(loadedPhotoImg, offsetX, offsetY, drawW, drawH);
+    } else {
+      // Realistic dark gym mirror studio backdrop so user sees how their transparent avatar composites
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#1e293b');
+      grad.addColorStop(0.62, '#0f172a');
+      grad.addColorStop(0.63, '#1e1b18');
+      grad.addColorStop(1, '#141210');
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
 
-      // Draw offscreen 960x600 HD MapleStory Chibi scene with custom Pose, Expression & Position
-      const off = document.createElement('canvas');
-      off.width = 960;
-      off.height = 600;
-      const offCtx = off.getContext('2d');
-      if (offCtx) {
-        offCtx.imageSmoothingEnabled = true;
-        offCtx.imageSmoothingQuality = 'high';
-        drawPixelGymScene(offCtx, {
-          bodyStage: store.bodyStage,
-          equipped: store.equipped,
-          room: store.room,
-          isNight: store.isNightModeRoom,
-          frameTick: 12,
-          avatarX: avatarScenePos.x,
-          avatarY: avatarScenePos.y,
-          avatarState: selectedPose,
-          expressionOverride: selectedExpression,
-          facingRight: true,
-          petHearts: [{ x: avatarScenePos.x + 52, y: avatarScenePos.y + 8, alpha: 1 }],
-        });
-      }
+      // Subtle gym mirror reflection & rack silhouette
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(48, 48, W - 96, H * 0.56);
 
-      const sceneY = 54;
-      const sceneH = aspectRatio === '9:16' ? 360 : 265;
+      // Diagonal mirror sheen
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.beginPath();
+      ctx.moveTo(90, 48);
+      ctx.lineTo(220, 48);
+      ctx.lineTo(90, H * 0.6);
+      ctx.closePath();
+      ctx.fill();
 
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      if (bgImg) {
-        ctx.drawImage(bgImg, 20, sceneY, W - 40, sceneH);
-        ctx.drawImage(off, 28, sceneY + sceneH - 110, 160, 100);
-      } else {
-        ctx.drawImage(off, 20, sceneY, W - 40, sceneH);
-      }
-
-      // Frame border
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(20, sceneY, W - 40, sceneH);
-
-      // 2. Top Header Stamp
-      ctx.fillStyle = '#10b981';
-      ctx.font = 'bold 15px "JetBrains Mono", monospace';
-      ctx.fillText(`⚡ ${BRAND_CONFIG.appName} WORKOUT VERIFIED`, 20, 34);
-
-      ctx.fillStyle = '#f59e0b';
-      ctx.font = 'bold 14px "JetBrains Mono", monospace';
-      ctx.fillText(`🔥 STREAK ${store.streakDays} DAYS`, W - 175, 34);
-
-      // 3. Freely Draggable Sticker Badge (V2-03)
-      ctx.font = 'bold 16px "Noto Sans TC", sans-serif';
-      const textMetrics = ctx.measureText(selectedSticker);
-      const badgeW = Math.min(W - 40, Math.max(180, textMetrics.width + 32));
-      const badgeH = 40;
-      const clampedX = Math.max(20, Math.min(W - badgeW - 20, stickerPos.x));
-      const clampedY = Math.max(54, Math.min(H - 125, stickerPos.y));
-
-      ctx.fillStyle = 'rgba(30, 27, 75, 0.92)';
-      ctx.fillRect(clampedX, clampedY, badgeW, badgeH);
-      ctx.strokeStyle = '#f43f5e';
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(clampedX, clampedY, badgeW, badgeH);
-
-      // Corner drag handle indicator
-      ctx.fillStyle = '#f43f5e';
-      ctx.fillRect(clampedX - 3, clampedY - 3, 6, 6);
-      ctx.fillRect(clampedX + badgeW - 3, clampedY + badgeH - 3, 6, 6);
-
-      ctx.fillStyle = '#fda4af';
-      ctx.fillText(selectedSticker, clampedX + 14, clampedY + 26);
-
-      // 4. Workout Stats Block at Bottom
-      const statsY = sceneY + sceneH + 28;
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 16px "Noto Sans TC", sans-serif';
-      const summaryText = latestHist
-        ? `🏋️ 今日課表：${latestHist.routineName} (${latestHist.totalSets} 組 · ${latestHist.totalVolume} kg)`
-        : `🏋️ 玩家：${store.nickname} (Lv.${store.level})`;
-      ctx.fillText(summaryText.slice(0, 30), 20, statsY);
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '14px "Noto Sans TC", sans-serif';
-      ctx.fillText(caption.slice(0, 34), 20, statsY + 28);
-
-      // 5. Bottom-Right Brand Watermark
-      ctx.fillStyle = '#10b981';
-      ctx.font = 'bold 12px "JetBrains Mono", monospace';
-      ctx.fillText(`👾 ${BRAND_CONFIG.appName} · 像素健身養成社群`, W - 235, H - 14);
-    };
-
-    if (uploadedBgUrl) {
-      const img = new Image();
-      img.onload = () => renderCard(img);
-      img.src = uploadedBgUrl;
-    } else {
-      renderCard();
+      // Subtle prompt in center-left when no user photo is uploaded yet
+      ctx.fillStyle = 'rgba(248, 250, 252, 0.45)';
+      ctx.font = 'bold 22px "Noto Sans TC", sans-serif';
+      ctx.fillText('點擊上方「選取照片 / 拍照」', 64, H * 0.32);
+      ctx.font = 'bold 18px "Noto Sans TC", sans-serif';
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+      ctx.fillText('讓你的紙娃娃直接融入真實合照！', 64, H * 0.32 + 34);
     }
+
+    // 2. Draw Transparent-Background 2D Chibi Avatar at user-chosen position & scale
+    const targetX = avatarNormPos.x * W;
+    const targetY = avatarNormPos.y * H;
+
+    // Draw realistic soft contact shadow on the photo beneath the avatar's feet
+    ctx.save();
+    ctx.translate(targetX, targetY);
+    const shadowRx = 46 * avatarScale;
+    const shadowRy = 13 * avatarScale;
+    const shadowGrad = ctx.createRadialGradient(0, 4, 2, 0, 4, shadowRx);
+    shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.48)');
+    shadowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = shadowGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, 4, shadowRx, shadowRy, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Render Avatar onto an offscreen canvas then scale crisply onto the photo
+    // In drawMapleChibiAvatar, pivot (centerX = x + 28, baseY = y + 60) is the feet center.
+    ctx.save();
+    ctx.translate(targetX, targetY);
+    const finalScale = 2.8 * avatarScale;
+    ctx.scale(finalScale, finalScale);
+    drawMapleChibiAvatar(ctx, {
+      x: -28,
+      y: -60,
+      bodyStage: store.bodyStage,
+      equipped: store.equipped,
+      state: selectedPose,
+      expressionOverride: selectedExpression,
+      facingRight,
+      frameTick: selectedPose === 'CURL' ? 18 : 10,
+    });
+    ctx.restore();
+
+    // 3. Optional Minimalist Corner Watermark (Only drawn when showWatermark === true)
+    if (showWatermark) {
+      const pad = 24;
+      const pillH = 54;
+      const summaryLabel = latestHist
+        ? `${BRAND_CONFIG.appName} · Lv.${store.level} ${store.nickname} · ${latestHist.totalVolume.toLocaleString()}kg`
+        : `${BRAND_CONFIG.appName} · Lv.${store.level} ${store.nickname} · 🔥 ${store.streakDays}天`;
+
+      ctx.font = 'bold 20px "Barlow Condensed", "Noto Sans TC", sans-serif';
+      const textW = ctx.measureText(summaryLabel).width;
+      const pillW = Math.min(W - pad * 2, textW + 44);
+      const pillX = W - pillW - pad;
+      const pillY = H - pillH - pad;
+
+      // Frosted dark pill
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.76)';
+      ctx.beginPath();
+      ctx.roundRect(pillX, pillY, pillW, pillH, 16);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(52, 211, 153, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(summaryLabel, pillX + 22, pillY + pillH / 2 + 1);
+    }
+
+    ctx.restore();
   }, [
     store.memeStudioOpen,
     aspectRatio,
-    selectedSticker,
-    caption,
-    uploadedBgUrl,
+    loadedPhotoImg,
+    avatarNormPos,
+    avatarScale,
+    facingRight,
     selectedPose,
     selectedExpression,
-    stickerPos,
-    avatarScenePos,
+    showWatermark,
     store.bodyStage,
     store.equipped,
-    store.room,
-    store.isNightModeRoom,
-    store.streakDays,
-    store.nickname,
     store.level,
+    store.nickname,
+    store.streakDays,
     latestHist,
   ]);
 
   if (!store.memeStudioOpen) return null;
 
-  // Pointer drag handlers for moving the Sticker or Character directly on Canvas
-  const getCanvasCoords = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const updateAvatarPosFromPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
+    if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    };
+    const normX = Math.max(0.12, Math.min(0.88, (e.clientX - rect.left) / rect.width));
+    const normY = Math.max(0.22, Math.min(0.93, (e.clientY - rect.top) / rect.height));
+    setAvatarNormPos({ x: normX, y: normY });
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const pt = getCanvasCoords(e);
-    // Check if pointer is inside or near the sticker box
-    if (
-      pt.x >= stickerPos.x - 20 &&
-      pt.x <= stickerPos.x + 340 &&
-      pt.y >= stickerPos.y - 15 &&
-      pt.y <= stickerPos.y + 55
-    ) {
-      setDragTarget('sticker');
-    } else {
-      setDragTarget('avatar');
-    }
+    setIsDragging(true);
+    updateAvatarPosFromPointer(e);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!dragTarget) return;
-    const pt = getCanvasCoords(e);
-    if (dragTarget === 'sticker') {
-      setStickerPos({
-        x: Math.round(pt.x - 100),
-        y: Math.round(pt.y - 20),
-      });
-    } else if (dragTarget === 'avatar') {
-      // Map canvas coordinates into 240x150 pixel scene coordinates
-      const mappedX = Math.max(24, Math.min(180, Math.round((pt.x - 20) / 2) - 16));
-      const mappedY = Math.max(52, Math.min(96, Math.round((pt.y - 54) / 2) - 24));
-      setAvatarScenePos({ x: mappedX, y: mappedY });
-    }
+    if (!isDragging) return;
+    updateAvatarPosFromPointer(e);
   };
 
   const handlePointerUp = () => {
-    setDragTarget(null);
+    setIsDragging(false);
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,121 +240,221 @@ export const MemeStudioModal: React.FC = () => {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        setUploadedBgUrl(reader.result);
+        setUploadedPhotoUrl(reader.result);
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleDownloadPng = () => {
+  const handleDownloadPhoto = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/png');
     const link = document.createElement('a');
-    link.download = `fitmon-meme-${Date.now()}.png`;
+    link.download = `fitmon-photo-${Date.now()}.png`;
     link.href = dataUrl;
     link.click();
-    store.showToast('💾 已下載高清拍貼 PNG！（可分享至 IG 限動 / Threads）');
+    store.completePhotoWithAvatarQuest();
+    store.showToast('💾 已儲存高清合照至裝置相簿！');
   };
 
-  const handlePublishToPlaza = () => {
+  const handleExternalShare = async () => {
     const canvas = canvasRef.current;
-    const dataUrl = canvas ? canvas.toDataURL('image/png') : undefined;
-    store.publishPost(caption, selectedSticker, dataUrl);
+    if (!canvas) return;
+    store.completePhotoWithAvatarQuest();
+
+    try {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/png')
+      );
+      if (blob && typeof navigator !== 'undefined' && navigator.share) {
+        const file = new File([blob], `fitmon-avatar-photo.png`, { type: 'image/png' });
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `${BRAND_CONFIG.appName} 與我的娃合照`,
+            files: [file],
+          });
+          store.showToast('📲 已開啟系統站外分享選單！');
+          return;
+        }
+      }
+    } catch {
+      // User cancelled share sheet or browser does not support file sharing; fall back cleanly
+    }
+
+    handleDownloadPhoto();
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 overflow-y-auto">
       <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3 border-2 border-slate-700 max-h-[94vh] overflow-y-auto">
-        {/* Header */}
+        {/* 1. Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <h3 className="text-sm font-black text-white">拍貼工坊</h3>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <Camera className="w-4 h-4 text-amber-400" aria-hidden="true" />
+              <h3 className="text-sm font-black text-white">與我的娃合照（實景合成）</h3>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              拍下或選取照片，直接拖曳你的紙娃娃一起同框合照！
+            </p>
           </div>
           <button
             onClick={() => store.setMemeStudioOpen(false)}
+            aria-label="關閉合照視窗"
             className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Aspect Ratio & Local Photo Upload */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
+        {/* 2. Top Bar: Photo Upload + Aspect Ratio + Watermark Toggle */}
+        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+          <label className="retro-btn px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black cursor-pointer flex items-center gap-1.5 shadow">
+            <Camera className="w-3.5 h-3.5 stroke-[2.5px]" aria-hidden="true" />
+            <span>{uploadedPhotoUrl ? '更換照片 / 重拍' : '選取照片 / 拍照'}</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
+          </label>
+
+          <div className="flex items-center gap-1">
             {(['1:1', '9:16'] as const).map((ratio) => (
               <button
                 key={ratio}
                 onClick={() => setAspectRatio(ratio)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${
+                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-black border transition ${
                   aspectRatio === ratio
                     ? 'bg-emerald-500 text-slate-950 border-emerald-400'
                     : 'bg-slate-900 text-slate-300 border-slate-700'
                 }`}
               >
-                {ratio === '9:16' ? '📱 9:16 限動' : '🟦 1:1 貼文'}
+                {ratio === '9:16' ? '9:16 限動' : '1:1 方圖'}
               </button>
             ))}
-          </div>
 
-          <label className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-600 text-xs font-bold cursor-pointer flex items-center gap-1">
-            <Upload className="w-3.5 h-3.5" />
-            <span>{uploadedBgUrl ? '更換自拍照' : '疊加本機自拍'}</span>
-            <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-          </label>
+            <button
+              onClick={() => setShowWatermark((v) => !v)}
+              aria-pressed={showWatermark}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-black border flex items-center gap-1 transition ${
+                showWatermark
+                  ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                  : 'bg-slate-900 border-slate-700 text-slate-400'
+              }`}
+            >
+              <Stamp className="w-3 h-3" aria-hidden="true" />
+              <span>{showWatermark ? '浮水印 ON' : '無浮水印'}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Interactive Draggable Canvas Stage */}
-        <div className="bg-slate-950 rounded-xl p-2 border border-slate-800 flex flex-col items-center gap-1.5">
-          <div className="w-full flex items-center justify-between text-[10px] text-cyan-300 px-1">
+        {/* 3. Interactive Composite Canvas Stage */}
+        <div className="game-stage-dark bg-slate-950 rounded-2xl p-2 border border-slate-800 flex flex-col items-center gap-1.5">
+          <div className="w-full flex items-center justify-between text-[11px] text-cyan-300 px-1">
             <span className="flex items-center gap-1 font-bold">
-              <Move className="w-3 h-3" />
-              直接在畫布上拖曳「貼圖框」或「角色位置」！
+              <Move className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>直接用手指在照片上拖曳紙娃娃的位置</span>
             </span>
             <button
               onClick={() => {
-                setStickerPos({ x: 32, y: 268 });
-                setAvatarScenePos({ x: 96, y: 78 });
+                setAvatarNormPos({ x: 0.72, y: 0.76 });
+                setAvatarScale(1.35);
+                setFacingRight(false);
               }}
-              className="text-slate-400 hover:text-white underline"
+              className="text-slate-400 hover:text-white flex items-center gap-0.5 text-[10px] font-bold"
             >
-              重置位置
+              <RotateCcw className="w-3 h-3" aria-hidden="true" />
+              <span>重置位置</span>
             </button>
           </div>
+
           <canvas
             ref={canvasRef}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            className="max-h-60 w-auto rounded-lg border border-slate-700 shadow-lg cursor-grab active:cursor-grabbing touch-none"
+            className="w-full max-w-[330px] rounded-xl border border-slate-700 shadow-lg touch-none cursor-move"
           />
         </div>
 
-        {/* V2-03: Expression & Action Pose Selectors */}
-        <div className="grid grid-cols-2 gap-2">
-          {/* Expression Selector */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2 space-y-1.5">
-            <span className="text-[11px] font-black text-slate-300 flex items-center gap-1">
-              <Smile className="w-3.5 h-3.5 text-amber-400" />
-              角色表情設定
-            </span>
-            <div className="grid grid-cols-2 gap-1">
+        {/* 4. Compact Avatar Controls: Scale + Flip + Pose */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 space-y-2">
+          {/* Scale Slider & Horizontal Flip */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1">
+              <ZoomIn className="w-3.5 h-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
+              <span className="text-[11px] font-black text-slate-300 shrink-0">大小</span>
+              <input
+                type="range"
+                min={0.6}
+                max={2.4}
+                step={0.05}
+                value={avatarScale}
+                onChange={(e) => setAvatarScale( parseFloat(e.target.value) )}
+                className="w-full accent-emerald-400 cursor-pointer"
+              />
+              <span className="text-[11px] font-mono font-bold text-emerald-400 w-9 text-right">
+                {avatarScale.toFixed(1)}x
+              </span>
+            </div>
+
+            <button
+              onClick={() => setFacingRight((v) => !v)}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-black text-white flex items-center gap-1 shrink-0"
+            >
+              <FlipHorizontal2 className="w-3.5 h-3.5 text-cyan-400" aria-hidden="true" />
+              <span>左右翻轉</span>
+            </button>
+          </div>
+
+          {/* Pose & Expression Switcher */}
+          <div className="flex items-center justify-between gap-1.5 flex-wrap pt-1 border-t border-slate-800/80">
+            <div className="flex items-center gap-1 flex-wrap">
               {(
                 [
-                  { id: 'smile', label: '😊 自信笑' },
-                  { id: 'strain', label: '😣 咬牙汗' },
-                  { id: 'cool', label: '😎 耍帥酷' },
-                  { id: 'cry', label: '😭 練腿哭' },
+                  { id: 'CHEER', label: '歡呼', icon: Sparkles },
+                  { id: 'CURL', label: '彎舉', icon: Flame },
+                  { id: 'SQUAT', label: '深蹲', icon: Dumbbell },
+                  { id: 'IDLE', label: '站姿', icon: User },
+                  { id: 'WALK', label: '散步', icon: Footprints },
+                ] as { id: PoseOption; label: string; icon: React.FC<{ className?: string }> }[]
+              ).map((p) => {
+                const PoseIcon = p.icon;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPose(p.id)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-black flex items-center gap-1 transition ${
+                      selectedPose === p.id
+                        ? 'bg-emerald-500 text-slate-950 shadow'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <PoseIcon className="w-3 h-3" aria-hidden="true" />
+                    <span>{p.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-1">
+              {(
+                [
+                  { id: 'smile', label: '微笑' },
+                  { id: 'strain', label: '發力' },
+                  { id: 'cool', label: '耍帥' },
                 ] as { id: ExpressionOption; label: string }[]
               ).map((exp) => (
                 <button
                   key={exp.id}
                   onClick={() => setSelectedExpression(exp.id)}
-                  className={`py-1 px-1.5 rounded text-[10px] font-black border transition ${
+                  className={`px-2 py-1 rounded-lg text-[10px] font-black transition ${
                     selectedExpression === exp.id
-                      ? 'bg-amber-400 text-slate-950 border-amber-300'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
                   }`}
                 >
                   {exp.label}
@@ -341,88 +462,24 @@ export const MemeStudioModal: React.FC = () => {
               ))}
             </div>
           </div>
-
-          {/* Pose Selector */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2 space-y-1.5">
-            <span className="text-[11px] font-black text-slate-300 flex items-center gap-1">
-              <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              角色動作姿勢
-            </span>
-            <div className="grid grid-cols-2 gap-1">
-              {(
-                [
-                  { id: 'CURL', label: '💪 二頭彎舉' },
-                  { id: 'SQUAT', label: '🏋️ 深蹲爆發' },
-                  { id: 'CHEER', label: '🙌 勝利歡呼' },
-                  { id: 'WALK', label: '🚶 漫步展示' },
-                ] as { id: PoseOption; label: string }[]
-              ).map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedPose(p.id)}
-                  className={`py-1 px-1.5 rounded text-[10px] font-black border transition ${
-                    selectedPose === p.id
-                      ? 'bg-emerald-500 text-slate-950 border-emerald-400'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Meme Sticker Picker */}
-        <div className="space-y-1">
-          <label className="text-[11px] font-bold text-slate-300">
-            迷因貼圖
-          </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {MEME_STICKERS.map((stk) => (
-              <button
-                key={stk.id}
-                onClick={() => setSelectedSticker(stk.text)}
-                className={`p-1.5 rounded-lg text-[11px] font-bold text-left truncate border transition ${
-                  selectedSticker === stk.text
-                    ? 'bg-rose-500/20 border-rose-400 text-white'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {stk.text}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Custom Caption */}
-        <div>
-          <label className="text-[11px] font-bold text-slate-300 block mb-1">打卡語錄</label>
-          <input
-            type="text"
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            maxLength={40}
-            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-400"
-          />
-        </div>
-
-        {/* Export Actions */}
+        {/* 5. Pure External Share & Save Actions (No In-App Feed Posting!) */}
         <div className="grid grid-cols-2 gap-2 pt-1">
           <button
-            onClick={handleDownloadPng}
-            className="retro-btn py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-xs flex items-center justify-center gap-1.5"
+            onClick={handleDownloadPhoto}
+            className="retro-btn py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-xs flex items-center justify-center gap-1.5"
           >
-            <Download className="w-4 h-4 text-emerald-400" />
-            <span>下載圖片</span>
+            <Download className="w-4 h-4 text-cyan-400" aria-hidden="true" />
+            <span>儲存高清合照</span>
           </button>
 
           <button
-            onClick={handlePublishToPlaza}
-            className="retro-btn py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5"
+            onClick={handleExternalShare}
+            className="retro-btn py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg"
           >
-            <Share2 className="w-4 h-4" />
-            <span>發佈動態</span>
+            <Share2 className="w-4 h-4 stroke-[2.5px]" aria-hidden="true" />
+            <span>站外分享 (IG / LINE)</span>
           </button>
         </div>
       </div>

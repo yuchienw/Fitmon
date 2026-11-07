@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Clock, Flame, Coins, Trophy, BookmarkPlus, BookOpen } from 'lucide-react';
+import { X, Calendar, Clock, Flame, Coins, Trophy, BookmarkPlus, BookOpen, Camera } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { EXERCISE_LIBRARY, WorkoutTemplate } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
@@ -159,18 +159,28 @@ export const SessionDetailModal: React.FC = () => {
           })}
         </div>
 
-        {/* Footer Action: Save as Reusable Custom Routine or Re-run */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        {/* Footer Action: Save as Reusable Custom Routine, Photo with Avatar, or Close */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
           <button
             onClick={handleSaveSessionAsRoutine}
-            className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-black flex items-center justify-center gap-1.5"
+            className="py-2.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-black flex items-center justify-center gap-1"
           >
-            <BookmarkPlus className="w-3.5 h-3.5" />
-            <span>另存為我的課表</span>
+            <BookmarkPlus className="w-3.5 h-3.5 shrink-0" />
+            <span>另存課表</span>
+          </button>
+          <button
+            onClick={() => {
+              store.setSelectedHistorySessionId(null);
+              store.setMemeStudioOpen(true);
+            }}
+            className="retro-btn py-2.5 px-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black flex items-center justify-center gap-1"
+          >
+            <Camera className="w-3.5 h-3.5 shrink-0" />
+            <span>與娃合照</span>
           </button>
           <button
             onClick={() => store.setSelectedHistorySessionId(null)}
-            className="py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black"
+            className="py-2.5 px-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black"
           >
             關閉明細
           </button>
