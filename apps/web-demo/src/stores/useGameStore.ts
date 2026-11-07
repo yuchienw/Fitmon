@@ -122,6 +122,7 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
 
 export interface LoggedSet {
   id: string;
+  queueItemId?: string;
   exerciseId: string;
   exerciseNameZh: string;
   unitLabel: string;
@@ -134,6 +135,16 @@ export interface LoggedSet {
   decayFactor: number;
   isPR: boolean;
   timestamp: number;
+}
+
+export interface TemplateQueueItem {
+  id: string;
+  exerciseId: string;
+  targetSets: number;
+  completedSets: number;
+  reps: number;
+  weightKg: number;
+  restSeconds: number;
 }
 
 export interface WorkoutSessionRecord {
@@ -248,14 +259,8 @@ interface GameState {
   isWorkoutFocusActive: boolean;
   workoutElapsedSeconds: number;
   activeTemplateName: string | null;
-  templateQueue: {
-    exerciseId: string;
-    targetSets: number;
-    completedSets: number;
-    reps: number;
-    weightKg: number;
-    restSeconds: number;
-  }[];
+  templateQueue: TemplateQueueItem[];
+  selectedQueueItemId: string | null;
   selectedExerciseId: string;
   currentWeightKg: number;
   currentReps: number;
@@ -348,9 +353,10 @@ interface GameState {
   deleteRoutine: (routineId: string) => void;
   copyOrReferenceRoutine: (routine: WorkoutTemplate) => void;
   startWorkoutFocus: (routine?: WorkoutTemplate) => void;
-  swapActiveExercise: (oldExerciseId: string, newExerciseId: string) => void;
+  swapActiveExercise: (oldExerciseId: string, newExerciseId: string, targetQueueItemId?: string) => void;
   addExerciseToActiveQueue: (exerciseId: string) => void;
-  selectExercise: (exerciseId: string) => void;
+  selectExercise: (exerciseId: string, queueItemId?: string) => void;
+  selectQueueItem: (queueItemId: string) => void;
   setCurrentWeight: (kg: number) => void;
   setCurrentReps: (reps: number) => void;
   setCurrentRestConfigSec: (sec: number) => void;
@@ -821,6 +827,7 @@ export const useGameStore = create<GameState>()(
       workoutElapsedSeconds: 0,
       activeTemplateName: null,
       templateQueue: [],
+      selectedQueueItemId: null,
       selectedExerciseId: 'barbell_squat',
       currentWeightKg: 80,
       currentReps: 8,
@@ -1342,49 +1349,53 @@ export const useGameStore = create<GameState>()(
         const firstEx =
           EXERCISE_LIBRARY.find((e) => e.id === firstCfg?.exerciseId) || EXERCISE_LIBRARY[0];
 
+        const initialQueue: TemplateQueueItem[] = routine
+          ? routine.exercises.map((e, idx) => ({
+              id: `qitem_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+              exerciseId: e.exerciseId,
+              targetSets: e.sets,
+              completedSets: 0,
+              reps: e.reps,
+              weightKg: e.weightKg,
+              restSeconds: e.restSeconds || 90,
+            }))
+          : [
+              {
+                id: `qitem_${Date.now()}_0`,
+                exerciseId: firstEx.id,
+                targetSets: 4,
+                completedSets: 0,
+                reps: firstEx.defaultReps,
+                weightKg: firstEx.defaultWeightKg,
+                restSeconds: firstEx.defaultRestSec,
+              },
+            ];
+
+        const firstItem = initialQueue[0];
+
         set({
           activeTab: 'workout',
           isWorkoutFocusActive: true,
           workoutElapsedSeconds: 0,
           activeTemplateName: routine ? routine.nameZh : '自由訓練課表',
-          templateQueue: routine
-            ? routine.exercises.map((e) => ({
-                exerciseId: e.exerciseId,
-                targetSets: e.sets,
-                completedSets: 0,
-                reps: e.reps,
-                weightKg: e.weightKg,
-                restSeconds: e.restSeconds || 90,
-              }))
-            : [
-                {
-                  exerciseId: firstEx.id,
-                  targetSets: 4,
-                  completedSets: 0,
-                  reps: firstEx.defaultReps,
-                  weightKg: firstEx.defaultWeightKg,
-                  restSeconds: firstEx.defaultRestSec,
-                },
-              ],
-          selectedExerciseId: firstEx.id,
-          currentWeightKg: firstCfg ? firstCfg.weightKg : firstEx.defaultWeightKg,
-          currentReps: firstCfg ? firstCfg.reps : firstEx.defaultReps,
-          currentRestConfigSec: firstCfg ? firstCfg.restSeconds : firstEx.defaultRestSec,
+          templateQueue: initialQueue,
+          selectedQueueItemId: firstItem.id,
+          selectedExerciseId: firstItem.exerciseId,
+          currentWeightKg: firstItem.weightKg,
+          currentReps: firstItem.reps,
+          currentRestConfigSec: firstItem.restSeconds,
           sessionSets: [],
         });
       },
 
-      swapActiveExercise: (oldExerciseId, newExerciseId) => {
+      swapActiveExercise: (oldExerciseId, newExerciseId, targetQueueItemId) => {
         const newEx = EXERCISE_LIBRARY.find((e) => e.id === newExerciseId);
         if (!newEx) return;
         soundFX.playBlip();
-        set((state) => ({
-          selectedExerciseId: newExerciseId,
-          currentWeightKg: newEx.defaultWeightKg,
-          currentReps: newEx.defaultReps,
-          currentRestConfigSec: newEx.defaultRestSec,
-          templateQueue: state.templateQueue.map((item) =>
-            item.exerciseId === oldExerciseId
+        set((state) => {
+          const queueId = targetQueueItemId || state.selectedQueueItemId;
+          const updatedQueue = state.templateQueue.map((item) =>
+            (queueId ? item.id === queueId : item.exerciseId === oldExerciseId)
               ? {
                   ...item,
                   exerciseId: newExerciseId,
@@ -1393,8 +1404,16 @@ export const useGameStore = create<GameState>()(
                   restSeconds: newEx.defaultRestSec,
                 }
               : item
-          ),
-        }));
+          );
+          return {
+            selectedQueueItemId: queueId || null,
+            selectedExerciseId: newExerciseId,
+            currentWeightKg: newEx.defaultWeightKg,
+            currentReps: newEx.defaultReps,
+            currentRestConfigSec: newEx.defaultRestSec,
+            templateQueue: updatedQueue,
+          };
+        });
         get().showToast(`🔄 已替換為：${newEx.nameZh}`);
       },
 
@@ -1402,41 +1421,58 @@ export const useGameStore = create<GameState>()(
         const newEx = EXERCISE_LIBRARY.find((e) => e.id === exerciseId);
         if (!newEx) return;
         soundFX.playSetComplete();
-        set((state) => {
-          const alreadyExists = state.templateQueue.some((q) => q.exerciseId === exerciseId);
-          const nextQueue = alreadyExists
-            ? state.templateQueue.map((q) =>
-                q.exerciseId === exerciseId ? { ...q, targetSets: q.targetSets + 2 } : q
-              )
-            : [
-                ...state.templateQueue,
-                {
-                  exerciseId: newEx.id,
-                  targetSets: 4,
-                  completedSets: 0,
-                  reps: newEx.defaultReps,
-                  weightKg: newEx.defaultWeightKg,
-                  restSeconds: newEx.defaultRestSec,
-                },
-              ];
-          return {
-            templateQueue: nextQueue,
-            selectedExerciseId: newEx.id,
-            currentWeightKg: newEx.defaultWeightKg,
-            currentReps: newEx.defaultReps,
-            currentRestConfigSec: newEx.defaultRestSec,
-          };
-        });
+        const newItemId = `qitem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const newItem: TemplateQueueItem = {
+          id: newItemId,
+          exerciseId: newEx.id,
+          targetSets: 4,
+          completedSets: 0,
+          reps: newEx.defaultReps,
+          weightKg: newEx.defaultWeightKg,
+          restSeconds: newEx.defaultRestSec,
+        };
+        set((state) => ({
+          templateQueue: [...state.templateQueue, newItem],
+          selectedQueueItemId: newItemId,
+          selectedExerciseId: newEx.id,
+          currentWeightKg: newEx.defaultWeightKg,
+          currentReps: newEx.defaultReps,
+          currentRestConfigSec: newEx.defaultRestSec,
+        }));
         get().showToast(`➕ 已新增動作：${newEx.nameZh}`);
       },
 
-      selectExercise: (exerciseId) => {
+      selectQueueItem: (queueItemId) => {
+        const state = get();
+        const qItem = state.templateQueue.find((q) => q.id === queueItemId);
+        if (!qItem) return;
+        const ex = EXERCISE_LIBRARY.find((e) => e.id === qItem.exerciseId);
+        if (!ex) return;
+        soundFX.playBlip();
+        set({
+          selectedQueueItemId: qItem.id,
+          selectedExerciseId: qItem.exerciseId,
+          currentWeightKg: qItem.weightKg,
+          currentReps: qItem.reps,
+          currentRestConfigSec: qItem.restSeconds,
+        });
+      },
+
+      selectExercise: (exerciseId, queueItemId) => {
         const state = get();
         const ex = EXERCISE_LIBRARY.find((e) => e.id === exerciseId);
         if (!ex) return;
-        const qItem = state.templateQueue.find((q) => q.exerciseId === exerciseId);
+        const qItem = queueItemId
+          ? state.templateQueue.find((q) => q.id === queueItemId)
+          : state.selectedQueueItemId
+          ? state.templateQueue.find(
+              (q) => q.id === state.selectedQueueItemId && q.exerciseId === exerciseId
+            )
+          : state.templateQueue.find((q) => q.exerciseId === exerciseId);
+
         soundFX.playBlip();
         set({
+          selectedQueueItemId: qItem ? qItem.id : null,
           selectedExerciseId: exerciseId,
           currentWeightKg: qItem ? qItem.weightKg : ex.defaultWeightKg,
           currentReps: qItem ? qItem.reps : ex.defaultReps,
@@ -1444,14 +1480,30 @@ export const useGameStore = create<GameState>()(
         });
       },
 
-      setCurrentWeight: (kg) => set({ currentWeightKg: Math.max(0, Number(kg) || 0) }),
-      setCurrentReps: (reps) => set({ currentReps: Math.max(1, Math.round(Number(reps) || 1)) }),
+      setCurrentWeight: (kg) => {
+        const validKg = Math.max(0, Number(kg) || 0);
+        set((state) => ({
+          currentWeightKg: validKg,
+          templateQueue: state.templateQueue.map((q) =>
+            q.id === state.selectedQueueItemId ? { ...q, weightKg: validKg } : q
+          ),
+        }));
+      },
+      setCurrentReps: (reps) => {
+        const validReps = Math.max(1, Math.round(Number(reps) || 1));
+        set((state) => ({
+          currentReps: validReps,
+          templateQueue: state.templateQueue.map((q) =>
+            q.id === state.selectedQueueItemId ? { ...q, reps: validReps } : q
+          ),
+        }));
+      },
       setCurrentRestConfigSec: (sec) => {
         const validSec = Math.max(10, Math.round(Number(sec) || 60));
         set((state) => ({
           currentRestConfigSec: validSec,
           templateQueue: state.templateQueue.map((q) =>
-            q.exerciseId === state.selectedExerciseId ? { ...q, restSeconds: validSec } : q
+            q.id === state.selectedQueueItemId ? { ...q, restSeconds: validSec } : q
           ),
         }));
       },
@@ -1514,8 +1566,17 @@ export const useGameStore = create<GameState>()(
         if (isPR) soundFX.playPRFanfare();
         else soundFX.playSetComplete();
 
+        // Target the active queue item specifically
+        const activeQueueItem =
+          state.templateQueue.find((q) => q.id === state.selectedQueueItemId) ||
+          state.templateQueue.find((q) => q.exerciseId === ex.id && q.completedSets < q.targetSets) ||
+          state.templateQueue.find((q) => q.exerciseId === ex.id);
+
+        const targetQueueItemId = activeQueueItem?.id;
+
         const newSet: LoggedSet = {
-          id: `set_${Date.now()}`,
+          id: `set_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          queueItemId: targetQueueItemId,
           exerciseId: ex.id,
           exerciseNameZh: ex.nameZh,
           unitLabel: ex.unitLabel,
@@ -1530,22 +1591,26 @@ export const useGameStore = create<GameState>()(
           timestamp: Date.now(),
         };
 
-        const existsInQueue = state.templateQueue.some((q) => q.exerciseId === ex.id);
-        const updatedQueue = existsInQueue
-          ? state.templateQueue.map((item) =>
-              item.exerciseId === ex.id ? { ...item, completedSets: item.completedSets + 1 } : item
-            )
-          : [
-              ...state.templateQueue,
-              {
-                exerciseId: ex.id,
-                targetSets: 3,
-                completedSets: 1,
-                reps: state.currentReps,
-                weightKg: state.currentWeightKg,
-                restSeconds: state.currentRestConfigSec,
-              },
-            ];
+        let updatedQueue = [...state.templateQueue];
+        if (targetQueueItemId) {
+          // Increment completedSets ONLY for the selected queue item
+          updatedQueue = state.templateQueue.map((item) =>
+            item.id === targetQueueItemId
+              ? { ...item, completedSets: item.completedSets + 1 }
+              : item
+          );
+        } else {
+          const newQueueId = `qitem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+          updatedQueue.push({
+            id: newQueueId,
+            exerciseId: ex.id,
+            targetSets: 3,
+            completedSets: 1,
+            reps: state.currentReps,
+            weightKg: state.currentWeightKg,
+            restSeconds: state.currentRestConfigSec,
+          });
+        }
 
         set({
           stamina: newStamina,
@@ -1616,7 +1681,8 @@ export const useGameStore = create<GameState>()(
         >();
 
         state.sessionSets.forEach((s) => {
-          const existing = groupedMap.get(s.exerciseId);
+          const groupKey = s.queueItemId || s.exerciseId;
+          const existing = groupedMap.get(groupKey);
           if (existing) {
             existing.sets.push({
               weightKg: s.weightKg,
@@ -1625,7 +1691,7 @@ export const useGameStore = create<GameState>()(
               isPR: s.isPR,
             });
           } else {
-            groupedMap.set(s.exerciseId, {
+            groupedMap.set(groupKey, {
               exerciseId: s.exerciseId,
               exerciseNameZh: s.exerciseNameZh,
               unitLabel: s.unitLabel,
@@ -1686,6 +1752,7 @@ export const useGameStore = create<GameState>()(
           sessionSets: [],
           activeTemplateName: null,
           templateQueue: [],
+          selectedQueueItemId: null,
         });
       },
 
@@ -1699,6 +1766,7 @@ export const useGameStore = create<GameState>()(
           sessionSets: [],
           activeTemplateName: null,
           templateQueue: [],
+          selectedQueueItemId: null,
         });
         get().showToast('已退出專注模式');
       },

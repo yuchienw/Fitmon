@@ -195,25 +195,32 @@ export const WorkoutTab: React.FC = () => {
               {store.templateQueue.map((q, qIdx) => {
                 const ex = EXERCISE_LIBRARY.find((e) => e.id === q.exerciseId);
                 if (!ex) return null;
-                const isCurrent = store.selectedExerciseId === q.exerciseId;
+                const isCurrent = store.selectedQueueItemId
+                  ? store.selectedQueueItemId === q.id
+                  : store.selectedExerciseId === q.exerciseId && qIdx === 0;
                 const isDone = q.completedSets >= q.targetSets;
                 return (
                   <button
-                    key={`${q.exerciseId}_${qIdx}`}
-                    onClick={() => store.selectExercise(q.exerciseId)}
+                    key={q.id || `${q.exerciseId}_${qIdx}`}
+                    onClick={() => store.selectQueueItem(q.id)}
                     className={`p-2 rounded-xl border text-left shrink-0 flex items-center gap-2 transition ${
                       isDone
                         ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300'
                         : isCurrent
-                        ? 'bg-cyan-950/80 border-cyan-400 text-white ring-1 ring-cyan-400/50'
-                        : 'bg-slate-900 border-slate-800 text-slate-400'
+                        ? 'bg-cyan-950/80 border-cyan-400 text-white ring-1 ring-cyan-400/50 shadow-md shadow-cyan-950/50'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <ExerciseThumbnail exercise={ex} size={34} />
                     <div>
-                      <div className="text-xs font-black whitespace-nowrap">{ex.nameZh}</div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-black whitespace-nowrap">{ex.nameZh}</span>
+                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">
+                          #{qIdx + 1}
+                        </span>
+                      </div>
                       <div className="text-[10px] font-mono text-slate-300">
-                        {q.completedSets}/{q.targetSets}組
+                        {q.completedSets}/{q.targetSets}組 · {q.weightKg}{ex.unitLabel}
                       </div>
                     </div>
                   </button>
@@ -584,7 +591,7 @@ export const WorkoutTab: React.FC = () => {
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => {
-                          store.swapActiveExercise(selectedExercise.id, ex.id);
+                          store.swapActiveExercise(selectedExercise.id, ex.id, store.selectedQueueItemId || undefined);
                           setSwapModalOpen(false);
                         }}
                         className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 text-xs font-black"
