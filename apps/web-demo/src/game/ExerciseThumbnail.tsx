@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { ExerciseItem } from '../config/catalogConfig';
+import { useGameStore } from '../stores/useGameStore';
 
 interface ExerciseThumbnailProps {
   exercise: ExerciseItem;
   sizeClass?: string;
   size?: number;
   showPhotoToggle?: boolean;
+  disableGuideModal?: boolean;
 }
 
 /**
@@ -17,6 +19,7 @@ export const ExerciseThumbnail: React.FC<ExerciseThumbnailProps> = ({
   sizeClass = 'w-11 h-11',
   size,
   showPhotoToggle = false,
+  disableGuideModal = false,
 }) => {
   const [useRealPhoto, setUseRealPhoto] = useState(false);
   const [photoError, setPhotoError] = useState(false);
@@ -306,6 +309,11 @@ export const ExerciseThumbnail: React.FC<ExerciseThumbnailProps> = ({
     <div
       style={boxStyle}
       onClick={(e) => {
+        if (!disableGuideModal) {
+          e.stopPropagation();
+          useGameStore.getState().setInspectedExerciseId(exercise.id);
+          return;
+        }
         if (showPhotoToggle && photoUrl) {
           e.stopPropagation();
           setUseRealPhoto(true);
@@ -313,10 +321,17 @@ export const ExerciseThumbnail: React.FC<ExerciseThumbnailProps> = ({
       }}
       className={`${
         size ? '' : sizeClass
-      } rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-100 shrink-0 shadow-sm relative`}
-      title={`${exercise.nameZh} — 主働肌：${exercise.primaryMusclesZh || exercise.muscleLabelZh}`}
+      } rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-100 shrink-0 shadow-sm relative ${
+        !disableGuideModal ? 'cursor-pointer hover:ring-2 hover:ring-cyan-400 transition' : ''
+      }`}
+      title={`點擊查看【${exercise.nameZh}】標準動作說明與目標肌群`}
     >
       {renderAnatomicalSvg()}
+      {!disableGuideModal && (!size || size >= 30) && (
+        <span className="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-slate-950/80 text-[8px] font-black text-cyan-300 leading-none pointer-events-none">
+          說明
+        </span>
+      )}
     </div>
   );
 };

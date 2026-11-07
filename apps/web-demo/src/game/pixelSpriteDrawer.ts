@@ -432,13 +432,14 @@ export function drawMapleChibiAvatar(
     ctx.scale(-1, 1);
   }
 
-  // Dynamic skeletal animation offsets
-  const isSquat = state === 'SQUAT' && Math.floor(frameTick / 22) % 2 === 1;
+  // Dynamic skeletal animation offsets (smooth sine wave for Squat & Curl)
+  const squatWave = state === 'SQUAT' ? (Math.sin(frameTick * 0.14) + 1) * 0.5 : 0;
+  const isSquat = state === 'SQUAT' && squatWave > 0.45;
   const isCurl = state === 'CURL' && Math.floor(frameTick / 16) % 2 === 1;
   const isCheer = state === 'CHEER';
   const walkPhase = state === 'WALK' ? Math.sin(frameTick * 0.25) : 0;
   const breathY = Math.sin(frameTick * 0.1) * 1.1;
-  const squatDrop = isSquat ? 7.5 : Math.abs(walkPhase) * 1.5;
+  const squatDrop = state === 'SQUAT' ? squatWave * 7.5 : Math.abs(walkPhase) * 1.5;
 
   // Dramatic physique differentiation: Beginner (slim) vs Aesthetic (V-taper 6-pack) vs Powerlifter (massive) vs Titan (colossal)
   const isMuscular = bodyStage !== 'beginner';
@@ -525,8 +526,9 @@ export function drawMapleChibiAvatar(
 
   // ---------------- 2. LEGS, QUAD MUSCLES, SHORTS & SNEAKERS (bottom) ----------------
   const legSpread = isHuge ? 6.8 : bodyStage === 'aesthetic' ? 5.8 : 4.4;
-  const leftLegX = -legSpread + walkPhase * 3.5 - (isSquat ? 2.5 : 0);
-  const rightLegX = legSpread - walkPhase * 3.5 + (isSquat ? 2.5 : 0);
+  const squatKneeFlare = state === 'SQUAT' ? squatWave * 2.8 : 0;
+  const leftLegX = -legSpread + walkPhase * 3.5 - squatKneeFlare;
+  const rightLegX = legSpread - walkPhase * 3.5 + squatKneeFlare;
   const hipY = -16.5 + squatDrop;
 
   let shortsMain = '#1e3a8a';
@@ -702,10 +704,12 @@ export function drawMapleChibiAvatar(
 
   // ---------------- 4. ARMS, DELTOID CAPS, BICEP PEAKS & HELD GEAR ----------------
   const shoulderY = torsoY + 3.5;
-  const armAngle = isCheer ? -2.3 : isCurl ? -1.15 : isSquat ? -0.6 : walkPhase * 0.45;
+  const isBarbellBackSquat = state === 'SQUAT';
+  const isFrontBarbellHold = state !== 'SQUAT' && equipped.accessory === 'acc_gold_barbell';
+  const isGoldBar = equipped.accessory === 'acc_gold_barbell';
 
   // Helper to draw a limb (slim for beginner, 3D deltoid + bulging bicep for muscular!)
-  const drawChibiArm = () => {
+  const drawChibiArm = (drawFist = true) => {
     if (isMuscular) {
       // Round 3D Deltoid Shoulder Cap
       fillStrokeEllipse(ctx, 0, 0.5, armW * 0.56, armW * 0.52, '#ffd8b8', OUTLINE, 1.2);
@@ -721,25 +725,115 @@ export function drawMapleChibiAvatar(
       // Slim Beginner Arm
       fillStrokeRoundRect(ctx, -armW / 2, -0.5, armW, 10.5, armW * 0.48, '#ffdfc4', OUTLINE, 1.15);
     }
-    // Fist
-    fillStrokeEllipse(ctx, 0, 10.8, armW * 0.48, 3.2, '#ffdfc4', OUTLINE, 1.2);
+    if (drawFist) {
+      fillStrokeEllipse(ctx, 0, 10.8, armW * 0.48, 3.2, '#ffdfc4', OUTLINE, 1.2);
+    }
   };
 
-  // Back Arm
-  ctx.save();
-  ctx.translate(-torsoW / 2 - armW * 0.22, shoulderY);
-  ctx.rotate(-armAngle * 0.7);
-  drawChibiArm();
-  ctx.restore();
+  // Helper to draw a competition barbell + plates at barY
+  const drawCompetitionBarbell = (barY: number, goldStyle: boolean) => {
+    // Chrome or 24K Gold Bar Shaft (wide enough so plates clear the head & shoulders!)
+    fillStrokeRoundRect(
+      ctx,
+      -34,
+      barY - 1.6,
+      68,
+      3.2,
+      1.6,
+      goldStyle ? '#fde047' : '#f1f5f9',
+      OUTLINE,
+      1.2
+    );
+    // Left & Right 25KG Red/Gold & 20KG Blue Competition Plates + Collars
+    fillStrokeRoundRect(
+      ctx,
+      -30.5,
+      barY - 10,
+      4.5,
+      20,
+      2,
+      goldStyle ? '#f59e0b' : '#ef4444',
+      OUTLINE,
+      1.2
+    );
+    fillStrokeRoundRect(ctx, -26, barY - 8.5, 3.8, 17, 1.8, '#2563eb', OUTLINE, 1.1);
+    fillStrokeRoundRect(
+      ctx,
+      26,
+      barY - 10,
+      4.5,
+      20,
+      2,
+      goldStyle ? '#f59e0b' : '#ef4444',
+      OUTLINE,
+      1.2
+    );
+    fillStrokeRoundRect(ctx, 22.2, barY - 8.5, 3.8, 17, 1.8, '#2563eb', OUTLINE, 1.1);
+  };
 
-  // Front Arm + Held Equipment
-  ctx.save();
-  ctx.translate(torsoW / 2 + armW * 0.22, shoulderY);
-  ctx.rotate(armAngle);
-  drawChibiArm();
+  if (isBarbellBackSquat) {
+    // BARBELL BACK SQUAT POSTURE:
+    // 1. Barbell rests across the upper traps behind the neck (drawn BEFORE the head!)
+    const backSquatBarY = torsoY + 1;
+    drawCompetitionBarbell(backSquatBarY, isGoldBar);
 
-  // Held Accessory in Front Hand (when not doing Barbell Back Squat)
-  if (state !== 'SQUAT') {
+    // 2. Both arms reach outward & upward to grip the barbell shaft!
+    ctx.save();
+    ctx.translate(-torsoW / 2 - armW * 0.15, shoulderY);
+    ctx.rotate(1.95);
+    drawChibiArm(false);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(torsoW / 2 + armW * 0.15, shoulderY);
+    ctx.rotate(-1.95);
+    drawChibiArm(false);
+    ctx.restore();
+
+    // 3. Draw both fists gripping the barbell knurling outside the shoulders
+    fillStrokeEllipse(ctx, -18.5, backSquatBarY, 3.4, 3.2, '#ffdfc4', OUTLINE, 1.2);
+    fillStrokeEllipse(ctx, 18.5, backSquatBarY, 3.4, 3.2, '#ffdfc4', OUTLINE, 1.2);
+  } else if (isFrontBarbellHold) {
+    // 24K GOLD BARBELL FRONT DEADLIFT / CURL HOLD:
+    // Both arms angle symmetrically down/forward to hold the barbell across the waist/chest!
+    const frontBarAngle = isCheer ? -2.2 : isCurl ? -0.95 : 0.18;
+    const frontBarY = isCheer
+      ? headY - 22
+      : torsoY + 12.5 - (isCurl ? 6.5 : 0);
+
+    ctx.save();
+    ctx.translate(-torsoW / 2 - armW * 0.15, shoulderY);
+    ctx.rotate(-frontBarAngle);
+    drawChibiArm(false);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(torsoW / 2 + armW * 0.15, shoulderY);
+    ctx.rotate(frontBarAngle);
+    drawChibiArm(false);
+    ctx.restore();
+
+    drawCompetitionBarbell(frontBarY, true);
+    // Both fists gripping the 24K Gold Barbell shaft symmetrically
+    fillStrokeEllipse(ctx, -13.5, frontBarY, 3.4, 3.2, '#ffdfc4', OUTLINE, 1.2);
+    fillStrokeEllipse(ctx, 13.5, frontBarY, 3.4, 3.2, '#ffdfc4', OUTLINE, 1.2);
+  } else {
+    // STANDARD ONE-HANDED ACCESSORY OR FREE POSE (Dumbbell / Protein Shaker)
+    const armAngle = isCheer ? -2.3 : isCurl ? -1.15 : walkPhase * 0.45;
+
+    // Back Arm
+    ctx.save();
+    ctx.translate(-torsoW / 2 - armW * 0.22, shoulderY);
+    ctx.rotate(-armAngle * 0.7);
+    drawChibiArm(true);
+    ctx.restore();
+
+    // Front Arm + Held Equipment
+    ctx.save();
+    ctx.translate(torsoW / 2 + armW * 0.22, shoulderY);
+    ctx.rotate(armAngle);
+    drawChibiArm(true);
+
     const acc = equipped.accessory;
     if (acc === 'acc_iron_dumbbell' || acc === 'acc_hex_dumbbell') {
       fillStrokeRoundRect(ctx, -7, 9, 14, 2.6, 1, '#cbd5e1', OUTLINE, 1);
@@ -750,50 +844,7 @@ export function drawMapleChibiAvatar(
       fillStrokeRoundRect(ctx, -4, 3, 8, 2.8, 1.2, '#0f172a', OUTLINE, 1);
       fillStrokeRoundRect(ctx, -2, 7, 4, 5, 1, 'rgba(255,255,255,0.65)', '', 0);
     }
-  }
-  ctx.restore();
-
-  // If Squatting or Equipped 24K Gold Barbell: Draw Full Competition Barbell!
-  if (state === 'SQUAT' || equipped.accessory === 'acc_gold_barbell') {
-    const isGold = equipped.accessory === 'acc_gold_barbell';
-    const barY = state === 'SQUAT' ? torsoY + 1 : torsoY + 11 - (isCurl ? 6 : 0);
-    // Chrome or 24K Gold Bar
-    fillStrokeRoundRect(
-      ctx,
-      -32,
-      barY - 1.5,
-      64,
-      3,
-      1.5,
-      isGold ? '#fde047' : '#f1f5f9',
-      OUTLINE,
-      1.2
-    );
-    // Left & Right 25KG Red/Gold & 20KG Blue Competition Plates
-    fillStrokeRoundRect(
-      ctx,
-      -28,
-      barY - 10,
-      4.5,
-      20,
-      2,
-      isGold ? '#f59e0b' : '#ef4444',
-      OUTLINE,
-      1.2
-    );
-    fillStrokeRoundRect(ctx, -23.5, barY - 8.5, 3.8, 17, 1.8, '#2563eb', OUTLINE, 1.1);
-    fillStrokeRoundRect(
-      ctx,
-      23.5,
-      barY - 10,
-      4.5,
-      20,
-      2,
-      isGold ? '#f59e0b' : '#ef4444',
-      OUTLINE,
-      1.2
-    );
-    fillStrokeRoundRect(ctx, 19.7, barY - 8.5, 3.8, 17, 1.8, '#2563eb', OUTLINE, 1.1);
+    ctx.restore();
   }
 
   // ---------------- 5. MAPLESTORY BIG ADORABLE CHIBI HEAD & FACE ----------------
@@ -1058,27 +1109,79 @@ export function drawPixelGymScene(ctx: CanvasRenderingContext2D, state: RoomRend
   const H = 150;
   const wallH = 98;
 
-  // ---------------- 1. WARM SUNLIT / COZY WALLPAPER ----------------
+  // ---------------- 1. WALLPAPER (wall_industrial_dark / wall_cyber_neon / wall_zen_wood) ----------------
   const wallGrad = ctx.createLinearGradient(0, 0, 0, wallH);
   if (state.room.wallpaper === 'wall_cyber_neon') {
-    wallGrad.addColorStop(0, '#312e81');
+    wallGrad.addColorStop(0, '#1e1b4b');
     wallGrad.addColorStop(1, '#4c1d95');
-  } else if (state.room.wallpaper === 'wall_exposed_brick') {
-    wallGrad.addColorStop(0, '#fed7aa');
-    wallGrad.addColorStop(1, '#fdba74');
-  } else {
-    // Warm Cozy Maple Gym Cream/Sky Wall
+  } else if (state.room.wallpaper === 'wall_zen_wood') {
     wallGrad.addColorStop(0, '#fef3c7');
-    wallGrad.addColorStop(1, '#fde68a');
+    wallGrad.addColorStop(1, '#f59e0b');
+  } else {
+    // wall_industrial_dark (Default Cool Concrete & Warm Gym Lighting)
+    wallGrad.addColorStop(0, '#334155');
+    wallGrad.addColorStop(1, '#1e293b');
   }
   ctx.fillStyle = wallGrad;
   ctx.fillRect(0, 0, W, wallH);
 
-  // Subtle decorative wainscoting / wall paneling
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-  ctx.fillRect(0, wallH - 22, W, 20);
+  if (state.room.wallpaper === 'wall_cyber_neon') {
+    // Glowing Cyberpunk Neon Strips
+    ctx.strokeStyle = '#d946ef';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(0, 22);
+    ctx.lineTo(W, 22);
+    ctx.moveTo(0, wallH - 12);
+    ctx.lineTo(W, wallH - 12);
+    ctx.stroke();
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(0, 25);
+    ctx.lineTo(W, 25);
+    ctx.stroke();
+  } else if (state.room.wallpaper === 'wall_zen_wood') {
+    // Warm Nordic Wood Vertical Slats
+    ctx.strokeStyle = 'rgba(180, 83, 9, 0.25)';
+    ctx.lineWidth = 1;
+    for (let wx = 12; wx < W; wx += 16) {
+      ctx.beginPath();
+      ctx.moveTo(wx, 0);
+      ctx.lineTo(wx, wallH);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.fillRect(0, wallH - 22, W, 20);
+  } else {
+    // Industrial Dark Concrete Formwork Panels
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.lineWidth = 1;
+    for (let wx = 40; wx < W; wx += 40) {
+      ctx.beginPath();
+      ctx.moveTo(wx, 0);
+      ctx.lineTo(wx, wallH);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.12)';
+    ctx.fillRect(0, wallH - 22, W, 20);
+  }
   // Baseboard molding
-  fillStrokeRoundRect(ctx, -2, wallH - 4, W + 4, 5, 1, '#b45309', OUTLINE, 1.2);
+  fillStrokeRoundRect(
+    ctx,
+    -2,
+    wallH - 4,
+    W + 4,
+    5,
+    1,
+    state.room.wallpaper === 'wall_cyber_neon'
+      ? '#a21caf'
+      : state.room.wallpaper === 'wall_zen_wood'
+      ? '#b45309'
+      : '#0f172a',
+    OUTLINE,
+    1.2
+  );
 
   // ---------------- 2. LARGE SCENIC WINDOW (Day Sunlight vs Cozy Starry Night) ----------------
   const winX = 76;
@@ -1145,30 +1248,59 @@ export function drawPixelGymScene(ctx: CanvasRenderingContext2D, state: RoomRend
   ctx.stroke();
   fillStrokeRoundRect(ctx, winX - 3, winY + winH - 2, winW + 6, 5, 2, '#d97706', OUTLINE, 1.3);
 
-  // ---------------- 3. WARM HONEY-WOOD / GYM FLOOR ----------------
+  // ---------------- 3. GYM FLOOR (floor_rubber_black / floor_turf_green / floor_gold_marble) ----------------
   const floorGrad = ctx.createLinearGradient(0, wallH, 0, H);
-  if (state.room.floor === 'floor_maple_wood') {
-    floorGrad.addColorStop(0, '#fcd34d');
-    floorGrad.addColorStop(1, '#f59e0b');
+  if (state.room.floor === 'floor_turf_green') {
+    floorGrad.addColorStop(0, '#10b981');
+    floorGrad.addColorStop(1, '#047857');
   } else if (state.room.floor === 'floor_gold_marble') {
     floorGrad.addColorStop(0, '#f8fafc');
-    floorGrad.addColorStop(1, '#e2e8f0');
+    floorGrad.addColorStop(1, '#cbd5e1');
   } else {
-    // Cozy Warm Oak Wood Gym Floor
-    floorGrad.addColorStop(0, '#fed7aa');
-    floorGrad.addColorStop(1, '#f59e0b');
+    // floor_rubber_black (Shock-absorbent dark gym rubber floor)
+    floorGrad.addColorStop(0, '#334155');
+    floorGrad.addColorStop(1, '#1e293b');
   }
   ctx.fillStyle = floorGrad;
   ctx.fillRect(0, wallH, W, H - wallH);
 
-  // Perspective plank lines
-  ctx.strokeStyle = 'rgba(146, 64, 14, 0.22)';
-  ctx.lineWidth = 1;
-  for (let fy = wallH + 10; fy < H; fy += 12) {
-    ctx.beginPath();
-    ctx.moveTo(0, fy);
-    ctx.lineTo(W, fy);
-    ctx.stroke();
+  // Floor surface details based on floor type
+  if (state.room.floor === 'floor_turf_green') {
+    // White Sled Turf Hash Marks
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = 1.4;
+    for (let tx = 24; tx < W; tx += 36) {
+      ctx.beginPath();
+      ctx.moveTo(tx, wallH + 6);
+      ctx.lineTo(tx - 6, H - 4);
+      ctx.stroke();
+    }
+  } else if (state.room.floor === 'floor_gold_marble') {
+    // Luxury Gold Marble Tile Grid
+    ctx.strokeStyle = 'rgba(234, 179, 8, 0.55)';
+    ctx.lineWidth = 1.2;
+    for (let fy = wallH + 12; fy < H; fy += 14) {
+      ctx.beginPath();
+      ctx.moveTo(0, fy);
+      ctx.lineTo(W, fy);
+      ctx.stroke();
+    }
+    for (let fx = 30; fx < W; fx += 45) {
+      ctx.beginPath();
+      ctx.moveTo(fx, wallH);
+      ctx.lineTo(fx - 12, H);
+      ctx.stroke();
+    }
+  } else {
+    // Rubber Gym Mat Interlocking Tile Lines
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.lineWidth = 1;
+    for (let fy = wallH + 10; fy < H; fy += 12) {
+      ctx.beginPath();
+      ctx.moveTo(0, fy);
+      ctx.lineTo(W, fy);
+      ctx.stroke();
+    }
   }
 
   // Warm sunlight beam on floor during daytime

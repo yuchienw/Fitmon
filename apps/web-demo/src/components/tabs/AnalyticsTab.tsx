@@ -445,11 +445,19 @@ export const AnalyticsTab: React.FC = () => {
                       return (
                         <div
                           key={i}
-                          className="px-2 py-1 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-1.5 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            store.setInspectedExerciseId(exObj.id);
+                          }}
+                          className="px-2 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                          title={`點擊查看【${exObj.nameZh}】動作說明`}
                         >
                           <ExerciseThumbnail exercise={exObj} size={26} />
                           <div className="text-[10px]">
-                            <div className="font-bold text-white">{log.exerciseNameZh}</div>
+                            <div className="font-bold text-white flex items-center gap-1">
+                              <span>{log.exerciseNameZh}</span>
+                              <span className="text-[9px] text-cyan-400">📖</span>
+                            </div>
                             <div className="font-mono text-cyan-300">
                               {log.sets.length}組 · {Math.max(...log.sets.map((s) => s.weightKg))}
                               {log.unitLabel}
@@ -857,12 +865,14 @@ export const AnalyticsTab: React.FC = () => {
                 return (
                   <div
                     key={ex.id}
-                    className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2.5"
+                    onClick={() => store.setInspectedExerciseId(ex.id)}
+                    className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 flex items-center gap-2.5 cursor-pointer transition group"
                   >
                     <ExerciseThumbnail exercise={ex} size={36} />
                     <div className="min-w-0">
-                      <div className="text-[11px] font-bold text-slate-300 truncate">
-                        {ex.nameZh}
+                      <div className="text-[11px] font-bold text-slate-300 group-hover:text-cyan-300 truncate flex items-center gap-1">
+                        <span className="truncate">{ex.nameZh}</span>
+                        <span className="text-[10px] text-cyan-400 shrink-0">📖</span>
                       </div>
                       <div className="text-sm font-black font-mono text-amber-300 mt-0.5">
                         {pr > 0 ? `${pr} ${ex.unitLabel}` : '--'}

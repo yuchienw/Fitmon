@@ -173,11 +173,13 @@ export const UserProfileModal: React.FC = () => {
               return (
                 <div
                   key={idx}
-                  className="px-2 py-1.5 rounded-lg bg-slate-950/70 flex items-center justify-between text-[11px]"
+                  onClick={() => store.setInspectedExerciseId(ex.id)}
+                  className="px-2 py-1.5 rounded-lg bg-slate-950/70 hover:bg-slate-800/80 border border-transparent hover:border-cyan-500/40 flex items-center justify-between text-[11px] cursor-pointer transition"
                 >
                   <div className="flex items-center gap-2">
                     <ExerciseThumbnail exercise={ex} size={26} />
                     <span className="font-bold text-slate-200">{ex.nameZh}</span>
+                    <span className="text-[10px] text-cyan-400">📖</span>
                   </div>
                   <span className="font-mono text-cyan-300">
                     {item.sets}組×{item.reps} · {item.weightKg}

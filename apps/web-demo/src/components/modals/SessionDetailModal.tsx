@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Clock, Flame, Coins, Trophy, BookmarkPlus } from 'lucide-react';
+import { X, Calendar, Clock, Flame, Coins, Trophy, BookmarkPlus, BookOpen } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { EXERCISE_LIBRARY, WorkoutTemplate } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
@@ -104,11 +104,14 @@ export const SessionDetailModal: React.FC = () => {
                 key={`${log.exerciseId}_${exIdx}`}
                 className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
+                <div
+                  onClick={() => store.setInspectedExerciseId(exObj.id)}
+                  className="flex items-center justify-between gap-2 cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <ExerciseThumbnail exercise={exObj} size={38} />
-                    <div>
-                      <div className="text-xs font-black text-white">
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-white group-hover:text-cyan-300 transition truncate">
                         {exIdx + 1}. {log.exerciseNameZh}
                       </div>
                       <div className="text-[10px] text-slate-400">
@@ -116,6 +119,16 @@ export const SessionDetailModal: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      store.setInspectedExerciseId(exObj.id);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-[10px] font-black flex items-center gap-1 shrink-0"
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    <span>動作說明</span>
+                  </button>
                 </div>
 
                 {/* Set-by-Set Rows */}

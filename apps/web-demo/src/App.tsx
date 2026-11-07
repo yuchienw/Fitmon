@@ -13,6 +13,7 @@ import { SettingsModal } from './components/modals/SettingsModal';
 import { WardrobeModal } from './components/modals/WardrobeModal';
 import { UserProfileModal } from './components/modals/UserProfileModal';
 import { SessionDetailModal } from './components/modals/SessionDetailModal';
+import { ExerciseGuideModal } from './components/modals/ExerciseGuideModal';
 
 export const App: React.FC = () => {
   const {
@@ -117,6 +118,7 @@ export const App: React.FC = () => {
         <WardrobeModal />
         <UserProfileModal />
         <SessionDetailModal />
+        <ExerciseGuideModal />
       </div>
     </div>
   );

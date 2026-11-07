@@ -49,19 +49,26 @@ export const ShopTab: React.FC = () => {
     onConfirm: () => void;
   } | null>(null);
 
-  // Merge current equipped/room with live Try-On overrides
+  // Merge current equipped/room with live Try-On overrides (filtering out any undefined entries)
+  const cleanTryOnEquipped = Object.fromEntries(
+    Object.entries(store.tryOnEquipped).filter(([, v]) => Boolean(v))
+  ) as Partial<Record<EquipSlot, string>>;
+  const cleanTryOnRoom = Object.fromEntries(
+    Object.entries(store.tryOnRoom).filter(([, v]) => Boolean(v))
+  ) as Partial<Record<RoomSlot, string>>;
+
   const mergedEquipped: Record<EquipSlot, string> = {
     ...store.equipped,
-    ...(store.tryOnEquipped as Record<EquipSlot, string>),
+    ...(cleanTryOnEquipped as Record<EquipSlot, string>),
   };
 
   const mergedRoom: Record<RoomSlot, string> = {
     ...store.room,
-    ...(store.tryOnRoom as Record<RoomSlot, string>),
+    ...(cleanTryOnRoom as Record<RoomSlot, string>),
   };
 
   const hasTryOnChanges =
-    Object.keys(store.tryOnEquipped).length > 0 || Object.keys(store.tryOnRoom).length > 0;
+    Object.keys(cleanTryOnEquipped).length > 0 || Object.keys(cleanTryOnRoom).length > 0;
 
   const allCatalog = [...AVATAR_ITEMS, ...ROOM_ITEMS];
   const cartItems = store.cartItemIds
@@ -390,14 +397,17 @@ export const ShopTab: React.FC = () => {
                         </button>
                         <button
                           onClick={() => {
-                            store.previewShopItem(
-                              item.id,
-                              item.isRoomDecor &&
-                                (item.roomSubType === 'furniture' || item.roomSubType === 'pet')
-                                ? targetAnchorSlot
-                                : undefined
-                            );
-                            store.toggleCartItem(item.id);
+                            if (inCart) {
+                              store.toggleCartItem(item.id);
+                            } else {
+                              store.previewShopItem(
+                                item.id,
+                                item.isRoomDecor &&
+                                  (item.roomSubType === 'furniture' || item.roomSubType === 'pet')
+                                  ? targetAnchorSlot
+                                  : undefined
+                              );
+                            }
                           }}
                           className={`flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition ${
                             inCart
@@ -406,7 +416,7 @@ export const ShopTab: React.FC = () => {
                           }`}
                         >
                           <ShoppingCart className="w-3.5 h-3.5" />
-                          <span>{inCart ? '入車' : `${item.priceCoins}🪙`}</span>
+                          <span>{inCart ? '已入車' : `${item.priceCoins}🪙`}</span>
                         </button>
                       </>
                     )}
@@ -538,10 +548,10 @@ export const ShopTab: React.FC = () => {
       </div>
 
       {/* =====================================================================
-          3. FLOATING SHOPPING CART & TRY-ON CHECKOUT BAR
+          3. STICKY SHOPPING CART & TRY-ON CHECKOUT BAR (Cleared above BottomNav)
          ===================================================================== */}
       {(store.cartItemIds.length > 0 || hasTryOnChanges) && (
-        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[460px] px-3.5 z-40">
+        <div className="sticky bottom-6 w-full px-3.5 pt-2 z-20">
           <div className="retro-box rounded-2xl p-3 bg-slate-950/95 border-2 border-amber-400 shadow-2xl flex items-center justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">

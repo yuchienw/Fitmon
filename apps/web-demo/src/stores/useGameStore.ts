@@ -126,6 +126,7 @@ interface GameState {
   wardrobeModalOpen: boolean;
   selectedProfileId: string | null;
   selectedHistorySessionId: string | null;
+  inspectedExerciseId: string | null;
   victoryModalData: VictorySettlementData | null;
   toastMessage: string | null;
 
@@ -227,6 +228,7 @@ interface GameState {
   setWardrobeModalOpen: (open: boolean) => void;
   setSelectedProfileId: (id: string | null) => void;
   setSelectedHistorySessionId: (id: string | null) => void;
+  setInspectedExerciseId: (id: string | null) => void;
   setShareRaidModalOpen: (open: boolean) => void;
   closeVictoryModal: () => void;
   showToast: (msg: string) => void;
@@ -655,6 +657,7 @@ export const useGameStore = create<GameState>()(
       wardrobeModalOpen: false,
       selectedProfileId: null,
       selectedHistorySessionId: null,
+      inspectedExerciseId: null,
       victoryModalData: null,
       toastMessage: null,
 
@@ -857,6 +860,11 @@ export const useGameStore = create<GameState>()(
         set({ selectedHistorySessionId: id });
       },
 
+      setInspectedExerciseId: (id) => {
+        soundFX.playBlip();
+        set({ inspectedExerciseId: id });
+      },
+
       setShareRaidModalOpen: (open) => {
         soundFX.playBlip();
         set({ shareRaidModalOpen: open });
@@ -945,9 +953,11 @@ export const useGameStore = create<GameState>()(
         if (avatarItem) {
           const slot = avatarItem.slot as EquipSlot;
           if (state.ownedItemIds.includes(itemId)) {
+            const nextTryOn = { ...state.tryOnEquipped };
+            delete nextTryOn[slot];
             set({
               equipped: { ...state.equipped, [slot]: itemId },
-              tryOnEquipped: { ...state.tryOnEquipped, [slot]: undefined },
+              tryOnEquipped: nextTryOn,
             });
             state.showToast(`✨ 已換上已擁有裝備：${avatarItem.nameZh}`);
           } else {
@@ -972,9 +982,11 @@ export const useGameStore = create<GameState>()(
               : targetRoomSlot || (roomItem.roomSubType === 'pet' ? 'slotCenter' : 'slotLeft');
 
           if (state.ownedItemIds.includes(itemId)) {
+            const nextTryOnRoom = { ...state.tryOnRoom };
+            delete nextTryOnRoom[rSlot];
             set({
               room: { ...state.room, [rSlot]: itemId },
-              tryOnRoom: { ...state.tryOnRoom, [rSlot]: undefined },
+              tryOnRoom: nextTryOnRoom,
             });
             state.showToast(`🏠 已佈置至房間：${roomItem.nameZh}`);
           } else {
@@ -993,7 +1005,19 @@ export const useGameStore = create<GameState>()(
         soundFX.playBlip();
         const exists = state.cartItemIds.includes(itemId);
         if (exists) {
-          set({ cartItemIds: state.cartItemIds.filter((id) => id !== itemId) });
+          const nextTryOnEquipped = { ...state.tryOnEquipped };
+          (Object.keys(nextTryOnEquipped) as EquipSlot[]).forEach((k) => {
+            if (nextTryOnEquipped[k] === itemId) delete nextTryOnEquipped[k];
+          });
+          const nextTryOnRoom = { ...state.tryOnRoom };
+          (Object.keys(nextTryOnRoom) as RoomSlot[]).forEach((k) => {
+            if (nextTryOnRoom[k] === itemId) delete nextTryOnRoom[k];
+          });
+          set({
+            cartItemIds: state.cartItemIds.filter((id) => id !== itemId),
+            tryOnEquipped: nextTryOnEquipped,
+            tryOnRoom: nextTryOnRoom,
+          });
         } else {
           state.previewShopItem(itemId);
         }

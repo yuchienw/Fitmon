@@ -46,7 +46,8 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
   const equipped = activeCustom ? activeCustom.equipped : store.equipped;
   const room = activeCustom ? activeCustom.room : store.room;
 
-  const [aiState, setAiState] = useState<'WALK' | 'SQUAT' | 'CURL' | 'IDLE'>('SQUAT');
+  const initialPose = compact ? 'IDLE' : 'SQUAT';
+  const [aiState, setAiState] = useState<'WALK' | 'SQUAT' | 'CURL' | 'IDLE'>(initialPose);
   const [speechBubble, setSpeechBubble] = useState<string>(SPEECH_LINES[0]);
 
   const animRef = useRef({
@@ -56,7 +57,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
     vx: 0.4,
     facingRight: true,
     stateTimer: 0,
-    currentState: 'SQUAT' as 'WALK' | 'SQUAT' | 'CURL' | 'IDLE',
+    currentState: initialPose as 'WALK' | 'SQUAT' | 'CURL' | 'IDLE',
     hearts: [] as { x: number; y: number; alpha: number }[],
   });
 
@@ -101,7 +102,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
       st.tick += 1;
       st.stateTimer += 1;
 
-      if (st.stateTimer > 260) {
+      if (!compact && st.stateTimer > 260) {
         st.stateTimer = 0;
         const states: ('WALK' | 'SQUAT' | 'CURL' | 'IDLE')[] = ['WALK', 'SQUAT', 'CURL', 'IDLE'];
         const next = states[Math.floor(Math.random() * states.length)];
@@ -213,45 +214,48 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
       />
 
       {/* Floating Bottom Game HUD Overlay inside the Room Stage */}
-      {!compact && (
-        <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
-          <div className="flex items-center gap-1 bg-slate-950/80 backdrop-blur-md p-1 rounded-xl border border-white/15 pointer-events-auto shadow-lg">
-            {(
-              [
-                { id: 'SQUAT', label: '🏋️ 深蹲' },
-                { id: 'CURL', label: '💪 彎舉' },
-                { id: 'WALK', label: '🚶 散步' },
-              ] as const
-            ).map((m) => (
-              <button
-                key={m.id}
-                onClick={() => {
-                  setAiState(m.id);
-                  animRef.current.stateTimer = 0;
-                  store.interactWithRoomEntity('avatar');
-                }}
-                className={`px-2 py-1 rounded-lg text-[11px] font-black transition ${
-                  aiState === m.id
-                    ? 'bg-emerald-500 text-slate-950 shadow'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
-          {onOpenWardrobe && (
+      <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
+        <div className="flex items-center gap-1 bg-slate-950/80 backdrop-blur-md p-1 rounded-xl border border-white/15 pointer-events-auto shadow-lg">
+          {(
+            [
+              { id: 'IDLE', label: '🧍 站姿' },
+              { id: 'SQUAT', label: '🏋️ 深蹲' },
+              { id: 'CURL', label: '💪 彎舉' },
+              ...(compact ? [] : ([{ id: 'WALK', label: '🚶 散步' }] as const)),
+            ] as const
+          ).map((m) => (
             <button
-              onClick={onOpenWardrobe}
-              className="pointer-events-auto retro-btn px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1 shrink-0 shadow-lg"
+              key={m.id}
+              onClick={() => {
+                setAiState(m.id);
+                animRef.current.stateTimer = 0;
+                if (m.id !== 'WALK') {
+                  animRef.current.x = 92;
+                  animRef.current.facingRight = true;
+                }
+                store.interactWithRoomEntity('avatar');
+              }}
+              className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-black transition ${
+                aiState === m.id
+                  ? 'bg-emerald-500 text-slate-950 shadow'
+                  : 'text-slate-300 hover:text-white'
+              }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>換裝佈置</span>
+              {m.label}
             </button>
-          )}
+          ))}
         </div>
-      )}
+
+        {!compact && onOpenWardrobe && (
+          <button
+            onClick={onOpenWardrobe}
+            className="pointer-events-auto retro-btn px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1 shrink-0 shadow-lg"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>換裝佈置</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 };
