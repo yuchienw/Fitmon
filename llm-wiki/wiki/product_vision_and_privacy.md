@@ -31,20 +31,20 @@ FitMon 實行極致絲滑的體驗路徑：
 ### 2.3 本地與雲端物理隔離架構
 ```mermaid
 flowchart TD
-    subgraph ClientDevice ["用戶終端（手機/瀏覽器本地）"]
-        LocalData["【高度私密訓練數據】\n• 每一組公斤數 (kg) 與次數 (Reps)\n• 休息秒數與私密課表備忘\n• 動作備註與個人歷史數據"]
+    subgraph ClientDevice ["用戶終端（手機/瀏覽器本地沙盒）"]
+        LocalData["【高度私密健康與個人數值 (100% 本地隔離)】\n• 身高 (cm) / 體重 (kg) / 體脂率 (%)\n• 年齡 / 性別 / 睡眠時長 / TDEE 每日熱量\n• 每一組公斤數 (kg) 與次數 (Reps)"]
         LocalStorage[("本地沙盒存儲\nIndexedDB / SQLite")]
         LocalData --> LocalStorage
     end
 
-    subgraph CloudServer ["雲端伺服器（Supabase 匿名庫）"]
-        PublicData["【公開非個資資料】\n• OAuth UID (匿名雜湊)\n• 玩家公開自訂暱稱\n• 連擊維持週數 (Streak)\n• 像素外觀部件代碼 (Avatar Code)\n• 解鎖榮譽稱號"]
-        CloudDB[("公開資料庫\npublic_profiles")]
+    subgraph CloudServer ["雲端伺服器 (Server-Authoritative 防作弊權威)"]
+        PublicData["【僅對應帳號 UID · 零個資 (Zero-PII)】\n• 帳號 UID (匿名 OAuth ID) & 公開自訂暱稱\n• 天梯排行榜 (個人關卡 / 戰隊推圖 / 歷史最大傷害)\n• 冒險關卡進度 (Stage & Boss HP)\n• 伺服器端時戳反作弊 (組間休息稽核、每日秒解限1次)\n• 金幣餘額 (Wallet) & 紙娃娃外觀代碼"]
+        CloudDB[("雲端防作弊資料庫\npublic_profiles / raid_progress")]
         PublicData --> CloudDB
     end
 
-    LocalData --"嚴格禁止同步"--> CloudDB
-    ClientDevice --"僅同步榮譽與連擊"--> CloudServer
+    LocalData --"嚴格禁止同步至雲端"--> CloudDB
+    ClientDevice --"僅同步無個資之遊戲與帳號數值"--> CloudServer
 ```
 
 ---

@@ -134,8 +134,12 @@ flowchart TB
 2. **Apple Health 與 Google 健康串接**：
    * 透過 Capacitor 官方外掛（`@capawesome-team/capacitor-health`）在用戶授權下自動讀取 Apple Watch / Android 手機之體重、睡眠與步數。
    * 資料直存本機沙盒，提供最無痛的數據輸入體驗。
-3. **雲端防作弊唯一職責 (Server-Authoritative Economy)**：
-   * 雲端唯一保管並在伺服器端驗證的只有：**金幣錢包 (Wallet Ledger)、道具庫存 (Inventory)、純像素社群與打賞紀錄**，確保本機無法透過修改記憶體刷金幣作弊。
+3. **雲端防作弊唯一職責 (Server-Authoritative Anti-Cheat & Zero-PII Ledger)**：
+   * **伺服器端核心驗證**：未來所有防止作弊機制（包括：**運動組間休息真偽檢查、出拳冷卻驗證、每日課金秒解限 1 次、天梯排行榜排名判定、冒險關卡進度與血量結算**）均全數由雲端後端（Supabase / Serverless RPC）作為唯一權威（Server-Authoritative）執行校驗，客戶端僅作樂觀 UI 渲染，嚴防透過竄改客戶端記憶體或本機時間作弊。
+   * **零個資（Zero-PII）帳號映射規範**：
+     - 雲端資料庫僅儲存與遊戲帳號唯一對應之匿名識別碼（OAuth UID / Account ID）。
+     - 身高、體重、體脂率、年齡、生理數值等私密健康個資 100% 留存在本地裝置沙盒，**嚴禁上傳至伺服器**。
+     - 雲端僅記錄：帳號 UID、自訂暱稱、天梯進度（Stage）、戰鬥數據（歷史最大傷害、尾刀次數、擊殺數）、錢包金幣與外觀代碼，完全不包含任何個資。
 
 ---
 
