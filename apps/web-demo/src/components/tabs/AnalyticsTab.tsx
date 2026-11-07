@@ -8,18 +8,15 @@ import {
   ChevronRight,
   Shirt,
   Clock,
-  Sparkles,
   Activity,
   CalendarDays,
-  ListFilter,
 } from 'lucide-react';
 import { useGameStore, WorkoutSessionRecord } from '../../stores/useGameStore';
-import { EXERCISE_LIBRARY, AvatarBodyStage } from '../../config/catalogConfig';
+import { EXERCISE_LIBRARY } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
-import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 
 type MeSubTab = 'history' | 'charts' | 'trophies';
-type HistoryViewMode = 'calendar' | 'weekly' | 'list';
+type HistoryViewMode = 'calendar' | 'weekly';
 type ChartMetricType = 'volume' | 'strength_pr' | 'muscle_split';
 
 export const AnalyticsTab: React.FC = () => {
@@ -63,17 +60,43 @@ export const AnalyticsTab: React.FC = () => {
     sessionsByDaysAgo.set(d, prev);
   });
 
+  const todayObj = new Date();
+  const currentYear = todayObj.getFullYear();
+  const currentMonth = todayObj.getMonth() + 1;
+  const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
+
+  const formatDateFromDaysAgo = (dAgo: number) => {
+    const dt = new Date(todayObj);
+    dt.setDate(todayObj.getDate() - dAgo);
+    const m = dt.getMonth() + 1;
+    const d = dt.getDate();
+    const wk = weekdayNames[dt.getDay()];
+    return {
+      month: m,
+      day: d,
+      weekday: wk,
+      mmdd: `${m}/${String(d).padStart(2, '0')}`,
+      fullLabel: `${m}月${d}日 (週${wk})`,
+    };
+  };
+
   // Weekly 7-day data (6 days ago -> Today)
   const weeklyDays = Array.from({ length: 7 }, (_, i) => {
     const dAgo = 6 - i;
     const daySessions = sessionsByDaysAgo.get(dAgo) || [];
     const volume = daySessions.reduce((sum, s) => sum + s.totalVolume, 0);
     const sets = daySessions.reduce((sum, s) => sum + s.totalSets, 0);
-    const dateObj = new Date();
-    dateObj.setDate(dateObj.getDate() - dAgo);
-    const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
-    const label = dAgo === 0 ? '今日' : `週${weekdayNames[dateObj.getDay()]}`;
-    return { dAgo, label, volume, sets, sessions: daySessions };
+    const dateInfo = formatDateFromDaysAgo(dAgo);
+    const label = dAgo === 0 ? '今日' : `週${dateInfo.weekday}`;
+    return {
+      dAgo,
+      label,
+      mmdd: dateInfo.mmdd,
+      fullLabel: dateInfo.fullLabel,
+      volume,
+      sets,
+      sessions: daySessions,
+    };
   });
 
   const maxWeeklyDayVol = Math.max(...weeklyDays.map((d) => d.volume), 6000);
@@ -82,18 +105,18 @@ export const AnalyticsTab: React.FC = () => {
   const weeklyActiveDays = weeklyDays.filter((d) => d.sets > 0).length;
 
   // Monthly 28-day Calendar Grid (4 weeks ending today so today is always visible in the grid)
-  const todayObj = new Date();
   const calendarCells = Array.from({ length: 28 }, (_, i) => {
     const dAgo = 27 - i;
-    const cellDate = new Date();
-    cellDate.setDate(todayObj.getDate() - dAgo);
-    const dayNum = cellDate.getDate();
+    const dateInfo = formatDateFromDaysAgo(dAgo);
     const daySessions = sessionsByDaysAgo.get(dAgo) || [];
     const volume = daySessions.reduce((sum, s) => sum + s.totalVolume, 0);
     const sets = daySessions.reduce((sum, s) => sum + s.totalSets, 0);
     return {
       dAgo,
-      dayNum,
+      month: dateInfo.month,
+      dayNum: dateInfo.day,
+      mmdd: `${dateInfo.month}/${dateInfo.day}`,
+      weekday: dateInfo.weekday,
       isToday: dAgo === 0,
       volume,
       sets,
@@ -105,11 +128,17 @@ export const AnalyticsTab: React.FC = () => {
   const monthlyTotalVolume = calendarCells.reduce((sum, c) => sum + c.volume, 0);
   const monthlyTotalSets = calendarCells.reduce((sum, c) => sum + c.sets, 0);
 
-  // Filtered sessions for bottom list when a calendar/week day is selected
+  // Filtered sessions for bottom list:
+  // - If a specific day is clicked, show that day's sessions
+  // - Otherwise, if in 'weekly' (週瀏覽), show ONLY this week's sessions (dAgo <= 6)
+  // - If in 'calendar' (月瀏覽), show this month's sessions (dAgo <= 27)
   const displayedSessions =
     selectedDaysAgo !== null
       ? sessionsByDaysAgo.get(selectedDaysAgo) || []
-      : store.workoutHistory;
+      : store.workoutHistory.filter((s, idx) => {
+          const dAgo = getSessionDaysAgo(s, idx);
+          return historyMode === 'weekly' ? dAgo >= 0 && dAgo <= 6 : dAgo >= 0 && dAgo <= 27;
+        });
 
   // Chronological sessions for trend chart (oldest -> newest)
   const chronologicalSessions = [...store.workoutHistory].reverse();
@@ -164,8 +193,6 @@ export const AnalyticsTab: React.FC = () => {
           volumePoints[volumePoints.length - 1].x
         },${padY + plotH}`
       : '';
-
-  const isBareTop = store.equipped.top === 'top_bare_muscles';
 
   return (
     <div className="p-3.5 space-y-3.5 pb-10">
@@ -224,19 +251,19 @@ export const AnalyticsTab: React.FC = () => {
       </div>
 
       {/* =====================================================================
-          SUB-TAB 1: MONTHLY CALENDAR, WEEKLY VOLUME & SESSION LIST (Item 5)
+          SUB-TAB 1: MONTHLY CALENDAR & WEEKLY VOLUME + FILTERED SESSION LIST
          ===================================================================== */}
       {subTab === 'history' && (
         <div className="space-y-3">
-          {/* View Switcher: 月曆 / 週檢視 / 列表 */}
-          <div className="flex items-center justify-between bg-slate-900 p-1 rounded-xl border border-slate-800">
+          {/* View Switcher: 月瀏覽 / 週瀏覽 (Removed redundant 列表明細 option) */}
+          <div className="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
             {(
               [
-                { id: 'calendar', label: '📅 月曆檢視', icon: CalendarDays },
-                { id: 'weekly', label: '📊 週訓練量', icon: BarChart3 },
-                { id: 'list', label: '📋 列表明細', icon: ListFilter },
+                { id: 'calendar', label: '📅 月瀏覽（月曆檢視）', icon: CalendarDays },
+                { id: 'weekly', label: '📊 週瀏覽（本週訓練）', icon: BarChart3 },
               ] as const
             ).map((m) => {
+              const MIcon = m.icon;
               const active = historyMode === m.id;
               return (
                 <button
@@ -245,13 +272,14 @@ export const AnalyticsTab: React.FC = () => {
                     setHistoryMode(m.id);
                     setSelectedDaysAgo(null);
                   }}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-black transition ${
+                  className={`py-2 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition ${
                     active
                       ? 'bg-cyan-500 text-slate-950 shadow'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  {m.label}
+                  <MIcon className="w-3.5 h-3.5" />
+                  <span>{m.label}</span>
                 </button>
               );
             })}
@@ -260,40 +288,68 @@ export const AnalyticsTab: React.FC = () => {
           {/* VIEW A: MONTHLY CALENDAR GRID */}
           {historyMode === 'calendar' && (
             <div className="retro-box rounded-2xl p-3.5 space-y-3">
+              {/* Clear Year & Month Banner */}
+              <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black">
+                    📅 {currentYear} 年 {currentMonth} 月
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400 font-bold">
+                    ({calendarCells[0].mmdd} ～ {calendarCells[27].mmdd})
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-cyan-300">
+                  點選日期可篩選單日
+                </span>
+              </div>
+
               {/* Monthly Summary KPIs */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-                  <div className="text-[10px] text-slate-400">近4週訓練</div>
+                  <div className="text-[10px] text-slate-400">本月訓練天數</div>
                   <div className="text-sm font-black font-mono text-emerald-400">
                     {monthlyActiveDays} 天
                   </div>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-                  <div className="text-[10px] text-slate-400">總組數</div>
+                  <div className="text-[10px] text-slate-400">本月總組數</div>
                   <div className="text-sm font-black font-mono text-white">
                     {monthlyTotalSets} 組
                   </div>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-                  <div className="text-[10px] text-slate-400">總訓練量</div>
+                  <div className="text-[10px] text-slate-400">本月總訓練量</div>
                   <div className="text-sm font-black font-mono text-amber-300">
                     {(monthlyTotalVolume / 1000).toFixed(1)}k kg
                   </div>
                 </div>
               </div>
 
-              {/* 7-Column Calendar Grid */}
+              {/* Weekday Column Headers aligned with the 7 columns */}
+              <div className="grid grid-cols-7 gap-1.5 text-center px-0.5">
+                {calendarCells.slice(0, 7).map((c, idx) => (
+                  <div
+                    key={idx}
+                    className="text-[10px] font-black text-slate-400 py-0.5"
+                  >
+                    週{c.weekday}
+                  </div>
+                ))}
+              </div>
+
+              {/* 7-Column Calendar Grid with Month/Day (MM/DD) clearly visible */}
               <div className="grid grid-cols-7 gap-1.5 text-center">
                 {calendarCells.map((cell) => {
                   const hasWorkout = cell.sets > 0;
                   const isSelected = selectedDaysAgo === cell.dAgo;
+                  const showMonthPrefix = cell.dayNum === 1 || cell.dAgo === 27 || cell.isToday;
                   return (
                     <button
                       key={cell.dAgo}
                       onClick={() =>
                         setSelectedDaysAgo(isSelected ? null : cell.dAgo)
                       }
-                      className={`py-2 px-1 rounded-xl border flex flex-col items-center justify-center transition ${
+                      className={`py-2 px-0.5 rounded-xl border flex flex-col items-center justify-center transition ${
                         isSelected
                           ? 'bg-cyan-500 text-slate-950 border-cyan-300 font-black'
                           : hasWorkout
@@ -303,8 +359,12 @@ export const AnalyticsTab: React.FC = () => {
                           : 'bg-slate-900/70 border-slate-800/80 text-slate-500'
                       }`}
                     >
-                      <span className="text-[11px] font-mono font-black">
-                        {cell.isToday ? '今' : cell.dayNum}
+                      <span className="text-[10px] font-mono font-black leading-tight">
+                        {cell.isToday
+                          ? `${cell.mmdd}今`
+                          : showMonthPrefix
+                          ? cell.mmdd
+                          : `${cell.month}/${cell.dayNum}`}
                       </span>
                       {hasWorkout ? (
                         <span
@@ -329,7 +389,7 @@ export const AnalyticsTab: React.FC = () => {
                     onClick={() => setSelectedDaysAgo(null)}
                     className="text-cyan-400 font-bold"
                   >
-                    顯示全部紀錄
+                    顯示本月全部紀錄
                   </button>
                 )}
               </div>
@@ -339,6 +399,27 @@ export const AnalyticsTab: React.FC = () => {
           {/* VIEW B: WEEKLY VOLUME BAR VIEW */}
           {historyMode === 'weekly' && (
             <div className="retro-box rounded-2xl p-3.5 space-y-3">
+              {/* Clear Week Date Range Header */}
+              <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-black">
+                    📊 本週訓練（{weeklyDays[0].mmdd} ～ {weeklyDays[6].mmdd}）
+                  </span>
+                </div>
+                {selectedDaysAgo !== null ? (
+                  <button
+                    onClick={() => setSelectedDaysAgo(null)}
+                    className="text-[11px] text-cyan-400 font-black"
+                  >
+                    顯示本週全部
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-bold text-slate-400">
+                    點選柱狀圖可看單日
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
                   <div className="text-[10px] text-slate-400">本週訓練</div>
@@ -360,9 +441,9 @@ export const AnalyticsTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* 7-Day Vertical Bar Chart */}
+              {/* 7-Day Vertical Bar Chart with Exact MM/DD Dates */}
               <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3">
-                <div className="grid grid-cols-7 gap-2 items-end h-32 pt-4">
+                <div className="grid grid-cols-7 gap-1.5 items-end h-36 pt-4">
                   {weeklyDays.map((d) => {
                     const heightPct =
                       d.volume > 0 ? Math.max(16, Math.round((d.volume / maxWeeklyDayVol) * 100)) : 6;
@@ -388,10 +469,13 @@ export const AnalyticsTab: React.FC = () => {
                           }`}
                           style={{ height: `${heightPct}%` }}
                         />
-                        <span className="text-[10px] font-bold text-slate-300 mt-1.5">
+                        <span className="text-[10px] font-mono font-black text-white mt-1.5 leading-tight">
+                          {d.mmdd}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-400 leading-tight">
                           {d.label}
                         </span>
-                        <span className="text-[9px] font-mono text-slate-500">
+                        <span className="text-[9px] font-mono text-cyan-300/80 leading-tight">
                           {d.sets}組
                         </span>
                       </button>
@@ -402,14 +486,39 @@ export const AnalyticsTab: React.FC = () => {
             </div>
           )}
 
-          {/* SESSION CARDS LIST */}
+          {/* SESSION CARDS LIST (Filtered strictly by current Month View or Week View) */}
           <div className="space-y-2.5">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-black text-slate-300">
+                {selectedDaysAgo !== null
+                  ? `📋 ${formatDateFromDaysAgo(selectedDaysAgo).fullLabel} 訓練明細（${displayedSessions.length} 筆）`
+                  : historyMode === 'weekly'
+                  ? `📋 本週訓練明細（${weeklyDays[0].mmdd}～${weeklyDays[6].mmdd} · 共 ${displayedSessions.length} 筆）`
+                  : `📋 本月訓練明細（${currentYear}年${currentMonth}月 · 共 ${displayedSessions.length} 筆）`}
+              </span>
+              {selectedDaysAgo !== null && (
+                <button
+                  onClick={() => setSelectedDaysAgo(null)}
+                  className="text-[11px] font-black text-cyan-400"
+                >
+                  查看{historyMode === 'weekly' ? '本週' : '本月'}全部
+                </button>
+              )}
+            </div>
+
             {displayedSessions.length === 0 ? (
               <div className="retro-box rounded-2xl p-5 text-center text-xs text-slate-400">
-                該日無訓練紀錄
+                {selectedDaysAgo !== null
+                  ? '該日無訓練紀錄'
+                  : historyMode === 'weekly'
+                  ? '本週尚無訓練紀錄'
+                  : '本月尚無訓練紀錄'}
               </div>
             ) : (
-              displayedSessions.map((session) => (
+              displayedSessions.map((session, sIdx) => {
+                const dAgo = getSessionDaysAgo(session, sIdx);
+                const dateInfo = formatDateFromDaysAgo(dAgo);
+                return (
                 <div
                   key={session.id}
                   onClick={() => store.setSelectedHistorySessionId(session.id)}
@@ -418,7 +527,7 @@ export const AnalyticsTab: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2 text-[11px] font-mono text-emerald-400 font-bold">
-                        <span>📅 {session.dateLabel}</span>
+                        <span>📅 {dateInfo.mmdd} (週{dateInfo.weekday}) · {session.dateLabel}</span>
                         <span>·</span>
                         <span className="flex items-center gap-0.5 text-slate-400">
                           <Clock className="w-3 h-3" />
@@ -482,7 +591,8 @@ export const AnalyticsTab: React.FC = () => {
                     <span className="text-amber-300 font-bold">+{session.coinsEarned}🪙</span>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -793,58 +903,70 @@ export const AnalyticsTab: React.FC = () => {
       )}
 
       {/* =====================================================================
-          SUB-TAB 3: PR TROPHIES & HIGH-CONTRAST AVATAR MUSCLE STAGE SWITCHER (Item 6)
+          SUB-TAB 3: BODY METRICS SUMMARY & ALL EXERCISES PR BOARD (Removed Avatar Block)
          ===================================================================== */}
       {subTab === 'trophies' && (
         <div className="space-y-3.5">
-          {/* Body Stage Evolution Selector + Live Muscular Portrait */}
+          {/* Body Metrics & Composition Summary (No Avatar Doll Block) */}
           <div className="retro-box rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-white flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                肌肉體態進化對比
+                <Activity className="w-4 h-4 text-emerald-400" />
+                當前體態數據與營養目標
               </span>
-              <button
-                onClick={() =>
-                  store.equipOwnedAvatarItem(
-                    'top',
-                    isBareTop ? 'top_black_tank' : 'top_bare_muscles'
-                  )
-                }
-                className="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 text-xs font-black"
-              >
-                {isBareTop ? '💪 赤膊展示中' : '👕 脫衣看肌肉'}
-              </button>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-black">
+                BMI {(biometrics.weightKg / Math.pow(biometrics.heightCm / 100, 2)).toFixed(1)}
+              </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <AvatarPortraitCanvas
-                bodyStage={store.bodyStage}
-                equipped={store.equipped}
-                size={92}
-              />
-              <div className="grid grid-cols-2 gap-2 flex-1">
-                {(
-                  [
-                    { id: 'beginner', label: '🌱 菜鳥', desc: '平坦柔和無腹肌' },
-                    { id: 'aesthetic', label: '⚡ 精實', desc: '倒三角＋六塊腹肌' },
-                    { id: 'powerlifter', label: '🐻 巨巨', desc: '厚實胸肌＋斜方肌' },
-                    { id: 'titan', label: '👑 泰坦', desc: '極限寬肩＋霸王氣場' },
-                  ] as { id: AvatarBodyStage; label: string; desc: string }[]
-                ).map((st) => (
-                  <button
-                    key={st.id}
-                    onClick={() => store.setBodyStage(st.id)}
-                    className={`p-2 rounded-xl border text-left transition ${
-                      store.bodyStage === st.id
-                        ? 'bg-emerald-950/40 border-emerald-400 text-white'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <div className="text-xs font-black">{st.label}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{st.desc}</div>
-                  </button>
-                ))}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+                <label className="text-[10px] text-slate-400 block">身高 cm</label>
+                <input
+                  type="number"
+                  value={biometrics.heightCm}
+                  onChange={(e) => store.updateBiometrics({ heightCm: Number(e.target.value) })}
+                  className="w-full bg-transparent text-center font-mono font-black text-sm text-white outline-none mt-0.5"
+                />
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+                <label className="text-[10px] text-slate-400 block">體重 kg</label>
+                <input
+                  type="number"
+                  value={biometrics.weightKg}
+                  onChange={(e) => store.updateBiometrics({ weightKg: Number(e.target.value) })}
+                  className="w-full bg-transparent text-center font-mono font-black text-sm text-emerald-400 outline-none mt-0.5"
+                />
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+                <label className="text-[10px] text-slate-400 block">體脂率 %</label>
+                <input
+                  type="number"
+                  value={biometrics.bodyFatPct}
+                  onChange={(e) => store.updateBiometrics({ bodyFatPct: Number(e.target.value) })}
+                  className="w-full bg-transparent text-center font-mono font-black text-sm text-amber-300 outline-none mt-0.5"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+                <div className="text-[10px] text-slate-400">除脂體重 LBM</div>
+                <div className="text-xs font-black font-mono text-cyan-300 mt-0.5">
+                  {(biometrics.weightKg * (1 - biometrics.bodyFatPct / 100)).toFixed(1)} kg
+                </div>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+                <div className="text-[10px] text-slate-400">目標熱量</div>
+                <div className="text-xs font-black font-mono text-emerald-400 mt-0.5">
+                  {targetKcal} kcal
+                </div>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+                <div className="text-[10px] text-slate-400">每日蛋白質</div>
+                <div className="text-xs font-black font-mono text-rose-300 mt-0.5">
+                  {proteinGrams} g
+                </div>
               </div>
             </div>
           </div>

@@ -2056,6 +2056,7 @@ export const useGameStore = create<GameState>()(
               adventureCooldownUntil: now + cooldownMs,
               activeTeamComboBuff: nextComboBuff,
               collectedBossLoots: updatedLoots,
+              devForceNextLootDrop: false,
             });
             state.showToast(
               droppedLootName
@@ -2077,6 +2078,7 @@ export const useGameStore = create<GameState>()(
               adventureCooldownUntil: now + cooldownMs,
               activeTeamComboBuff: nextComboBuff,
               collectedBossLoots: updatedLoots,
+              devForceNextLootDrop: false,
             });
             state.showToast(
               droppedLootName
