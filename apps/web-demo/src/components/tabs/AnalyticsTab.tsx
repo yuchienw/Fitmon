@@ -286,12 +286,12 @@ export const AnalyticsTab: React.FC = () => {
          ===================================================================== */}
       {subTab === 'history' && (
         <div className="space-y-3">
-          {/* View Switcher: 月瀏覽 / 週瀏覽 (Removed redundant 列表明細 option) */}
+          {/* View Switcher: 月瀏覽 / 週瀏覽 */}
           <div className="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
             {(
               [
-                { id: 'calendar', label: '📅 月瀏覽（月曆檢視）', icon: CalendarDays },
-                { id: 'weekly', label: '📊 週瀏覽（本週訓練）', icon: BarChart3 },
+                { id: 'calendar', label: '月瀏覽', icon: CalendarDays },
+                { id: 'weekly', label: '週瀏覽', icon: BarChart3 },
               ] as const
             ).map((m) => {
               const MIcon = m.icon;
@@ -337,8 +337,8 @@ export const AnalyticsTab: React.FC = () => {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="px-2 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black font-mono shrink-0">
-                    📅 {calYear}年{calMonth}月
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black font-mono shrink-0">
+                    {calYear}年{calMonth}月
                   </span>
                   <button
                     onClick={() => {
@@ -492,8 +492,8 @@ export const AnalyticsTab: React.FC = () => {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="px-2 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-black font-mono shrink-0">
-                    📊 {weeklyDays[0].mmdd} ～ {weeklyDays[6].mmdd}
+                  <span className="px-2 py-0.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-black font-mono shrink-0">
+                    {weeklyDays[0].mmdd} ～ {weeklyDays[6].mmdd}
                   </span>
                   <button
                     onClick={() => {
@@ -526,7 +526,7 @@ export const AnalyticsTab: React.FC = () => {
                   </button>
                 ) : (
                   <span className="text-[10px] font-mono text-slate-400 shrink-0">
-                    週日～週六
+                    週日～六
                   </span>
                 )}
               </div>
@@ -553,7 +553,7 @@ export const AnalyticsTab: React.FC = () => {
               </div>
 
               {/* 7-Day Vertical Bar Chart with Exact MM/DD Dates */}
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3">
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 sm:p-3">
                 <div className="grid grid-cols-7 gap-1 items-end h-36 pt-4">
                   {weeklyDays.map((d) => {
                     const heightPct =
@@ -565,28 +565,28 @@ export const AnalyticsTab: React.FC = () => {
                         onClick={() =>
                           setSelectedDateKey(isSelected ? null : d.dayKey)
                         }
-                        className="flex flex-col items-center h-full justify-end group"
+                        className="flex flex-col items-center h-full justify-end group min-w-0"
                       >
-                        <span className="text-[9px] font-mono text-emerald-300 font-bold mb-1">
+                        <span className="text-[9px] font-mono text-emerald-300 font-bold mb-1 truncate w-full text-center">
                           {d.volume > 0 ? `${(d.volume / 1000).toFixed(1)}k` : ''}
                         </span>
                         <div
-                          className={`w-full rounded-t-lg transition-all ${
+                          className={`w-full max-w-[24px] mx-auto rounded-t-md transition-all ${
                             isSelected
-                              ? 'bg-cyan-400'
+                              ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]'
                               : d.volume > 0
                               ? 'bg-gradient-to-t from-emerald-600 to-emerald-400'
                               : 'bg-slate-800'
                           }`}
                           style={{ height: `${heightPct}%` }}
                         />
-                        <span className="text-[10px] font-mono font-black text-white mt-1.5 leading-tight">
+                        <span className="text-[10px] font-mono font-black text-white mt-1.5 leading-tight truncate w-full text-center">
                           {d.mmdd}
                         </span>
-                        <span className="text-[9px] font-bold text-slate-400 leading-tight">
+                        <span className="text-[9px] font-bold text-slate-400 leading-tight truncate w-full text-center">
                           {d.label}
                         </span>
-                        <span className="text-[9px] font-mono text-cyan-300/80 leading-tight">
+                        <span className="text-[9px] font-mono text-cyan-300/80 leading-tight truncate w-full text-center">
                           {d.sets}組
                         </span>
                       </button>
@@ -604,8 +604,8 @@ export const AnalyticsTab: React.FC = () => {
                 {selectedDateKey !== null
                   ? `📋 ${selectedDateKey} 紀錄（${displayedSessions.length} 筆）`
                   : historyMode === 'weekly'
-                  ? `📋 本週明細（${weeklyDays[0].mmdd}～${weeklyDays[6].mmdd} · ${displayedSessions.length}筆）`
-                  : `📋 本月明細（${calYear}/${calMonth} · ${displayedSessions.length}筆）`}
+                  ? `📋 本週紀錄（${displayedSessions.length} 筆）`
+                  : `📋 本月紀錄（${displayedSessions.length} 筆）`}
               </span>
               {selectedDateKey !== null && (
                 <button
