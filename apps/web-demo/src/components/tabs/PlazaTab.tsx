@@ -22,7 +22,6 @@ import {
   UserPlus,
   UserMinus,
   Edit3,
-  Camera,
 } from 'lucide-react';
 import {
   useGameStore,
@@ -205,12 +204,12 @@ export const PlazaTab: React.FC = () => {
 
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => store.setMemeStudioOpen(true)}
-            title="與我的娃合照分享"
+            onClick={() => store.setMemeStudioOpen(true, 'boss_victory')}
+            title="產生 Boss 討伐官方戰報圖卡（特定官方場景）"
             className="px-2 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-[11px] font-black text-emerald-300 flex items-center gap-1 active:scale-95 transition"
           >
-            <Camera className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span>合照</span>
+            <Trophy className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>戰報卡</span>
           </button>
 
           <button
@@ -686,6 +685,14 @@ export const PlazaTab: React.FC = () => {
               </button>
             ) : (
               <div className="space-y-2">
+                <button
+                  onClick={() => store.setMemeStudioOpen(true, 'boss_victory')}
+                  className="w-full retro-btn py-3 rounded-xl bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg"
+                >
+                  <Trophy className="w-4 h-4 stroke-[2.5px]" />
+                  <span>生成 Boss 討伐官方戰報圖卡（分享戰果）</span>
+                </button>
+
                 <div className="w-full py-2 px-3 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-between text-xs">
                   <span className="text-slate-300 font-bold flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-amber-400 animate-spin" />

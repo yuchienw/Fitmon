@@ -91,7 +91,7 @@ export const VictoryModal: React.FC = () => {
             <button
               onClick={() => {
                 store.closeVictoryModal();
-                store.setMemeStudioOpen(true);
+                store.setMemeStudioOpen(true, 'workout_photo');
               }}
               className="retro-btn py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5"
             >

@@ -203,6 +203,7 @@ interface GameState {
   bgmEnabled: boolean;
   isNightModeRoom: boolean;
   memeStudioOpen: boolean;
+  shareStudioContext: 'workout_photo' | 'boss_victory';
   settingsOpen: boolean;
   wardrobeModalOpen: boolean;
   selectedProfileId: string | null;
@@ -304,7 +305,7 @@ interface GameState {
   toggleSound: () => void;
   toggleBgm: () => void;
   toggleNightModeRoom: () => void;
-  setMemeStudioOpen: (open: boolean) => void;
+  setMemeStudioOpen: (open: boolean, context?: 'workout_photo' | 'boss_victory') => void;
   setSettingsOpen: (open: boolean) => void;
   setWardrobeModalOpen: (open: boolean) => void;
   setSelectedProfileId: (id: string | null) => void;
@@ -739,6 +740,7 @@ export const useGameStore = create<GameState>()(
       bgmEnabled: false,
       isNightModeRoom: false,
       memeStudioOpen: false,
+      shareStudioContext: 'workout_photo',
       settingsOpen: false,
       wardrobeModalOpen: false,
       selectedProfileId: null,
@@ -921,9 +923,12 @@ export const useGameStore = create<GameState>()(
         set((s) => ({ isNightModeRoom: !s.isNightModeRoom }));
       },
 
-      setMemeStudioOpen: (open) => {
+      setMemeStudioOpen: (open, context) => {
         soundFX.playBlip();
-        set({ memeStudioOpen: open });
+        set((s) => ({
+          memeStudioOpen: open,
+          shareStudioContext: context ?? s.shareStudioContext,
+        }));
       },
 
       setSettingsOpen: (open) => {

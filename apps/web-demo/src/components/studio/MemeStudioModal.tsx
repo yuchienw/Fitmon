@@ -18,10 +18,13 @@ import {
   Eye,
   EyeOff,
   SlidersHorizontal,
+  Trophy,
+  Lock,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
 import { BRAND_CONFIG } from '../../config/economyConfig';
+import { ADVENTURE_BOSS_CATALOG } from '../../config/catalogConfig';
 
 type PoseOption = 'IDLE' | 'SQUAT' | 'CURL' | 'CHEER' | 'WALK';
 type ExpressionOption = 'smile' | 'strain' | 'cool';
@@ -102,6 +105,21 @@ export const MemeStudioModal: React.FC = () => {
       setCustomKcal(Math.round(latestHist.durationMinutes * 7.5 + latestHist.totalSets * 6));
     }
   }, [latestHist]);
+
+  // Sync template & statMode when shareStudioContext changes ('workout_photo' vs 'boss_victory')
+  const isBossOfficialMode = store.shareStudioContext === 'boss_victory';
+  useEffect(() => {
+    if (!store.memeStudioOpen) return;
+    if (store.shareStudioContext === 'boss_victory') {
+      setStatMode('rpg_raid');
+      setTemplateId('rpg_hud');
+      setSelectedPose('CHEER');
+      setAvatarNormPos({ x: 0.76, y: 0.75 });
+    } else {
+      setStatMode('strength');
+      setTemplateId('strava_bottom');
+    }
+  }, [store.memeStudioOpen, store.shareStudioContext]);
 
   // Avatar placement & pose controls (normalized 0..1 coordinates on canvas)
   const [avatarNormPos, setAvatarNormPos] = useState<{ x: number; y: number }>({
@@ -201,9 +219,104 @@ export const MemeStudioModal: React.FC = () => {
     ctx.imageSmoothingQuality = 'high';
 
     // =========================================================================
-    // LAYER 1: Real Photo (center-cropped cover) OR Realistic Gym Mirror Backdrop
+    // LAYER 1: Official Boss Trophy Scene (if isBossOfficialMode) OR Real User Photo
     // =========================================================================
-    if (loadedPhotoImg) {
+    const currentBoss =
+      ADVENTURE_BOSS_CATALOG[(store.squadStage - 1) % ADVENTURE_BOSS_CATALOG.length];
+
+    if (isBossOfficialMode) {
+      // STRICT OFFICIAL CONTENT MODE: User photos are NOT allowed here!
+      // Render dedicated RPG Boss Victory / Raid Colosseum Arena graphic
+      const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.34, 30, W * 0.5, H * 0.4, W * 0.85);
+      bgGrad.addColorStop(0, '#451a03');
+      bgGrad.addColorStop(0.45, '#1e1b4b');
+      bgGrad.addColorStop(1, '#090d16');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Golden victory sunburst rays from behind Boss
+      ctx.save();
+      ctx.translate(W * 0.5, H * 0.34);
+      for (let i = 0; i < 16; i++) {
+        ctx.rotate((Math.PI * 2) / 16);
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(251, 191, 36, 0.07)' : 'rgba(244, 63, 94, 0.04)';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-42, -W);
+        ctx.lineTo(42, -W);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Arena stone floor platform
+      const floorY = H * 0.58;
+      const floorGrad = ctx.createLinearGradient(0, floorY, 0, H);
+      floorGrad.addColorStop(0, '#1e293b');
+      floorGrad.addColorStop(0.15, '#0f172a');
+      floorGrad.addColorStop(1, '#020617');
+      ctx.fillStyle = floorGrad;
+      ctx.fillRect(0, floorY, W, H - floorY);
+
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, floorY);
+      ctx.lineTo(W, floorY);
+      ctx.stroke();
+
+      // Official Boss Showcase Emblem in upper center-left
+      const bossCenterX = W * 0.36;
+      const bossCenterY = H * 0.35;
+
+      // Glowing magic circle under Boss
+      ctx.save();
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.55)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(bossCenterX, bossCenterY, 96, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+      ctx.beginPath();
+      ctx.arc(bossCenterX, bossCenterY, 90, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Giant Boss Emoji / Totem
+      ctx.font = '108px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(currentBoss.emoji, bossCenterX, bossCenterY);
+
+      // Slanted "RAID CLEAR / 討伐戰報" Stamp across the Boss
+      ctx.translate(bossCenterX, bossCenterY + 56);
+      ctx.rotate(-0.12);
+      ctx.fillStyle = '#e11d48';
+      ctx.beginPath();
+      ctx.roundRect(-115, -22, 230, 44, 10);
+      ctx.fill();
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 22px "Barlow Condensed", "Noto Sans TC", sans-serif';
+      ctx.fillText(`⚔️ STAGE ${store.squadStage} 討伐戰報`, 0, 2);
+      ctx.restore();
+
+      // Boss Name & Rare Loot Drop Banner
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 26px "Noto Sans TC", sans-serif';
+      ctx.fillText(`目標首領：${currentBoss.nameZh}`, 44, floorY - 58);
+
+      ctx.fillStyle = '#6ee7b7';
+      ctx.font = '800 18px "Noto Sans TC", sans-serif';
+      ctx.fillText(
+        `🎁 專屬神裝：${currentBoss.hiddenLoot.emoji} ${currentBoss.hiddenLoot.nameZh} (${currentBoss.hiddenLoot.statDescZh})`,
+        44,
+        floorY - 24
+      );
+    } else if (loadedPhotoImg) {
       const imgRatio = loadedPhotoImg.width / loadedPhotoImg.height;
       const canvasRatio = W / H;
       let drawW = W;
@@ -513,6 +626,7 @@ export const MemeStudioModal: React.FC = () => {
     ctx.restore();
   }, [
     store.memeStudioOpen,
+    isBossOfficialMode,
     aspectRatio,
     loadedPhotoImg,
     templateId,
@@ -643,25 +757,59 @@ export const MemeStudioModal: React.FC = () => {
           </button>
         </div>
 
-        {/* 2. Photo Upload + Aspect Ratio Switcher */}
-        <div className="flex items-center justify-between gap-2">
-          <label className="retro-btn px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black cursor-pointer flex items-center gap-1.5 shadow">
-            <Camera className="w-3.5 h-3.5 stroke-[2.5px]" aria-hidden="true" />
-            <span>{uploadedPhotoUrl ? '更換照片 / 重拍' : '選取照片 / 拍照'}</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-          </label>
+        {/* 1.5 Scenario Mode Switcher: [📷 運動日常合照 (可放個人照片)] vs [🏆 Boss 討伐紀念卡 (特定內容 · 禁放照片)] */}
+        <div className="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+          <button
+            onClick={() => store.setMemeStudioOpen(true, 'workout_photo')}
+            className={`py-1.5 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition ${
+              !isBossOfficialMode
+                ? 'bg-emerald-500 text-slate-950 shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>運動完成合照</span>
+          </button>
 
-          <div className="flex items-center gap-1">
+          <button
+            onClick={() => store.setMemeStudioOpen(true, 'boss_victory')}
+            className={`py-1.5 px-2 rounded-lg text-xs font-black flex items-center justify-center gap-1.5 transition ${
+              isBossOfficialMode
+                ? 'bg-amber-400 text-slate-950 shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>打贏 Boss 戰報</span>
+          </button>
+        </div>
+
+        {/* 2. Photo Upload (Allowed in Workout Mode, Locked in Official Boss Mode) + Aspect Ratio */}
+        <div className="flex items-center justify-between gap-2">
+          {isBossOfficialMode ? (
+            <div className="px-2.5 py-1.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-[11px] font-black flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+              <span>官方 Boss 特定戰報（不開放放個人照片）</span>
+            </div>
+          ) : (
+            <label className="retro-btn px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black cursor-pointer flex items-center gap-1.5 shadow">
+              <Camera className="w-3.5 h-3.5 stroke-[2.5px]" aria-hidden="true" />
+              <span>{uploadedPhotoUrl ? '更換照片 / 重拍' : '選取照片 / 拍照'}</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </label>
+          )}
+
+          <div className="flex items-center gap-1 shrink-0">
             {(['1:1', '9:16'] as const).map((ratio) => (
               <button
                 key={ratio}
                 onClick={() => setAspectRatio(ratio)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-black border transition ${
+                className={`px-2 py-1 rounded-lg text-[11px] font-mono font-black border transition ${
                   aspectRatio === ratio
                     ? 'bg-emerald-500 text-slate-950 border-emerald-400'
                     : 'bg-slate-900 text-slate-300 border-slate-700'

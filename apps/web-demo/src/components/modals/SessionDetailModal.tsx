@@ -171,7 +171,7 @@ export const SessionDetailModal: React.FC = () => {
           <button
             onClick={() => {
               store.setSelectedHistorySessionId(null);
-              store.setMemeStudioOpen(true);
+              store.setMemeStudioOpen(true, 'workout_photo');
             }}
             className="retro-btn py-2.5 px-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black flex items-center justify-center gap-1"
           >
