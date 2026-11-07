@@ -9,16 +9,27 @@ import {
   Swords,
   Wrench,
   X,
+  Sprout,
+  Zap,
+  Shield,
+  Crown,
+  Shirt,
+  ScrollText,
+  Flame,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { DAILY_SCIENCE_QUIZZES, AvatarBodyStage } from '../../config/catalogConfig';
 
-const STAGE_OPTIONS: { id: AvatarBodyStage; label: string }[] = [
-  { id: 'beginner', label: '🌱 菜鳥' },
-  { id: 'aesthetic', label: '⚡ 精實' },
-  { id: 'powerlifter', label: '🐻 巨巨' },
-  { id: 'titan', label: '👑 泰坦' },
+const STAGE_OPTIONS: {
+  id: AvatarBodyStage;
+  label: string;
+  icon: React.FC<{ className?: string }>;
+}[] = [
+  { id: 'beginner', label: '菜鳥', icon: Sprout },
+  { id: 'aesthetic', label: '精實', icon: Zap },
+  { id: 'powerlifter', label: '巨巨', icon: Shield },
+  { id: 'titan', label: '泰坦', icon: Crown },
 ];
 
 export const HomeTab: React.FC = () => {
@@ -45,18 +56,22 @@ export const HomeTab: React.FC = () => {
         {/* Floating Corner Dev/Physique Preview Trigger (Hidden until tapped) */}
         <button
           onClick={() => setDevPreviewOpen((v) => !v)}
-          className="absolute bottom-14 right-2.5 z-20 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-400/50 text-amber-300 text-[10px] font-black flex items-center gap-1 shadow-lg active:scale-95 transition"
+          className="game-stage-dark absolute bottom-14 right-2.5 z-20 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-400/50 text-amber-300 text-[10px] font-black flex items-center gap-1 shadow-lg active:scale-95 transition"
         >
-          <Wrench className="w-3 h-3" />
-          <span>🛠️ 體態外掛</span>
+          <Wrench className="w-3 h-3" aria-hidden="true" />
+          <span>體態預覽</span>
         </button>
 
         {devPreviewOpen && (
-          <div className="absolute bottom-24 right-2.5 left-2.5 z-30 p-2.5 rounded-2xl bg-slate-950/95 backdrop-blur-md border-2 border-amber-400 shadow-2xl space-y-2">
+          <div className="game-stage-dark absolute bottom-24 right-2.5 left-2.5 z-30 p-2.5 rounded-2xl bg-slate-950/95 backdrop-blur-md border-2 border-amber-400 shadow-2xl space-y-2">
             <div className="flex items-center justify-between text-[11px] font-black text-amber-300">
-              <span>🛠️ MVP 體態進化與赤膊快速預覽</span>
+              <span className="flex items-center gap-1">
+                <Wrench className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>MVP 體態進化與赤膊快速預覽</span>
+              </span>
               <button
                 onClick={() => setDevPreviewOpen(false)}
+                aria-label="關閉體態預覽"
                 className="p-0.5 rounded bg-slate-800 text-slate-300"
               >
                 <X className="w-3.5 h-3.5" />
@@ -64,19 +79,23 @@ export const HomeTab: React.FC = () => {
             </div>
             <div className="flex items-center gap-1.5">
               <div className="grid grid-cols-4 gap-1 flex-1">
-                {STAGE_OPTIONS.map((st) => (
-                  <button
-                    key={st.id}
-                    onClick={() => store.setBodyStage(st.id)}
-                    className={`py-1.5 rounded-xl text-[11px] font-black transition ${
-                      store.bodyStage === st.id
-                        ? 'bg-emerald-500 text-slate-950 shadow'
-                        : 'bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
+                {STAGE_OPTIONS.map((st) => {
+                  const StageIcon = st.icon;
+                  return (
+                    <button
+                      key={st.id}
+                      onClick={() => store.setBodyStage(st.id)}
+                      className={`py-1.5 rounded-xl text-[11px] font-black transition flex items-center justify-center gap-1 ${
+                        store.bodyStage === st.id
+                          ? 'bg-emerald-500 text-slate-950 shadow'
+                          : 'bg-slate-800 text-slate-300'
+                      }`}
+                    >
+                      <StageIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
+                      <span>{st.label}</span>
+                    </button>
+                  );
+                })}
               </div>
               <button
                 onClick={() =>
@@ -85,13 +104,23 @@ export const HomeTab: React.FC = () => {
                     isBareTop ? 'top_black_tank' : 'top_bare_muscles'
                   )
                 }
-                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 border transition ${
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 border transition flex items-center gap-1 ${
                   isBareTop
                     ? 'bg-amber-400 text-slate-950 border-amber-300'
                     : 'bg-slate-900 text-amber-300 border-amber-500/40'
                 }`}
               >
-                {isBareTop ? '💪 赤膊' : '👕 背心'}
+                {isBareTop ? (
+                  <>
+                    <Flame className="w-3 h-3 shrink-0" aria-hidden="true" />
+                    <span>赤膊</span>
+                  </>
+                ) : (
+                  <>
+                    <Shirt className="w-3 h-3 shrink-0" aria-hidden="true" />
+                    <span>背心</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -105,11 +134,21 @@ export const HomeTab: React.FC = () => {
           className="col-span-5 retro-btn py-3 px-3 rounded-2xl bg-gradient-to-b from-emerald-400 to-teal-500 text-slate-950 font-black text-xs flex flex-col items-center justify-center gap-1 shadow-lg border-2 border-emerald-200"
         >
           <div className="flex items-center gap-1.5 text-sm">
-            <Dumbbell className="w-4 h-4 stroke-[2.5px]" />
+            <Dumbbell className="w-4 h-4 stroke-[2.5px]" aria-hidden="true" />
             <span>開始運動</span>
           </div>
-          <span className="text-[10px] opacity-85 font-bold">
-            {isWorkoutCharged ? '✅ 今日已充能' : '⚡ 累積出拳能量'}
+          <span className="text-[10px] opacity-85 font-bold flex items-center gap-1">
+            {isWorkoutCharged ? (
+              <>
+                <CheckCircle2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span>今日已充能</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-3 h-3 shrink-0 fill-current" aria-hidden="true" />
+                <span>累積出拳能量</span>
+              </>
+            )}
           </span>
         </button>
 
@@ -118,11 +157,11 @@ export const HomeTab: React.FC = () => {
           className="col-span-5 retro-btn py-3 px-3 rounded-2xl bg-gradient-to-b from-amber-400 via-orange-400 to-rose-500 text-slate-950 font-black text-xs flex flex-col items-center justify-center gap-1 shadow-lg border-2 border-amber-200"
         >
           <div className="flex items-center gap-1.5 text-sm">
-            <Swords className="w-4 h-4 stroke-[2.5px]" />
+            <Swords className="w-4 h-4 stroke-[2.5px]" aria-hidden="true" />
             <span>討伐 Boss</span>
           </div>
-          <span className="text-[10px] opacity-90 font-bold">
-            Stage {store.squadStage} · 組隊刷寶
+          <span className="text-[10px] opacity-90 font-bold font-mono">
+            STAGE {store.squadStage} · 組隊刷寶
           </span>
         </button>
 
@@ -131,7 +170,7 @@ export const HomeTab: React.FC = () => {
           title="拍貼工坊"
           className="col-span-2 retro-btn py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-[11px] flex flex-col items-center justify-center gap-1"
         >
-          <Camera className="w-4 h-4 text-amber-400" />
+          <Camera className="w-4 h-4 text-amber-400" aria-hidden="true" />
           <span>拍貼</span>
         </button>
       </div>
@@ -140,15 +179,19 @@ export const HomeTab: React.FC = () => {
       <div className="retro-box rounded-2xl p-3 space-y-2">
         <div className="flex items-center justify-between px-0.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm">📜</span>
+            <ScrollText className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
             <h3 className="text-xs font-black text-white tracking-wide">今日懸賞任務</h3>
           </div>
           <button
             onClick={() => setQuizOpen(true)}
             className="px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 hover:bg-cyan-500/25 transition"
           >
-            <Brain className="w-3.5 h-3.5" />
-            <span>科普問答 +15🪙</span>
+            <Brain className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>科普問答</span>
+            <span className="font-mono flex items-center gap-0.5 text-amber-300">
+              +15
+              <Coins className="w-3 h-3 text-amber-400" aria-hidden="true" />
+            </span>
           </button>
         </div>
 

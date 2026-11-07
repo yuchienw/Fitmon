@@ -14,6 +14,13 @@ import {
   CreditCard,
   ShieldCheck,
   X,
+  LayoutGrid,
+  Crown,
+  Smile,
+  Dumbbell,
+  Dog,
+  Layers,
+  MapPin,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import {
@@ -187,26 +194,30 @@ export const ShopTab: React.FC = () => {
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
             {(
               [
-                { id: 'all', label: '全部' },
-                { id: 'hair', label: '🧢 頭飾' },
-                { id: 'face', label: '😊 表情' },
-                { id: 'top', label: '👕 上衣' },
-                { id: 'bottom', label: '🩳 下身' },
-                { id: 'accessory', label: '🏋️ 手持' },
+                { id: 'all', label: '全部', icon: LayoutGrid },
+                { id: 'hair', label: '頭飾', icon: Crown },
+                { id: 'face', label: '表情', icon: Smile },
+                { id: 'top', label: '上衣', icon: Shirt },
+                { id: 'bottom', label: '下身', icon: Layers },
+                { id: 'accessory', label: '手持', icon: Dumbbell },
               ] as const
-            ).map((sub) => (
-              <button
-                key={sub.id}
-                onClick={() => setAvatarFilter(sub.id)}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-black shrink-0 border transition ${
-                  avatarFilter === sub.id
-                    ? 'bg-cyan-500 text-slate-950 border-cyan-400'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                }`}
-              >
-                {sub.label}
-              </button>
-            ))}
+            ).map((sub) => {
+              const SubIcon = sub.icon;
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => setAvatarFilter(sub.id)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-black shrink-0 border transition flex items-center gap-1 ${
+                    avatarFilter === sub.id
+                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <SubIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
+                  <span>{sub.label}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -216,31 +227,38 @@ export const ShopTab: React.FC = () => {
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               {(
                 [
-                  { id: 'all', label: '全部' },
-                  { id: 'furniture', label: '🏋️ 器材' },
-                  { id: 'pet', label: '🐶 寵物' },
-                  { id: 'wallpaper', label: '🧱 牆面' },
-                  { id: 'floor', label: '🟫 地板' },
+                  { id: 'all', label: '全部', icon: LayoutGrid },
+                  { id: 'furniture', label: '器材', icon: Dumbbell },
+                  { id: 'pet', label: '寵物', icon: Dog },
+                  { id: 'wallpaper', label: '牆面', icon: Sofa },
+                  { id: 'floor', label: '地板', icon: Layers },
                 ] as const
-              ).map((sub) => (
-                <button
-                  key={sub.id}
-                  onClick={() => setRoomFilter(sub.id)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-black shrink-0 border transition ${
-                    roomFilter === sub.id
-                      ? 'bg-cyan-500 text-slate-950 border-cyan-400'
-                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                  }`}
-                >
-                  {sub.label}
-                </button>
-              ))}
+              ).map((sub) => {
+                const SubIcon = sub.icon;
+                return (
+                  <button
+                    key={sub.id}
+                    onClick={() => setRoomFilter(sub.id)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-black shrink-0 border transition flex items-center gap-1 ${
+                      roomFilter === sub.id
+                        ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-sm'
+                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <SubIcon className="w-3 h-3 shrink-0" aria-hidden="true" />
+                    <span>{sub.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Flexible Target Slot Selector for Furniture/Pets */}
             {(roomFilter === 'all' || roomFilter === 'furniture' || roomFilter === 'pet') && (
               <div className="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1">
-                <span className="text-[11px] font-bold text-slate-300">📍 擺放位置</span>
+                <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
+                  <span>擺放位置</span>
+                </span>
                 <div className="flex items-center gap-1">
                   {(
                     [

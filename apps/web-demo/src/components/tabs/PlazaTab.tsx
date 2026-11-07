@@ -204,27 +204,39 @@ export const PlazaTab: React.FC = () => {
     <div className="p-3 space-y-2.5 pb-10 relative">
       {/* 1. COMPACT GAME HUD TOP BAR: 4 VIEW PILLS + LOOT BAG + DEV CHEAT BUTTON */}
       <div className="flex items-center justify-between gap-1.5 flex-wrap">
-        <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+        <div
+          role="tablist"
+          aria-label="冒險模式切換"
+          className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800"
+        >
           {(
             [
-              { id: 'raid', label: '⚔️ 戰場' },
-              { id: 'squad_builder', label: `🛡️ 組隊(${1 + store.squadMembers.length}/4)` },
-              { id: 'ladder', label: '🏆 天梯' },
-              { id: 'social', label: '💬 動態' },
+              { id: 'raid', label: '戰場', icon: Swords },
+              {
+                id: 'squad_builder',
+                label: `組隊(${1 + store.squadMembers.length}/4)`,
+                icon: Users,
+              },
+              { id: 'ladder', label: '天梯', icon: Trophy },
+              { id: 'social', label: '動態', icon: Globe },
             ] as const
           ).map((tab) => {
+            const TabIcon = tab.icon;
             const active = mainSubTab === tab.id;
             return (
               <button
                 key={tab.id}
+                role="tab"
+                aria-selected={active}
                 onClick={() => setMainSubTab(tab.id)}
-                className={`py-1.5 px-2 rounded-lg text-[11px] font-black transition whitespace-nowrap ${
+                className={`py-1.5 px-2.5 rounded-lg text-[11px] font-black transition whitespace-nowrap flex items-center gap-1 ${
                   active
                     ? 'bg-emerald-500 text-slate-950 shadow'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                {tab.label}
+                <TabIcon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -234,18 +246,19 @@ export const PlazaTab: React.FC = () => {
           <button
             onClick={() => setLootBagOpen(true)}
             title="查看掉落寶物袋"
-            className="px-2 py-1.5 rounded-xl bg-slate-900 border border-amber-500/40 text-[11px] font-black text-amber-300 flex items-center gap-1"
+            className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-amber-500/40 text-[11px] font-black text-amber-300 flex items-center gap-1"
           >
-            <Gift className="w-3.5 h-3.5" />
-            <span>寶物 {store.collectedBossLoots.length}</span>
+            <Gift className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>寶物</span>
+            <span className="font-mono">{store.collectedBossLoots.length}</span>
           </button>
 
           <button
             onClick={() => setDevCheatOpen((v) => !v)}
             className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 active:scale-95 transition"
           >
-            <Wrench className="w-3.5 h-3.5" />
-            <span>🛠️ 外掛</span>
+            <Wrench className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            <span>外掛</span>
           </button>
         </div>
       </div>

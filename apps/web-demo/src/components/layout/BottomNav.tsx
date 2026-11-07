@@ -93,16 +93,18 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className="relative flex flex-col items-center justify-end pb-1 group focus:outline-none"
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={item.label}
+                className="relative flex flex-col items-center justify-end pb-1 group focus:outline-none min-h-[48px]"
               >
                 <div
-                  className={`relative -mt-5 w-13 h-13 rounded-2xl flex items-center justify-center transition-all duration-150 border-2 ${
+                  className={`relative -mt-5 rounded-2xl flex items-center justify-center transition-all duration-150 border-2 ${
                     isActive
-                      ? 'w-14 h-12 bg-gradient-to-b from-amber-400 via-orange-400 to-rose-500 text-slate-950 border-amber-200 shadow-[0_4px_0_#9a3412,0_6px_16px_rgba(244,63,94,0.45)] -translate-y-0.5'
-                      : 'w-13 h-11 bg-gradient-to-b from-emerald-400 to-teal-500 text-slate-950 border-emerald-200 shadow-[0_4px_0_#065f46] hover:-translate-y-0.5 active:translate-y-0.5'
+                      ? 'w-14 h-12 bg-gradient-to-b from-amber-400 via-orange-400 to-rose-500 text-slate-950 border-amber-200 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.5),0_4px_0_#9a3412,0_6px_16px_rgba(244,63,94,0.45)] -translate-y-0.5'
+                      : 'w-13 h-11 bg-gradient-to-b from-emerald-400 to-teal-500 text-slate-950 border-emerald-200 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.45),0_4px_0_#065f46] hover:-translate-y-0.5 active:translate-y-0.5'
                   }`}
                 >
-                  <Icon className="w-6 h-6 stroke-[2.5px] text-slate-950" />
+                  <Icon className="w-6 h-6 stroke-[2.5px] text-slate-950" aria-hidden="true" />
                   {item.badge !== undefined && (
                     <span
                       className={`absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full text-[9px] font-black shadow border border-white/40 ${
@@ -128,14 +130,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`relative flex flex-col items-center justify-center py-1.5 rounded-xl transition-all duration-100 ${
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={item.label}
+              className={`relative flex flex-col items-center justify-center py-1.5 min-h-[48px] rounded-xl transition-all duration-150 ${
                 isActive
                   ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
             >
               <div className="relative">
-                <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
+                <Icon
+                  className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`}
+                  aria-hidden="true"
+                />
                 {item.badge !== undefined && (
                   <span
                     className={`absolute -top-1.5 -right-3.5 px-1.5 py-0.2 rounded-full text-[9px] font-mono font-black ${

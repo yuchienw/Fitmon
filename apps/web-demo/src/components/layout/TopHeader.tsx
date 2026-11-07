@@ -68,32 +68,35 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
           {/* Streak Pill */}
           <button
             onClick={() => store.setActiveTab('home')}
-            className="flex items-center gap-0.5 bg-slate-900 border border-slate-700/80 px-1.5 py-1 rounded-lg text-[11px] font-mono font-bold text-orange-500 shrink-0"
+            aria-label={`連勝 ${store.streakDays} 天`}
+            className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 px-2 py-1 min-h-[32px] rounded-lg text-xs font-mono font-extrabold text-orange-500 shrink-0 active:scale-95 transition"
           >
-            <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 shrink-0" />
+            <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 shrink-0" aria-hidden="true" />
             <span>{formatCompact(store.streakDays)}</span>
           </button>
 
           {/* Stamina Pill */}
           <button
             onClick={() => store.setActiveTab('shop')}
-            className={`flex items-center gap-0.5 px-1.5 py-1 rounded-lg text-[11px] font-mono font-bold border shrink-0 ${
+            aria-label={`體力 ${store.stamina}`}
+            className={`flex items-center gap-1 px-2 py-1 min-h-[32px] rounded-lg text-xs font-mono font-extrabold border shrink-0 active:scale-95 transition ${
               staminaLow
                 ? 'bg-rose-950/60 border-rose-500/60 text-rose-300 animate-pulse'
                 : 'bg-slate-900 border-slate-700/80 text-emerald-400'
             }`}
           >
-            <Zap className="w-3 h-3 fill-current shrink-0" />
+            <Zap className="w-3.5 h-3.5 fill-current shrink-0" aria-hidden="true" />
             <span>{store.stamina}</span>
           </button>
 
           {/* Coins Pill (Auto-compacts at 10K+ so it never overflows!) */}
           <button
             onClick={() => store.setActiveTab('shop')}
-            className="flex items-center gap-1 bg-amber-950/40 border border-amber-500/40 px-2 py-1 rounded-lg text-[11px] font-mono font-bold text-amber-300 max-w-[88px] truncate shrink-0"
+            aria-label={`金幣 ${store.coins}`}
+            className="flex items-center gap-1 bg-amber-950/40 border border-amber-500/40 px-2 py-1 min-h-[32px] rounded-lg text-xs font-mono font-extrabold text-amber-300 shrink-0 active:scale-95 transition"
           >
-            <Coins className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="truncate">{formatCompact(store.coins)}</span>
+            <Coins className="w-3.5 h-3.5 text-amber-500 shrink-0" aria-hidden="true" />
+            <span>{formatCompact(store.coins)}</span>
           </button>
 
           {/* Quick 1-Tap Light / Dark Theme Switcher */}
@@ -101,13 +104,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
             onClick={() =>
               store.setThemeMode(resolvedTheme === 'dark' ? 'light' : 'dark')
             }
+            aria-label={resolvedTheme === 'dark' ? '切換為溫暖亮色版' : '切換為柔和深色版'}
             title={resolvedTheme === 'dark' ? '切換為溫暖亮色版' : '切換為柔和深色版'}
-            className="p-1.5 rounded-lg bg-slate-900 border border-slate-700/80 text-amber-500 hover:scale-105 active:scale-95 transition shrink-0"
+            className="p-1.5 min-h-[32px] min-w-[32px] flex items-center justify-center rounded-lg bg-slate-900 border border-slate-700/80 text-amber-500 hover:scale-105 active:scale-95 transition shrink-0"
           >
             {resolvedTheme === 'dark' ? (
-              <Sun className="w-4 h-4" />
+              <Sun className="w-4 h-4" aria-hidden="true" />
             ) : (
-              <Moon className="w-4 h-4 text-slate-600" />
+              <Moon className="w-4 h-4 text-slate-600" aria-hidden="true" />
             )}
           </button>
 
@@ -115,9 +119,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
           <button
             onClick={() => store.setSettingsOpen(true)}
             aria-label="系統設定"
-            className="p-1.5 rounded-lg bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white active:scale-95 transition shrink-0"
+            className="p-1.5 min-h-[32px] min-w-[32px] flex items-center justify-center rounded-lg bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white active:scale-95 transition shrink-0"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </header>
