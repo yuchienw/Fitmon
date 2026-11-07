@@ -565,3 +565,46 @@
 - [meme_and_social.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)
 - [00_INDEX.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/00_INDEX.md)
 - [PROJECT_STATE.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)
+
+---
+
+## [2026-11-07] 拍貼工坊雙情境模式、UI/UX Pro Max 落地與純外部分享轉型 (v2.9.2, TASK-027 ~ TASK-028)
+
+### 1. 觸發原因 (Trigger / Context)
+- 使用者提出真實健身社群與發動態的使用者心智模型：
+  1. 像主流運動 APP (Strava / Nike Run Club) 一樣，運動完成發動態時希望能放自己的運動自拍照，並疊加運動數據（如跑步公里數、消耗大卡或訓練總容量），且紙娃娃可以站旁邊互動。
+  2. 提供多種數據模板供選擇，並具備自由開關：可選要不要開關「數據」、「我的娃」或「官方浮水印」。
+  3. 紙娃娃透明疊圖在個人照片上時，需支援自由旋轉角度（如傾斜俏皮姿勢）與鏡像翻轉。
+  4. 明確情境隔離：打贏一隻王（Boss 勝利首通）或運動完成都是發動態的黃金時機，但打贏王的情況下是官方戰鬥榮譽證書，不允許使用者上傳私人自拍照，維護遊戲沉浸感與硬核榮譽感。
+  5. 重新檢視並定調整個 FitMon APP 的 10 大核心系統盤點，確保產品豐富度與完整性。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+1. **內部動態牆全面退役 ➔ 100% 聚焦外部社群病毒裂變**：
+   - 傳統 In-App 社群動態牆需要沉重的 UGC 內容審查、伺服器圖片儲存成本與冷啟動痛點。
+   - 改為將 FitMon 定位為「最強健身曬圖裝備庫」：生成 9:16 IG 限動與 1:1 貼文圖片，一鍵喚起系統原生分享或下載，直接在 Instagram Stories、Threads、LINE 戰隊群中引發討論與好友裂變。
+2. **雙情境拍貼分享工坊 (`MemeStudioModal.tsx`)**：
+   - **情境 A：運動打卡結算 (`workout_photo`)**：
+     - 開放自訂照片上傳（支援裁切與置中適配）。
+     - 提供 4 種 Strava / NRC 級主流排版模板：`bottom_bar` (底欄黑金條)、`big_metrics` (海報大字排版)、`minimal_badge` (極簡毛玻璃圓角卡)、`rpg_hud` (8-Bit 像素戰鬥儀表)。
+     - 獨立三重開關：`[數據 ON/OFF]`、`[我的娃 ON/OFF]`、`[浮水印 ON/OFF]`。
+     - 紙娃娃自由度提升：滑鼠/手指任意拖曳定位、-180° ~ +180° 旋轉滑桿與角度快捷鍵（-15° / 0° / +15°）、水平鏡像翻轉 (`scaleX(-1)`)、4 種表情與 4 種動作姿態。
+   - **情境 B：Boss 討伐勝利結算 (`boss_victory`)**：
+     - 鎖定官方 2D 像素戰鬥競技場背景與對戰 BOSS 噴裝殘骸，強制禁用個人照片上傳，維護戰勝榮譽的官方權威性與美術沉浸感。
+3. **UI/UX Pro Max 視覺與物理動效體系**：
+   - 導入專業運動字型 `Barlow Condensed` (`font-athletics` 700/800 傾斜數字與大容量標籤)。
+   - 全面替換 Emoji，改用 Lucide SVG 向量幾何圖標與專屬像素 SVG 徽章。
+   - 增加按鈕與卡片的 3D 觸覺物理反饋動效。
+4. **APP 十大完整系統盤點確立**：
+   - ① 雙軌紙娃娃系統、② 運動課表與訓練系統、③ 運動科學數據與趨勢分析系統、④ Tap Titans 冒險推圖與生活 Boss 系統、⑤ 2~4 人同儕戰隊共鬥與督促系統、⑥ 雙情境拍貼分享工坊 (Meme & Share Studio)、⑦ 遊戲化任務與成就體系、⑧ 虛擬商城與裝備數值系統、⑨ 雙天梯天梯榜與同儕激勵系統、⑩ 本機安全健康沙盒與雲端帳號綁定系統。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [MemeStudioModal.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/modals/MemeStudioModal.tsx)
+- [PlazaTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/PlazaTab.tsx)
+- [WorkoutTab.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/tabs/WorkoutTab.tsx)
+- [BottomNav.tsx](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/src/components/layout/BottomNav.tsx)
+- [index.html](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/index.html)
+- [tailwind.config.js](file:///Users/yuchien/Project/Github/fitmon/apps/web-demo/tailwind.config.js)
+- [meme_and_social.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/meme_and_social.md)
+- [tech_architecture.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)
+- [PROJECT_STATE.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)
+- [changelog.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)

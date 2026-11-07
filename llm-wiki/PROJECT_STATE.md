@@ -8,19 +8,29 @@
 
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
-| **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、Meme 拍貼、開源科學動作庫 |
-| **目前階段** | **Phase 1：Web Demo & Native iOS/Android App v2.8 實機測試期** | 🚀 **【已完成 V2.8 七大體感升級 ＋ Capacitor iOS/Android 原生專案封裝】** |
-| **當前版本** | `v2.9.0-adventure-rpg-redesign` | 遊戲化冒險大改版：Tap Titans 關卡推圖、組間休息防作弊懲罰、Boss 隱藏噴裝、2~4人戰隊催促、雙天梯排行榜 |
-| **最後更新時間** | `2026-11-07 13:35 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `d804acd` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 實裝 Phase 2 遊戲化冒險系統（導航更名「冒險」、裝備物魔攻屬性、生活 Boss 推圖、戰隊催促與雙天梯） |
+| **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、雙情境拍貼、開源科學動作庫、Tap Titans 冒險推圖 |
+| **目前階段** | **Phase 1：Web Demo & Native iOS/Android App v2.9 實機測試期** | 🚀 **【已完成 V2.8 七大體感升級 ＋ V2.9 冒險推圖 ＋ 雙情境拍貼分享中心 ＋ UI/UX Pro Max 升級】** |
+| **當前版本** | `v2.9.2-dual-context-studio` | 遊戲化冒險大改版：Tap Titans 關卡推圖、雙情境拍貼分享中心、組間休息防作弊懲罰、Boss 隱藏噴裝、2~4人戰隊催促、雙天梯排行榜 |
+| **最後更新時間** | `2026-11-07 21:10 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `18ba145` | 與本地儲存庫保持同步 |
+| **當前焦點 (Current Focus)** | 完善拍貼工坊雙情境模式（運動照片+數據 vs 官方Boss結算）、UI/UX Pro Max 視覺規格落地、Wiki 全域對齊與實機驗證 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [ ] **MVP-V2.9-ADVENTURE-PLAYTEST**：實機與朋友測試新版 `[🏰 冒險]`（Tap Titans 關卡推圖、生活系 Boss、戰隊催促與天梯榜）
+- [ ] **MVP-V2.9-ADVENTURE-PLAYTEST**：實機與朋友測試新版 `[⚔️ 冒險]`（Tap Titans 關卡推圖、生活系 Boss、戰隊催促與天梯榜）及雙情境拍貼工坊分享至 IG/LINE
+
+### 🟢 已完成：V2.9.2 雙情境拍貼分享工坊與 UI/UX Pro Max 升級 (Share Studio & Design System Polish)
+- [x] **TASK-027 [雙情境拍貼分享工坊 (Meme & Share Studio)]**：
+  - **運動自拍打卡分享情境 (`workout_photo`)**：支援上傳真實運動自拍照，提供 4 款主流專業運動數據模板（底部橫條、海報大字、極簡毛玻璃、RPG戰鬥HUD）；點陣紙娃娃支援任意拖曳、360° 全角度旋轉滑軌 (`-180° ~ +180°`) 與鏡像水平翻轉；具備獨立 [數據 ON/OFF]、[我的娃 ON/OFF]、[浮水印 ON/OFF] 三重獨立開關。
+  - **Boss 首通/討伐勝利結算情境 (`boss_victory`)**：鎖定官方戰鬥競技場背景，不可上傳個人照片，呈現純粹硬核的像素戰勝證書與稀有戰利品，避免個人照片破壞遊戲沈浸感。
+  - **全面轉向純外部分享機制**：徹底移除內部單向社群貼文牆 (In-App Feed)，專注於輸出高品質圖片轉發至 Instagram 限時動態、Threads、LINE 戰隊群組與手機相簿下載，達成真正病毒裂變傳播。
+- [x] **TASK-028 [UI/UX Pro Max 視覺與物理動效體系升級]**：
+  - 導入運動健身無襯線字體 `Barlow Condensed` (`font-athletics` 700/800 傾斜數字與大容量標籤)。
+  - 全面拔除 Emoji，換裝為 Lucide SVG 向量幾何圖標與專屬像素 SVG 徽章。
+  - 建立極致觸覺反饋物理動效（彈跳縮放、深淺按壓位移、戰鬥震動）。
 
 ### 🟢 已完成：V2.9 遊戲化冒險與同儕督促系統 (Adventure RPG & Peer-Urging Completed)
 - [x] **TASK-023 [冒險系統底層重構]**：底部導航列更名為 `[⚔️ 冒險]`，商城與衣櫃裝備注入物攻/魔攻/輔助屬性，擴充 6 大生活系 Boss 與關卡狀態機
@@ -75,6 +85,8 @@
 - [ ] **MILESTONE-2**：串接 Supabase 雲端資料庫與 OAuth 漸進式綁定
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261107-29**：升級拍貼工坊為雙情境模式（運動自拍+4模板數據+360°紙娃娃 vs 鎖定官方Boss首通勝利卡），全面轉向純外部社群分享 (TASK-027)
+- [x] **DONE-20261107-28**：全面落地 UI/UX Pro Max 體系：Barlow Condensed 傾斜運動字體、Lucide SVG 向量圖標、3D 觸覺物理動效 (TASK-028)
 - [x] **DONE-20261107-27**：建立 GitHub Actions 自動部署至 GitHub Pages 工作流程，調整 Vite 與 Web Manifest 為相對路徑 (TASK-022)
 - [x] **DONE-20261103-26**：完成 V2.8 手機實機體驗 7 大優化（中途新增動作、極簡減字、加好友模擬、模擬內購、月曆/週檢視、高反差六塊肌紙娃娃）與 Capacitor iOS/Android 雙端 App 封裝 (TASK-021)
 - [x] **DONE-20261103-25**：完成 V2.7 《楓之谷》級高清 2D 賽璐璐 Q 版引擎、專業運動解剖肌群圖庫與系統自適應溫暖亮色主題 (TASK-020)

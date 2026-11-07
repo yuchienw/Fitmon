@@ -30,15 +30,16 @@
 | 【Tab 3: 金幣商城 (Shop)】                                    |
 |  • 雙軌換裝更衣鏡、消耗型道具 (體力水/雙倍卡/冰凍卡)、扭蛋機  |
 |                                                             |
-| 【Tab 4: 社群廣場 (Plaza)】                                  |
-|  • 拍立得動態瀑布流 (純像素卡片)、好友串門、Meme 拍貼按鈕     |
+| 【Tab 4: 冒險與戰隊 (Plaza / Adventure)】                      |
+|  • Tap Titans 關卡推圖、生活 Boss 戰、2~4人戰隊同儕催促、雙天梯榜 |
+|  • 拍貼分享工坊（運動自拍×4款數據模板×360°紙娃娃 / 官方Boss勝利卡）|
 |                                                             |
 | 【Tab 5: 本機數據與個人 (Analytics & Profile)】              |
 |  • 100% 本機 IndexedDB 體重/體脂/睡眠/TDEE 趨勢曲線圖 (DOM)  |
 |                                                             |
 +-------------------------------------------------------------+
 | 📱 底部固定導覽列 (Bottom Navigation Bar)                    |
-|   [🏠 房間]    [🏋️ 運動]    [🛒 商城]    [💬 社交]    [👤 我的]  |
+|   [🏠 房間]    [🏋️ 運動]    [🛒 商城]    [⚔️ 冒險]    [👤 我的]  |
 +-------------------------------------------------------------+
 ```
 
@@ -53,7 +54,7 @@ flowchart TB
         
         EmbeddedCanvas["【Home 局部畫布】PixiJS 2D 像素微小島\n• 180x320 虛擬低解析 + NEAREST 無損放大\n• 32x32 角色 5 層精靈 + 房間 6 家具卡槽\n• 離屏自動休眠 (Zero Battery Drain)"]
         
-        DOMPages["【標準 Web DOM 頁面】\n• Workout: 課表清單、秒表計時、3秒補登\n• Shop: 試穿更衣室、消耗道具、扭蛋機、聯名專櫃\n• Plaza: 拍立得卡片瀑布流、Meme 拍貼工坊\n• Analytics: 本機圖表、BMI/BMR/TDEE 計算"]
+        DOMPages["【標準 Web DOM 頁面】\n• Workout: 課表清單、秒表計時、3秒補登\n• Shop: 試穿更衣室、裝備物魔攻、消耗道具、儲值內購\n• Adventure: Tap Titans 推圖、Boss 戰、戰隊催促與雙天梯榜\n• Analytics: 本機圖表、BMI/BMR/TDEE 計算\n• Share Studio: 運動照片+4模板數據+360°紙娃娃 / 官方Boss勝利卡"]
 
         StateLayer["狀態維持層 (Zustand)\n• Tab State Keep-Alive (分頁切換計時器不中斷)\n• LocalStorage / IndexedDB (未登入沙盒 + 本機健康數據)"]
 
@@ -106,7 +107,7 @@ flowchart TB
 1. **`profiles`**：儲存 `avatar_config (JSONB)`、`room_config (JSONB)`、金幣餘額與 Streak 天數。
 2. **`items`**：包含角色外觀（`avatar_*`）與房間家具（`room_*`）的統一圖鑑，標註金幣價格與 PixiJS 素材 Key。
 3. **`quests` & `user_daily_quests`**：定義日常任務、打卡連擊暴擊與玩家每日進度。
-4. **`posts`**：儲存拍立得運動成果、自嘲短評、發文當下的角色/房間外觀快照（無真人照片，純像素零風控）。
+4. **`posts` (已停用 / 轉為外部社群分享)**：原規劃儲存內部動態牆貼文，自 V2.9 起徹底轉為「純外部社群分享 (Instagram Stories / Threads / LINE)」，雲端不儲存玩家自拍照片，維持 100% 零個資 (Zero-PII) 與零 UGC 風控成本。
 5. **`routine_templates` & `user_workout_schedules`**：自訂課表模板、每週分化排程與休息日標記。
 6. **`tips_and_gifts`**：記錄打賞金額與能量水互贈，由資料庫交易保證防刷。
 7. **`game_economy_config`**：數值配置表，支持未來動態模擬熱更新。
