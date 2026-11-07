@@ -38,7 +38,7 @@ import { BRAND_CONFIG } from '../../config/economyConfig';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
 
-type AdventureMainSubTab = 'raid' | 'squad_invite' | 'ladder';
+type AdventureMainSubTab = 'raid' | 'combat_stats' | 'squad_invite' | 'ladder';
 type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
 
 interface FinalBlowVictoryReport {
@@ -793,6 +793,7 @@ export const PlazaTab: React.FC = () => {
           {(
             [
               { id: 'raid', label: '冒險', icon: Swords },
+              { id: 'combat_stats', label: '個人素質', icon: Sparkles },
               {
                 id: 'squad_invite',
                 label: `我的隊伍(${1 + store.squadMembers.length}/4)`,
@@ -1463,151 +1464,243 @@ export const PlazaTab: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
 
-          {/* 3. PERSONAL COMBAT ATTRIBUTES, CURRENT LOADOUT & ADVENTURE RECORDS */}
-          <div className="retro-box rounded-2xl p-3.5 space-y-3 border border-slate-800">
+      {/* ================================================================= */}
+      {/* TAB 1.2: ⚡ 個人戰鬥素質 (獨立分頁：屬性傷害、裝備配裝、討伐生涯戰績) */}
+      {/* ================================================================= */}
+      {mainSubTab === 'combat_stats' && (
+        <div className="space-y-3">
+          {/* Header Card with Character Portrait */}
+          <div className="retro-box rounded-2xl p-4 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 border-2 border-cyan-500/40 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <div>
-                <h3 className="text-xs font-black text-white flex items-center gap-1.5">
-                  <Swords className="w-4 h-4 text-cyan-400" />
-                  <span>個人戰鬥素質與討伐戰績</span>
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  依穿戴配裝、連勝天數（🔥{store.streakDays}天）與當日運動技能即時計算
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl border border-cyan-400/50 bg-slate-950 p-1 shrink-0">
+                  <AvatarPortraitCanvas
+                    bodyStage={store.bodyStage}
+                    equipped={store.equipped}
+                    size={64}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[10px] font-black">
+                      Lv.{store.level} · 戰鬥角色
+                    </span>
+                    <span className="text-[10px] font-mono text-amber-300 font-bold">
+                      🔥 連勝 {store.streakDays} 天加成
+                    </span>
+                  </div>
+                  <h2 className="text-base font-black text-white mt-1">
+                    {store.nickname} 的個人戰鬥素質
+                  </h2>
+                </div>
               </div>
-              <button
-                onClick={() => store.setWardrobeModalOpen(true)}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 shrink-0"
-              >
-                <Shirt className="w-3.5 h-3.5" />
-                <span>更換配裝</span>
-              </button>
+
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <button
+                  onClick={() => store.setWardrobeModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black flex items-center gap-1 shadow"
+                >
+                  <Shirt className="w-3.5 h-3.5" />
+                  <span>衣櫃換裝</span>
+                </button>
+                <button
+                  onClick={() => setMainSubTab('raid')}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-black flex items-center gap-1"
+                >
+                  <Swords className="w-3.5 h-3.5 text-amber-300" />
+                  <span>去冒險</span>
+                </button>
+              </div>
             </div>
 
-            {/* A. Elemental / Attribute Damage & Attack Range */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+            <p className="text-[11px] text-slate-300 leading-relaxed bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+              💡 戰鬥傷害取決於：<strong className="text-emerald-300">真實運動課表完成度</strong>、
+              <strong className="text-amber-300">連勝天數</strong>、
+              <strong className="text-cyan-300">穿戴配裝屬性</strong>與當日所選運動技能（重訓破甲／有氧魔焰／徒手聚氣）。
+            </p>
+          </div>
+
+          {/* Section 1: Combat Attribute Breakdown & Damage Ranges */}
+          <div className="retro-box rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black text-white flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span>各屬性傷害與最大攻擊數值範圍</span>
+              </h3>
+              <span className="text-[10px] font-mono text-cyan-300 font-bold">
+                基礎運動力 {baseWorkoutAtk}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400">🥊 物理攻擊屬性</span>
-                  <span className="text-xs font-mono font-black text-rose-400">
+                  <span className="text-xs font-black text-white flex items-center gap-1">
+                    <span>🥊 物理攻擊屬性</span>
+                  </span>
+                  <span className="text-xs font-mono font-black text-rose-400 px-2 py-0.5 rounded bg-rose-950/40 border border-rose-500/30">
                     ATK {myPhyAtk}
                   </span>
                 </div>
-                <div className="text-[11px] font-mono text-white font-bold">
-                  重訓破甲基傷：<span className="text-amber-300">{phyNormalDmg} HP</span>
+                <div className="text-xs font-mono text-slate-300">
+                  重訓【破甲重擊】基傷：<strong className="text-amber-300 font-black">{phyNormalDmg} HP</strong>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  對「弱物理」Boss 自動觸發暴擊放大至 <span className="text-rose-300 font-bold">{(phyNormalDmg * 2.0).toFixed(0)} HP</span>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400">🪄 魔法攻擊屬性</span>
-                  <span className="text-xs font-mono font-black text-cyan-300">
+                  <span className="text-xs font-black text-white flex items-center gap-1">
+                    <span>🪄 魔法攻擊屬性</span>
+                  </span>
+                  <span className="text-xs font-mono font-black text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/40 border border-cyan-500/30">
                     MATK {myMagAtk}
                   </span>
                 </div>
-                <div className="text-[11px] font-mono text-white font-bold">
-                  有氧魔焰基傷：<span className="text-cyan-300">{magNormalDmg} HP</span>
+                <div className="text-xs font-mono text-slate-300">
+                  有氧【燃脂魔焰】基傷：<strong className="text-cyan-300 font-black">{magNormalDmg} HP</strong>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  隊友破甲後施放享 2.0x 連攜引爆至 <span className="text-cyan-200 font-bold">{(magNormalDmg * 2.0).toFixed(0)} HP</span>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400">🌪️ 核心暴擊與輔助</span>
-                  <span className="text-xs font-mono font-black text-emerald-400">
+                  <span className="text-xs font-black text-white flex items-center gap-1">
+                    <span>🌪️ 核心暴擊與輔助</span>
+                  </span>
+                  <span className="text-xs font-mono font-black text-emerald-300 px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30">
                     SUP {mySupportAtk}
                   </span>
                 </div>
-                <div className="text-[11px] font-mono text-white font-bold">
-                  聚氣暴擊基傷：<span className="text-emerald-300">{coreNormalDmg} HP</span>
+                <div className="text-xs font-mono text-slate-300">
+                  徒手【聚氣暴擊】基傷：<strong className="text-emerald-300 font-black">{coreNormalDmg} HP</strong>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  全屬性弱點全覆蓋，且享隱藏神裝掉率 <span className="text-emerald-200 font-bold">× 2.0 倍</span>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-950/50 to-slate-900 border border-amber-500/40 space-y-1">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-950/60 via-slate-900 to-slate-900 border border-amber-500/50 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-amber-300">🎯 最大攻擊數值範圍</span>
-                  <span className="text-[9px] font-bold text-amber-200/80">
-                    {isSoloMode ? '單人弱點2x' : '含組隊連攜'}
+                  <span className="text-xs font-black text-amber-300 flex items-center gap-1">
+                    <span>🎯 揮拳總傷害數值範圍</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-200 px-1.5 py-0.5 rounded bg-amber-500/20">
+                    弱點與連攜極限
                   </span>
                 </div>
-                <div className="text-xs font-mono font-black text-white">
+                <div className="text-sm font-mono font-black text-white">
                   {minAttackDamage.toLocaleString()} ～{' '}
-                  <span className="text-amber-300">
-                    {(isSoloMode ? maxSoloCritDamage : maxSquadComboDamage).toLocaleString()} HP
+                  <span className="text-amber-300 text-base">
+                    {maxSquadComboDamage.toLocaleString()} HP
                   </span>
                 </div>
+                <div className="text-[10px] text-slate-400">
+                  單人弱點極限 {maxSoloCritDamage.toLocaleString()} HP · 戰隊狂暴連攜最高可達 {maxSquadComboDamage.toLocaleString()} HP
+                </div>
               </div>
             </div>
+          </div>
 
-            {/* B. Currently Equipped 5-Slot Gear Loadout */}
-            <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-black text-slate-300">👕 目前配裝與屬性加成</span>
-                <span className="font-mono text-[10px] text-amber-300 font-bold">
-                  🎁 已啟用秘寶：{store.collectedBossLoots.length}/{ADVENTURE_BOSS_CATALOG.length} 件
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {equippedGearDetails.map((g) => (
-                  <div
-                    key={g.slot}
-                    onClick={() => store.setWardrobeModalOpen(true)}
-                    className="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 cursor-pointer transition flex flex-col justify-between"
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[9px] font-bold text-slate-400">{g.slotLabelZh}</span>
-                      <span className="text-[9px] font-mono font-black text-emerald-300">
-                        {g.statLabelZh}
-                      </span>
-                    </div>
-                    <div className="text-[11px] font-black text-white truncate mt-0.5">
+          {/* Section 2: Current Gear Loadout & Buffs */}
+          <div className="retro-box rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-white flex items-center gap-1.5">
+                <Shirt className="w-4 h-4 text-cyan-400" />
+                <span>目前穿戴配裝清單（5 槽位屬性）</span>
+              </span>
+              <span className="text-[10px] font-mono text-amber-300 font-bold">
+                🎁 收集秘寶：{store.collectedBossLoots.length}/{ADVENTURE_BOSS_CATALOG.length} 件
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {equippedGearDetails.map((g) => (
+                <div
+                  key={g.slot}
+                  onClick={() => store.setWardrobeModalOpen(true)}
+                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 cursor-pointer transition flex items-center justify-between gap-2"
+                >
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold text-slate-400 block">
+                      {g.slotLabelZh}
+                    </span>
+                    <span className="text-xs font-black text-white truncate block">
                       {g.nameZh}
-                    </div>
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <span
+                    className={`px-2 py-1 rounded-lg text-xs font-mono font-black shrink-0 ${
+                      g.statType === 'phy'
+                        ? 'bg-rose-950/60 text-rose-300 border border-rose-500/30'
+                        : g.statType === 'mag'
+                        ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/30'
+                        : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30'
+                    }`}
+                  >
+                    {g.statLabelZh}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 3: Career Adventure Records */}
+          <div className="retro-box rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-white flex items-center gap-1.5">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span>生涯討伐數據與榮譽紀錄</span>
+              </span>
+              <button
+                onClick={() => setMainSubTab('ladder')}
+                className="text-[11px] font-black text-cyan-400 hover:underline"
+              >
+                查看天梯榜單 ➔
+              </button>
             </div>
 
-            {/* C. Career Adventure Combat Records (Max Damage, Final Blows, Bosses Defeated, Total Output) */}
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-black text-slate-300">
-                🏆 生涯討伐數據紀錄
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                <div className="text-[10px] text-slate-400 font-bold">造成最大傷害</div>
+                <div className="text-base font-mono font-black text-amber-300">
+                  {store.personalMaxDamage.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-slate-500">單拳最高爆擊</div>
               </div>
-              <div className="grid grid-cols-4 gap-1.5 text-center">
-                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
-                  <div className="text-[9px] text-slate-400 font-bold">造成最大傷害</div>
-                  <div className="text-xs font-mono font-black text-amber-300 mt-0.5">
-                    {store.personalMaxDamage.toLocaleString()}
-                  </div>
-                  <div className="text-[9px] text-slate-500">單擊最高 HP</div>
-                </div>
 
-                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
-                  <div className="text-[9px] text-slate-400 font-bold">撿尾刀次數</div>
-                  <div className="text-xs font-mono font-black text-rose-400 mt-0.5">
-                    {store.totalFinalBlows ?? 2} 次
-                  </div>
-                  <div className="text-[9px] text-slate-500">最後一擊斬殺</div>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                <div className="text-[10px] text-slate-400 font-bold">撿尾刀次數</div>
+                <div className="text-base font-mono font-black text-rose-400">
+                  {store.totalFinalBlows ?? 2} 次
                 </div>
+                <div className="text-[10px] text-slate-500">Boss 終結斬殺</div>
+              </div>
 
-                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
-                  <div className="text-[9px] text-slate-400 font-bold">擊敗 Boss</div>
-                  <div className="text-xs font-mono font-black text-emerald-400 mt-0.5">
-                    {store.totalBossesDefeated ?? 3} 隻
-                  </div>
-                  <div className="text-[9px] text-slate-500">
-                    單S.{store.personalMaxStage} / 隊S.{store.squadMaxStage}
-                  </div>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                <div className="text-[10px] text-slate-400 font-bold">擊敗 Boss 隻數</div>
+                <div className="text-base font-mono font-black text-emerald-400">
+                  {store.totalBossesDefeated ?? 3} 隻
                 </div>
+                <div className="text-[10px] text-slate-500">
+                  個人 S.{store.personalMaxStage} · 戰隊 S.{store.squadMaxStage}
+                </div>
+              </div>
 
-                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
-                  <div className="text-[9px] text-slate-400 font-bold">累計總輸出</div>
-                  <div className="text-xs font-mono font-black text-cyan-300 mt-0.5">
-                    {((store.totalDamageDealt ?? 6420) / 1000).toFixed(1)}k
-                  </div>
-                  <div className="text-[9px] text-slate-500">
-                    共揮 {store.totalStrikesCount ?? 11} 拳
-                  </div>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                <div className="text-[10px] text-slate-400 font-bold">累計總輸出</div>
+                <div className="text-base font-mono font-black text-cyan-300">
+                  {((store.totalDamageDealt ?? 6420) / 1000).toFixed(1)}k
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  累計揮拳 {store.totalStrikesCount ?? 11} 次
                 </div>
               </div>
             </div>
