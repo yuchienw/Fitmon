@@ -20,6 +20,9 @@ import { soundFX } from '../audio/SoundManager';
 
 export type MainTab = 'home' | 'workout' | 'shop' | 'plaza' | 'analytics';
 
+export type TodayWorkoutStatus = 'none' | 'legit_rest' | 'cheated_fast';
+export type AdventureSportSkillType = 'strength' | 'cardio' | 'bodyweight';
+
 export interface SquadMemberState {
   id: string;
   nameZh: string;
@@ -27,6 +30,9 @@ export interface SquadMemberState {
   roleBadgeZh: string;
   gearDescZh: string;
   hasWorkedOutToday: boolean;
+  workoutAuditZh: string;
+  isSuspectedCheater?: boolean;
+  comboSkillAppliedZh?: string;
   damageDealt: number;
   nudgedCount: number;
 }
@@ -204,6 +210,10 @@ interface GameState {
   squadMaxStage: number;
   personalMaxDamage: number;
   shareRaidModalOpen: boolean;
+  todayWorkoutStatus: TodayWorkoutStatus;
+  todaySportType: AdventureSportSkillType;
+  activeTeamComboBuff: 'none' | 'armor_break' | 'burn_mark' | 'crit_aura';
+  collectedBossLoots: string[];
 
   // UI Actions
   setActiveTab: (tab: MainTab) => void;
@@ -266,10 +276,15 @@ interface GameState {
     isCrit: boolean;
     defeated: boolean;
     attackTypeLabel: string;
+    droppedLootName?: string;
+    isCheatPenalty?: boolean;
   } | null;
   resetAdventureCooldown: (method: 'ticket' | 'iap') => void;
   nudgeSquadMember: (memberId: string) => void;
   simulateFriendWorkoutJoin: (memberId: string) => void;
+  reportCheatingMember: (memberId: string) => void;
+  setTodayWorkoutStatus: (status: TodayWorkoutStatus) => void;
+  setTodaySportType: (sport: AdventureSportSkillType) => void;
 
   // Biometrics & Demo Cheats
   updateBiometrics: (partial: Partial<GameState['biometrics']>) => void;
@@ -745,7 +760,22 @@ export const useGameStore = create<GameState>()(
           roleBadgeZh: '🥊 物攻專精',
           gearDescZh: '紅黑健力服 + 奧林匹亞金槓',
           hasWorkedOutToday: true,
+          workoutAuditZh: '✅ 胸背重訓 8組 · 組間計時完整 (38分鐘)',
+          isSuspectedCheater: false,
+          comboSkillAppliedZh: '🔨 已施放【破甲重擊】：下位隊友魔攻 ×2.0 倍',
           damageDealt: 650,
+          nudgedCount: 0,
+        },
+        {
+          id: 'friend_leo',
+          nameZh: '街頭健體 · Leo',
+          roleType: 'phy',
+          roleBadgeZh: '🥊 力量型',
+          gearDescZh: '黑魂訓練吊嘎 + 鑄鐵啞鈴',
+          hasWorkedOutToday: true,
+          workoutAuditZh: '🤥 耗時 5 秒狂按 6 組深蹲 (組間休息 0秒 · 疑似空氣健身)',
+          isSuspectedCheater: true,
+          damageDealt: 15,
           nudgedCount: 0,
         },
         {
@@ -755,6 +785,8 @@ export const useGameStore = create<GameState>()(
           roleBadgeZh: '🪄 魔攻破盾',
           gearDescZh: '綠光泵感寬T + 迷彩跑褲',
           hasWorkedOutToday: false,
+          workoutAuditZh: '⚠️ 今日尚未運動打卡',
+          isSuspectedCheater: false,
           damageDealt: 0,
           nudgedCount: 0,
         },
@@ -765,6 +797,10 @@ export const useGameStore = create<GameState>()(
       squadMaxStage: 2,
       personalMaxDamage: 680,
       shareRaidModalOpen: false,
+      todayWorkoutStatus: 'legit_rest',
+      todaySportType: 'cardio',
+      activeTeamComboBuff: 'armor_break',
+      collectedBossLoots: [],
 
       setActiveTab: (tab) => {
         soundFX.playBlip();
@@ -1467,6 +1503,11 @@ export const useGameStore = create<GameState>()(
 
         soundFX.playVictory();
 
+        const firstEx = EXERCISE_LIBRARY.find((e) => e.id === state.sessionSets[0]?.exerciseId);
+        const detectedSport: AdventureSportSkillType = firstEx?.sportType || 'strength';
+        // If user spent at least 30s in focus mode, count as legit rest timer workout; otherwise suspected fast spam
+        const isLegitRest = state.workoutElapsedSeconds >= 30;
+
         set({
           coins: state.coins + settlementCoins,
           exp: newExp,
@@ -1476,6 +1517,8 @@ export const useGameStore = create<GameState>()(
           workoutElapsedSeconds: 0,
           isRestRunning: false,
           restSecondsLeft: 0,
+          todayWorkoutStatus: isLegitRest ? 'legit_rest' : 'cheated_fast',
+          todaySportType: detectedSport,
           victoryModalData: {
             calcResult,
             routineName: routineTitle,
@@ -1727,9 +1770,45 @@ export const useGameStore = create<GameState>()(
       attackAdventureBoss: (mode) => {
         const state = get();
         const now = Date.now();
+        if (state.todayWorkoutStatus === 'none') {
+          state.showToast('🔒 今日尚未完成運動打卡！請先去運動才能出拳打怪！');
+          return null;
+        }
         if (state.adventureCooldownUntil > now) {
           state.showToast('⏳ 出擊冷卻中，請等待倒數或使用討伐券重置！');
           return null;
+        }
+
+        const stageNum = mode === 'solo' ? state.soloStage : state.squadStage;
+        const bossIndex = (stageNum - 1) % ADVENTURE_BOSS_CATALOG.length;
+        const boss = ADVENTURE_BOSS_CATALOG[bossIndex];
+        const cooldownMs = 12 * 60 * 60 * 1000;
+
+        // ANTI-CHEAT STRICT PENALTY: If skipped rest timer / 3s spam click
+        if (state.todayWorkoutStatus === 'cheated_fast') {
+          const scratchDmg = 15;
+          soundFX.playBlip();
+          if (mode === 'solo') {
+            set({
+              soloBossHp: Math.max(1, state.soloBossHp - scratchDmg),
+              adventureCooldownUntil: now + cooldownMs,
+            });
+          } else {
+            set({
+              squadBossHp: Math.max(1, state.squadBossHp - scratchDmg),
+              adventureCooldownUntil: now + cooldownMs,
+            });
+          }
+          state.showToast(
+            '🤥 系統偵測未跑組間休息（疑似亂按作弊）！傷害懲罰 -95%，僅打出 -15 HP 刮痧拳，且無掉寶資格！'
+          );
+          return {
+            damage: scratchDmg,
+            isCrit: false,
+            defeated: false,
+            attackTypeLabel: '💨 作弊刮痧拳 (懲罰 -95%)',
+            isCheatPenalty: true,
+          };
         }
 
         // Calculate gear attributes
@@ -1744,43 +1823,71 @@ export const useGameStore = create<GameState>()(
           }
         });
 
-        const stageNum = mode === 'solo' ? state.soloStage : state.squadStage;
-        const bossIndex = (stageNum - 1) % ADVENTURE_BOSS_CATALOG.length;
-        const boss = ADVENTURE_BOSS_CATALOG[bossIndex];
-
         // Base attack from task completion & streak (No weight/tonnage comparison!)
         const completedQuests = state.quests.filter((q) => q.progress >= q.target).length;
-        const baseDmg = 320 + completedQuests * 60 + state.streakDays * 25;
+        const baseDmg = 340 + completedQuests * 60 + state.streakDays * 25;
 
         let isWeaknessHit = false;
         let attackTypeLabel = '🥊 物理重擊';
         let rawDmg = baseDmg + phyBonus * 4 + magBonus * 4;
+        let nextComboBuff = state.activeTeamComboBuff;
+        let lootChanceBoost = 1.0;
 
-        if (boss.weakness === 'phy' && phyBonus >= magBonus) {
+        // Sport Type Skill Selection & Team Combo Synergy
+        if (state.todaySportType === 'strength') {
+          attackTypeLabel = '🔨 重訓技【破甲重擊】';
+          rawDmg += phyBonus * 3;
+          nextComboBuff = 'armor_break';
+          if (boss.weakness === 'phy') {
+            isWeaknessHit = true;
+            rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
+          }
+        } else if (state.todaySportType === 'cardio') {
+          attackTypeLabel = '🔥 有氧技【燃脂魔焰】';
+          rawDmg += magBonus * 3;
+          if (boss.weakness === 'mag') {
+            isWeaknessHit = true;
+            rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
+          }
+          // Detonate teammate's Armor Break combo!
+          if (state.activeTeamComboBuff === 'armor_break') {
+            isWeaknessHit = true;
+            rawDmg = Math.round(rawDmg * 1.6);
+            attackTypeLabel = '💥 連攜引爆【破甲＋燃脂魔焰 ×2.0】';
+            nextComboBuff = 'burn_mark';
+          }
+        } else {
+          attackTypeLabel = '🌪️ 核心技【聚氣暴擊陣】';
           isWeaknessHit = true;
-          rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
-          attackTypeLabel = '🥊 弱點粉碎重拳';
-        } else if (boss.weakness === 'mag' && magBonus > 0) {
-          isWeaknessHit = true;
-          rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
-          attackTypeLabel = '🪄 高溫有氧魔法';
-        } else if (boss.weakness === 'balanced') {
-          isWeaknessHit = true;
-          rawDmg = Math.round(rawDmg * 1.5);
-          attackTypeLabel = '⚡ 物魔雙修合擊';
+          rawDmg = Math.round(rawDmg * 1.4);
+          lootChanceBoost = 2.0;
+          nextComboBuff = 'crit_aura';
         }
 
         // Full Squad Attendance Berserk (1.5x)
-        const allSquadAttended = state.squadMembers.every((m) => m.hasWorkedOutToday);
+        const allSquadAttended = state.squadMembers.every(
+          (m) => m.hasWorkedOutToday && !m.isSuspectedCheater
+        );
         if (mode === 'squad' && allSquadAttended) {
           rawDmg = Math.round(rawDmg * 1.5);
           isWeaknessHit = true;
-          attackTypeLabel = '🔥 全勤狂暴合擊 (×1.5)';
+          attackTypeLabel = '🔥 全員真運動狂暴合擊';
         }
 
-        const finalDamage = Math.max(250, rawDmg);
-        const cooldownMs = 12 * 60 * 60 * 1000; // 12 hours cooldown
+        const finalDamage = Math.max(280, rawDmg);
         const newMaxDmg = Math.max(state.personalMaxDamage, finalDamage);
+
+        // Roll for Boss Hidden Rare Loot Drop (only on legit rest workout!)
+        let droppedLootName: string | undefined;
+        const alreadyHasLoot = state.collectedBossLoots.includes(boss.hiddenLoot.id);
+        const dropRoll = Math.random();
+        if (!alreadyHasLoot && dropRoll < 0.65 * lootChanceBoost) {
+          droppedLootName = `${boss.hiddenLoot.emoji} ${boss.hiddenLoot.nameZh}`;
+        }
+
+        const updatedLoots = droppedLootName
+          ? [...state.collectedBossLoots, boss.hiddenLoot.id]
+          : state.collectedBossLoots;
 
         if (mode === 'solo') {
           const remaining = state.soloBossHp - finalDamage;
@@ -1796,18 +1903,42 @@ export const useGameStore = create<GameState>()(
               personalMaxDamage: newMaxDmg,
               coins: state.coins + boss.rewardCoins,
               adventureCooldownUntil: now + cooldownMs,
+              activeTeamComboBuff: nextComboBuff,
+              collectedBossLoots: updatedLoots,
             });
-            state.showToast(`🎉 擊破【${boss.nameZh}】！晉升 Stage ${nextStage} (+${boss.rewardCoins} 🪙)`);
-            return { damage: finalDamage, isCrit: isWeaknessHit, defeated: true, attackTypeLabel };
+            state.showToast(
+              droppedLootName
+                ? `🎁 擊破【${boss.nameZh}】並爆出隱藏神裝【${droppedLootName}】！`
+                : `🎉 擊破【${boss.nameZh}】！晉升 Stage ${nextStage} (+${boss.rewardCoins} 🪙)`
+            );
+            return {
+              damage: finalDamage,
+              isCrit: isWeaknessHit,
+              defeated: true,
+              attackTypeLabel,
+              droppedLootName,
+            };
           } else {
             soundFX.playPRFanfare();
             set({
               soloBossHp: remaining,
               personalMaxDamage: newMaxDmg,
               adventureCooldownUntil: now + cooldownMs,
+              activeTeamComboBuff: nextComboBuff,
+              collectedBossLoots: updatedLoots,
             });
-            state.showToast(`⚔️ 對【${boss.nameZh}】造成 -${finalDamage} HP！`);
-            return { damage: finalDamage, isCrit: isWeaknessHit, defeated: false, attackTypeLabel };
+            state.showToast(
+              droppedLootName
+                ? `🎁 暴擊 -${finalDamage} HP！從 Boss 身上打落【${droppedLootName}】！`
+                : `⚔️ ${attackTypeLabel}！對【${boss.nameZh}】造成 -${finalDamage} HP！`
+            );
+            return {
+              damage: finalDamage,
+              isCrit: isWeaknessHit,
+              defeated: false,
+              attackTypeLabel,
+              droppedLootName,
+            };
           }
         } else {
           const remaining = state.squadBossHp - finalDamage;
@@ -1823,18 +1954,42 @@ export const useGameStore = create<GameState>()(
               personalMaxDamage: newMaxDmg,
               coins: state.coins + boss.rewardCoins,
               adventureCooldownUntil: now + cooldownMs,
+              activeTeamComboBuff: nextComboBuff,
+              collectedBossLoots: updatedLoots,
             });
-            state.showToast(`🏆 戰隊合力擊破【${boss.nameZh}】！推進至 Stage ${nextStage}！`);
-            return { damage: finalDamage, isCrit: isWeaknessHit, defeated: true, attackTypeLabel };
+            state.showToast(
+              droppedLootName
+                ? `🏆 戰隊擊破【${boss.nameZh}】！你獲得隱藏掉落【${droppedLootName}】！`
+                : `🏆 戰隊合力擊破【${boss.nameZh}】！推進至 Stage ${nextStage}！`
+            );
+            return {
+              damage: finalDamage,
+              isCrit: isWeaknessHit,
+              defeated: true,
+              attackTypeLabel,
+              droppedLootName,
+            };
           } else {
             soundFX.playPRFanfare();
             set({
               squadBossHp: remaining,
               personalMaxDamage: newMaxDmg,
               adventureCooldownUntil: now + cooldownMs,
+              activeTeamComboBuff: nextComboBuff,
+              collectedBossLoots: updatedLoots,
             });
-            state.showToast(`⚔️ 戰隊出擊！造成 -${finalDamage} HP！`);
-            return { damage: finalDamage, isCrit: isWeaknessHit, defeated: false, attackTypeLabel };
+            state.showToast(
+              droppedLootName
+                ? `🎁 連攜重擊 -${finalDamage} HP！幸運打落【${droppedLootName}】！`
+                : `⚔️ ${attackTypeLabel}！造成 -${finalDamage} HP！`
+            );
+            return {
+              damage: finalDamage,
+              isCrit: isWeaknessHit,
+              defeated: false,
+              attackTypeLabel,
+              droppedLootName,
+            };
           }
         }
       },
@@ -1886,13 +2041,54 @@ export const useGameStore = create<GameState>()(
           squadBossHp: remaining,
           squadMembers: state.squadMembers.map((m) =>
             m.id === memberId
-              ? { ...m, hasWorkedOutToday: true, damageDealt: m.damageDealt + friendDmg }
+              ? {
+                  ...m,
+                  hasWorkedOutToday: true,
+                  isSuspectedCheater: false,
+                  workoutAuditZh: '✅ 有氧飛輪 30分鐘 · 組間心率與休息完整',
+                  comboSkillAppliedZh: '🔥 已施放【燃脂魔焰】：破除高糖護盾！',
+                  damageDealt: m.damageDealt + friendDmg,
+                }
               : m
           ),
         });
         state.showToast(
-          `⚡ 【${target.nameZh}】完成運動打卡！破除高糖護盾並打出 -${friendDmg} HP！全員狂暴已啟動！`
+          `⚡ 【${target.nameZh}】完成真實運動打卡！破除高糖護盾並打出 -${friendDmg} HP！`
         );
+      },
+
+      reportCheatingMember: (memberId) => {
+        const state = get();
+        const target = state.squadMembers.find((m) => m.id === memberId);
+        if (!target) return;
+        soundFX.playSetComplete();
+        set({
+          squadMembers: state.squadMembers.map((m) =>
+            m.id === memberId
+              ? {
+                  ...m,
+                  hasWorkedOutToday: false,
+                  isSuspectedCheater: false,
+                  workoutAuditZh: '🚨 作弊已被隊友抓包撤銷！需重新開啟組間休息計時運動',
+                  damageDealt: 0,
+                  nudgedCount: m.nudgedCount + 1,
+                }
+              : m
+          ),
+        });
+        state.showToast(
+          `🚨 抓包成功！已公開處刑【${target.nameZh}】的 5 秒空氣深蹲，沒收刮痧傷害並罰他重練！`
+        );
+      },
+
+      setTodayWorkoutStatus: (status) => {
+        soundFX.playBlip();
+        set({ todayWorkoutStatus: status, adventureCooldownUntil: 0 });
+      },
+
+      setTodaySportType: (sport) => {
+        soundFX.playBlip();
+        set({ todaySportType: sport });
       },
 
       updateBiometrics: (partial) => {
@@ -1914,12 +2110,12 @@ export const useGameStore = create<GameState>()(
       },
 
       resetDemoState: () => {
-        localStorage.removeItem('fitmon-mvp-storage-v5');
+        localStorage.removeItem('fitmon-mvp-storage-v6');
         window.location.reload();
       },
     }),
     {
-      name: 'fitmon-mvp-storage-v5',
+      name: 'fitmon-mvp-storage-v6',
       partialize: (state) => ({
         locale: state.locale,
         themeMode: state.themeMode,
@@ -1957,6 +2153,10 @@ export const useGameStore = create<GameState>()(
         personalMaxStage: state.personalMaxStage,
         squadMaxStage: state.squadMaxStage,
         personalMaxDamage: state.personalMaxDamage,
+        todayWorkoutStatus: state.todayWorkoutStatus,
+        todaySportType: state.todaySportType,
+        activeTeamComboBuff: state.activeTeamComboBuff,
+        collectedBossLoots: state.collectedBossLoots,
       }),
     }
   )

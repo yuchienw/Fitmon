@@ -27,6 +27,14 @@ export interface CosmeticItem {
   combatStat?: CombatStat;
 }
 
+export interface BossHiddenLoot {
+  id: string;
+  nameZh: string;
+  emoji: string;
+  rarityLabel: string;
+  statDescZh: string;
+}
+
 export interface AdventureBoss {
   id: string;
   stageNumber: number;
@@ -40,6 +48,7 @@ export interface AdventureBoss {
   weaknessMultiplier: number;
   rewardCoins: number;
   isWorldBoss?: boolean;
+  hiddenLoot: BossHiddenLoot;
 }
 
 export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
@@ -55,6 +64,13 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     weaknessLabelZh: '🥊 弱物理 (200% 暴擊)',
     weaknessMultiplier: 2.0,
     rewardCoins: 150,
+    hiddenLoot: {
+      id: 'loot_potato_shield',
+      nameZh: '波浪洋芋片脆皮盾',
+      emoji: '🛡️',
+      rarityLabel: '隱藏稀有 (25%)',
+      statDescZh: '🥊 物攻 +45 · 免疫沙發怠惰',
+    },
   },
   {
     id: 'boss_boba',
@@ -68,6 +84,13 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     weaknessLabelZh: '🪄 弱魔法 (200% 暴擊)',
     weaknessMultiplier: 2.0,
     rewardCoins: 250,
+    hiddenLoot: {
+      id: 'loot_boba_staff',
+      nameZh: '黑糖珍珠暴風法杖',
+      emoji: '🪄',
+      rarityLabel: '隱藏史詩 (20%)',
+      statDescZh: '🪄 魔攻 +55 · 有氧燃脂加速',
+    },
   },
   {
     id: 'boss_screen_zombie',
@@ -81,6 +104,13 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     weaknessLabelZh: '🥊 弱物理 (180% 暴擊)',
     weaknessMultiplier: 1.8,
     rewardCoins: 350,
+    hiddenLoot: {
+      id: 'loot_cyber_visor',
+      nameZh: '抗藍光覺醒護目鏡',
+      emoji: '🥽',
+      rarityLabel: '隱藏史詩 (18%)',
+      statDescZh: '🥊 物攻 +60 · 暴擊率 +15%',
+    },
   },
   {
     id: 'boss_cheese_slime',
@@ -94,6 +124,13 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     weaknessLabelZh: '🪄 弱魔法 (200% 暴擊)',
     weaknessMultiplier: 2.0,
     rewardCoins: 450,
+    hiddenLoot: {
+      id: 'loot_cheese_cape',
+      nameZh: '熔岩莫札瑞拉披肩',
+      emoji: '🧣',
+      rarityLabel: '隱藏傳奇 (15%)',
+      statDescZh: '🪄 魔攻 +70 · 灼燒連攜 +25%',
+    },
   },
   {
     id: 'boss_snooze_demon',
@@ -107,6 +144,13 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     weaknessLabelZh: '🥊 弱物理 (180% 暴擊)',
     weaknessMultiplier: 1.8,
     rewardCoins: 600,
+    hiddenLoot: {
+      id: 'loot_alarm_hammer',
+      nameZh: '晨間粉碎巨型鬧鐘錘',
+      emoji: '🔨',
+      rarityLabel: '隱藏傳奇 (12%)',
+      statDescZh: '🥊 物攻 +85 · 首擊破甲翻倍',
+    },
   },
   {
     id: 'boss_fried_chicken_lord',
@@ -121,6 +165,13 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     weaknessMultiplier: 1.5,
     rewardCoins: 1200,
     isWorldBoss: true,
+    hiddenLoot: {
+      id: 'loot_chicken_crown',
+      nameZh: '黃金脆皮霸王皇冠',
+      emoji: '👑',
+      rarityLabel: '神話限定 (10%)',
+      statDescZh: '⚡ 物魔雙攻 +100 · 全隊光環',
+    },
   },
 ];
 

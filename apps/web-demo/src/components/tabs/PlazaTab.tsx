@@ -5,13 +5,11 @@ import {
   Droplets,
   BadgeCheck,
   Home,
-  Flame,
   Globe,
   Users,
   UserCheck,
   Contact,
   ShieldAlert,
-  BookmarkPlus,
   UserPlus,
   Check,
   Swords,
@@ -26,8 +24,15 @@ import {
   Sparkles,
   Copy,
   X,
+  Gift,
+  Lock,
+  Dumbbell,
 } from 'lucide-react';
-import { useGameStore } from '../../stores/useGameStore';
+import {
+  useGameStore,
+  TodayWorkoutStatus,
+  AdventureSportSkillType,
+} from '../../stores/useGameStore';
 import {
   ADVENTURE_BOSS_CATALOG,
   AVATAR_ITEMS,
@@ -56,6 +61,8 @@ export const PlazaTab: React.FC = () => {
     damage: number;
     isCrit: boolean;
     label: string;
+    droppedLootName?: string;
+    isCheatPenalty?: boolean;
   } | null>(null);
   const [shakingMemberId, setShakingMemberId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
@@ -69,13 +76,11 @@ export const PlazaTab: React.FC = () => {
   const equippedIds = Object.values(store.equipped);
   let myPhyAtk = 20; // base
   let myMagAtk = 10; // base
-  let mySupportVal = 0;
   equippedIds.forEach((id) => {
     const item = AVATAR_ITEMS.find((a) => a.id === id);
     if (item?.combatStat) {
       if (item.combatStat.type === 'phy') myPhyAtk += item.combatStat.value;
       if (item.combatStat.type === 'mag') myMagAtk += item.combatStat.value;
-      if (item.combatStat.type === 'support') mySupportVal += item.combatStat.value;
     }
   });
 
@@ -92,6 +97,7 @@ export const PlazaTab: React.FC = () => {
     raidMode === 'solo' ? store.soloBossHp : store.squadBossHp
   );
   const hpPercent = Math.max(0, Math.min(100, Math.round((currentHp / maxHp) * 100)));
+  const isLootCollected = store.collectedBossLoots.includes(bossTemplate.hiddenLoot.id);
 
   // Cooldown status
   const cooldownRemainingSec = Math.max(
@@ -107,14 +113,20 @@ export const PlazaTab: React.FC = () => {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  // Squad attendance
-  const attendedCount =
-    1 + store.squadMembers.filter((m) => m.hasWorkedOutToday).length;
+  // Squad attendance (only counting legit non-cheaters)
+  const legitSquadCount =
+    (store.todayWorkoutStatus === 'legit_rest' ? 1 : 0) +
+    store.squadMembers.filter((m) => m.hasWorkedOutToday && !m.isSuspectedCheater).length;
   const totalSquadSize = 1 + store.squadMembers.length;
-  const isFullAttendance = attendedCount === totalSquadSize;
+  const isFullAttendance = legitSquadCount === totalSquadSize;
   const missingMember = store.squadMembers.find((m) => !m.hasWorkedOutToday);
 
   const handleManualStrike = () => {
+    if (store.todayWorkoutStatus === 'none') {
+      store.setActiveTab('workout');
+      store.showToast('🏋️ 請先完成今日運動並跑完組間休息，即可回來揮拳討伐 Boss！');
+      return;
+    }
     if (isOnCooldown) return;
     setIsAvatarLunging(true);
     setTimeout(() => {
@@ -126,9 +138,11 @@ export const PlazaTab: React.FC = () => {
           damage: res.damage,
           isCrit: res.isCrit,
           label: res.attackTypeLabel,
+          droppedLootName: res.droppedLootName,
+          isCheatPenalty: res.isCheatPenalty,
         });
         setTimeout(() => setIsBossHit(false), 500);
-        setTimeout(() => setFloatingHit(null), 1600);
+        setTimeout(() => setFloatingHit(null), 2200);
       }
     }, 220);
   };
@@ -262,19 +276,133 @@ export const PlazaTab: React.FC = () => {
             </button>
           </div>
 
+          {/* MVP 測試模擬控制台：驗證組間休息防作弊 & 運動技能選擇 */}
+          <div className="p-3 rounded-2xl bg-slate-900/95 border border-slate-700/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black text-amber-300 flex items-center gap-1">
+                ⚡ 今日運動組間休息判定（防亂按交差機制）
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                點擊可切換測試
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5">
+              {(
+                [
+                  {
+                    id: 'legit_rest',
+                    label: '✅ 完整組間休息',
+                    sub: '100%威力+掉寶',
+                    cls: 'border-emerald-400 bg-emerald-950/60 text-emerald-300',
+                  },
+                  {
+                    id: 'cheated_fast',
+                    label: '🤥 3秒亂按作弊',
+                    sub: '懲罰-95%刮痧',
+                    cls: 'border-rose-400 bg-rose-950/60 text-rose-300',
+                  },
+                  {
+                    id: 'none',
+                    label: '🔒 今日尚未運動',
+                    sub: '鎖定不可出拳',
+                    cls: 'border-slate-500 bg-slate-800 text-slate-200',
+                  },
+                ] as { id: TodayWorkoutStatus; label: string; sub: string; cls: string }[]
+              ).map((st) => {
+                const active = store.todayWorkoutStatus === st.id;
+                return (
+                  <button
+                    key={st.id}
+                    onClick={() => store.setTodayWorkoutStatus(st.id)}
+                    className={`p-1.5 rounded-xl border text-center transition ${
+                      active ? st.cls + ' ring-1 ring-white/30 font-black' : 'bg-slate-950 border-slate-800 text-slate-500'
+                    }`}
+                  >
+                    <div className="text-[10px] font-black truncate">{st.label}</div>
+                    <div className="text-[9px] opacity-80">{st.sub}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 依據今日做的運動類型選擇連攜技能 */}
+            {store.todayWorkoutStatus !== 'none' && (
+              <div className="pt-2 border-t border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-black text-cyan-300">
+                    🎯 依今日運動類型選擇出擊技能（與隊友打 Combo）：
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      {
+                        id: 'strength',
+                        title: '🏋️ 重訓課表',
+                        skill: '🔨 破甲重擊',
+                        desc: '掛上破甲(下位魔攻×2)',
+                      },
+                      {
+                        id: 'cardio',
+                        title: '🏃 有氧心肺',
+                        skill: '🔥 燃脂魔焰',
+                        desc: '引爆阿凱破甲(2倍連攜)',
+                      },
+                      {
+                        id: 'bodyweight',
+                        title: '🧘 徒手核心',
+                        skill: '🌪️ 聚氣暴擊陣',
+                        desc: '隱藏神裝掉寶率 ×2倍',
+                      },
+                    ] as {
+                      id: AdventureSportSkillType;
+                      title: string;
+                      skill: string;
+                      desc: string;
+                    }[]
+                  ).map((sp) => {
+                    const active = store.todaySportType === sp.id;
+                    return (
+                      <button
+                        key={sp.id}
+                        onClick={() => store.setTodaySportType(sp.id)}
+                        className={`p-2 rounded-xl border text-left transition ${
+                          active
+                            ? 'bg-cyan-950/70 border-cyan-400 text-white shadow'
+                            : 'bg-slate-950 border-slate-800 text-slate-400'
+                        }`}
+                      >
+                        <div className="text-[9px] text-slate-400 font-bold">{sp.title}</div>
+                        <div className="text-[11px] font-black text-amber-300 mt-0.5 truncate">
+                          {sp.skill}
+                        </div>
+                        <div className="text-[9px] text-cyan-200 mt-0.5 leading-tight">
+                          {sp.desc}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Player's Current Combat Gear Stats Bar */}
           <div className="px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-[11px] font-bold flex-wrap">
-              <span className="text-slate-400">我的戰力：</span>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold flex-wrap">
+              <span className="text-slate-400">裝備加成：</span>
               <span className="px-1.5 py-0.5 rounded bg-orange-500/20 border border-orange-400/40 text-orange-300 font-black">
                 🥊 物攻 {myPhyAtk}
               </span>
               <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-black">
                 🪄 魔攻 {myMagAtk}
               </span>
-              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-black">
-                🔥 連勝 +{store.streakDays * 10}%
-              </span>
+              {store.collectedBossLoots.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-amber-300 font-black">
+                  🎁 隱藏神裝 ×{store.collectedBossLoots.length}
+                </span>
+              )}
             </div>
             <button
               onClick={() => store.setWardrobeModalOpen(true)}
@@ -287,13 +415,13 @@ export const PlazaTab: React.FC = () => {
 
           {/* TAP TITANS BOSS BATTLE ARENA */}
           <div className="retro-box rounded-2xl p-4 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border-2 border-slate-800 relative overflow-hidden">
-            {/* Stage Banner & Weakness Badge */}
-            <div className="flex items-start justify-between gap-2 mb-3">
+            {/* Stage Banner & Fixed Weakness Badge */}
+            <div className="flex items-start justify-between gap-2 mb-2.5">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-black mb-1">
                   <span>STAGE {currentStage}</span>
                   <span>·</span>
-                  <span>{raidMode === 'solo' ? '個人地下城' : '3人彈性戰隊副本'}</span>
+                  <span>{raidMode === 'solo' ? '個人地下城' : '戰隊協同副本'}</span>
                 </div>
                 <h3 className="text-base font-black text-white flex items-center gap-1.5">
                   <span>{bossTemplate.emoji}</span>
@@ -312,32 +440,50 @@ export const PlazaTab: React.FC = () => {
                       : 'bg-amber-500/20 border-amber-400 text-amber-300'
                   }`}
                 >
-                  ⚡ {bossTemplate.weaknessLabelZh}
+                  ⚡ 固定弱點：{bossTemplate.weaknessLabelZh}
                 </div>
                 <div className="text-[10px] text-amber-300 font-bold mt-1">
-                  擊破獎勵: +{bossTemplate.rewardCoins} 🪙
+                  通關賞金: +{bossTemplate.rewardCoins} 🪙
                 </div>
               </div>
             </div>
 
-            {/* Elemental Shield Lock Alert (When in Squad Mode & Teammate hasn't worked out) */}
-            {raidMode === 'squad' && missingMember && (
-              <div className="mb-3 px-3 py-2 rounded-xl bg-rose-950/80 border border-rose-500/60 flex items-center justify-between gap-2 animate-pulse">
-                <div className="text-[11px] text-rose-200 font-bold leading-snug">
-                  🛡️ <span className="font-black text-amber-300">高糖護盾鎖定中！</span>
-                  等待隊友【{missingMember.nameZh}】運動出拳破除魔攻護盾！
+            {/* Boss Hidden Rare Loot Drop Preview Banner */}
+            <div className="mb-3 px-3 py-2 rounded-xl bg-amber-950/30 border border-amber-500/40 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xl shrink-0">{bossTemplate.hiddenLoot.emoji}</span>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-black text-amber-300 truncate flex items-center gap-1">
+                    <Gift className="w-3 h-3 shrink-0" />
+                    <span>本關隱藏掉落：{bossTemplate.hiddenLoot.nameZh}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-300 truncate">
+                    {bossTemplate.hiddenLoot.statDescZh} ·（需完整組間休息方可掉落）
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleNudge(missingMember.id)}
-                  className="px-2 py-1 rounded-lg bg-rose-500 text-white text-[10px] font-black shrink-0 shadow"
-                >
-                  🔔 催他
-                </button>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded text-[9px] font-black shrink-0 ${
+                  isLootCollected
+                    ? 'bg-emerald-500 text-slate-950'
+                    : 'bg-amber-500/20 border border-amber-400/50 text-amber-300'
+                }`}
+              >
+                {isLootCollected ? '✓ 已入手' : bossTemplate.hiddenLoot.rarityLabel}
+              </span>
+            </div>
+
+            {/* Active Team Combo Buff Status on Boss */}
+            {store.activeTeamComboBuff === 'armor_break' && (
+              <div className="mb-2.5 px-3 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-400/60 flex items-center justify-between text-[11px]">
+                <span className="text-cyan-200 font-bold">
+                  🔨 隊友【阿凱】已打破 Boss 護甲！現在選 <b className="text-amber-300">🔥 燃脂魔焰</b> 出擊可觸發 <b className="text-amber-300">2.0 倍連攜引爆</b>！
+                </span>
               </div>
             )}
 
             {/* Boss HP Bar (Persistent Cumulative Damage) */}
-            <div className="mb-4">
+            <div className="mb-3">
               <div className="flex items-center justify-between text-xs font-black mb-1">
                 <span className="text-rose-400 flex items-center gap-1">
                   ❤️ BOSS 血量（殘血累積不重置）
@@ -355,8 +501,7 @@ export const PlazaTab: React.FC = () => {
             </div>
 
             {/* Battle Visual Stage: Player Paper-Doll vs Giant Life-Humor Boss */}
-            <div className="relative h-40 rounded-xl bg-slate-950/90 border border-slate-800/90 flex items-center justify-around px-4 overflow-hidden">
-              {/* Retro dungeon floor grid effect */}
+            <div className="relative h-44 rounded-xl bg-slate-950/90 border border-slate-800/90 flex items-center justify-around px-4 overflow-hidden">
               <div
                 className="absolute inset-0 opacity-15 pointer-events-none"
                 style={{
@@ -384,22 +529,35 @@ export const PlazaTab: React.FC = () => {
                 </span>
               </div>
 
-              {/* Center VS & Floating Damage Text */}
-              <div className="relative z-20 flex flex-col items-center justify-center">
+              {/* Center VS & Floating Damage / Loot Drop Popup */}
+              <div className="relative z-20 flex flex-col items-center justify-center max-w-[150px]">
                 {floatingHit ? (
-                  <div className="animate-bounce text-center">
-                    <div className="text-[10px] font-black text-amber-300 bg-slate-900/90 px-2 py-0.5 rounded border border-amber-400/50">
+                  <div className="animate-bounce text-center space-y-1">
+                    <div
+                      className={`text-[10px] font-black px-2 py-0.5 rounded border ${
+                        floatingHit.isCheatPenalty
+                          ? 'bg-rose-950 text-rose-300 border-rose-500'
+                          : 'bg-slate-900/95 text-amber-300 border-amber-400/50'
+                      }`}
+                    >
                       {floatingHit.label}
                     </div>
                     <div
                       className={`font-mono font-black ${
-                        floatingHit.isCrit
+                        floatingHit.isCheatPenalty
+                          ? 'text-base text-slate-400'
+                          : floatingHit.isCrit
                           ? 'text-2xl text-amber-400 drop-shadow-[0_2px_8px_rgba(251,191,36,0.8)]'
                           : 'text-xl text-rose-400'
                       }`}
                     >
                       -{floatingHit.damage} HP!
                     </div>
+                    {floatingHit.droppedLootName && (
+                      <div className="px-2 py-1 rounded-lg bg-amber-400 text-slate-950 text-[10px] font-black shadow-lg animate-pulse">
+                        🎁 噴裝：{floatingHit.droppedLootName}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-xs font-black text-slate-500 font-mono">VS</div>
@@ -426,19 +584,37 @@ export const PlazaTab: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400 mt-2.5 text-center">
-              💡 {bossTemplate.descriptionZh}（完成任務與連續簽到即可提升出擊威力，不比拼舉重重量！）
-            </p>
-
-            {/* MANUAL STRIKE BUTTON OR COOLDOWN RESET CONTROLS */}
+            {/* MANUAL STRIKE BUTTON OR WORKOUT LOCK OR COOLDOWN */}
             <div className="mt-3.5">
-              {!isOnCooldown ? (
+              {store.todayWorkoutStatus === 'none' ? (
                 <button
                   onClick={handleManualStrike}
-                  className="w-full retro-btn py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                  className="w-full retro-btn py-3.5 rounded-xl bg-slate-800 border-2 border-amber-400/60 text-amber-300 font-black text-xs flex items-center justify-center gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>🔒 今日尚未運動打卡！點此前往【運動】累積出拳能量</span>
+                </button>
+              ) : !isOnCooldown ? (
+                <button
+                  onClick={handleManualStrike}
+                  className={`w-full retro-btn py-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 ${
+                    store.todayWorkoutStatus === 'cheated_fast'
+                      ? 'bg-rose-900/80 border-rose-500 text-rose-200'
+                      : 'bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+                  }`}
                 >
                   <Swords className="w-4 h-4" />
-                  <span>⚔️ 出擊挑戰 Boss（揮拳造成傷害）</span>
+                  <span>
+                    {store.todayWorkoutStatus === 'cheated_fast'
+                      ? '🤥 出擊挑戰（未跑組間休息：懲罰刮痧 -15 HP）'
+                      : `⚔️ 施放【${
+                          store.todaySportType === 'strength'
+                            ? '🔨 破甲重擊'
+                            : store.todaySportType === 'cardio'
+                            ? '🔥 燃脂魔焰'
+                            : '🌪️ 聚氣暴擊陣'
+                        }】痛扁 Boss`}
+                  </span>
                 </button>
               ) : (
                 <div className="space-y-2">
@@ -473,7 +649,7 @@ export const PlazaTab: React.FC = () => {
             </div>
           </div>
 
-          {/* SQUAD ACCOUNTABILITY & PEER-URGING PANEL */}
+          {/* SQUAD ACCOUNTABILITY, ANTI-CHEAT AUDIT & PEER-URGING PANEL */}
           {raidMode === 'squad' && (
             <div className="retro-box rounded-2xl p-3.5 space-y-3 border border-amber-500/40 bg-slate-900/90">
               <div className="flex items-center justify-between gap-2">
@@ -481,13 +657,13 @@ export const PlazaTab: React.FC = () => {
                   <h4 className="text-xs font-black text-white flex items-center gap-1.5">
                     <span>🔥 {store.squadName}</span>
                     <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px]">
-                      出勤 {attendedCount}/{totalSquadSize}
+                      真實出勤 {legitSquadCount}/{totalSquadSize}
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     {isFullAttendance
-                      ? '⚡ 全員已打卡到齊！全隊享有【狂暴 1.5 倍傷害】加成！'
-                      : `👉 只差 @${missingMember?.nameZh} 運動打卡，即可解鎖全隊 1.5 倍狂暴傷害！`}
+                      ? '⚡ 全隊皆完成真實組間休息運動！全員享有【狂暴 1.5 倍傷害】！'
+                      : '💡 隊友間會直接公開「組間休息完整度」，亂按作弊將被隊友抓包並砍傷 95%！'}
                   </p>
                 </div>
 
@@ -501,54 +677,38 @@ export const PlazaTab: React.FC = () => {
               </div>
 
               {/* Squad Members Cards */}
-              <div className="space-y-2">
-                {/* Me */}
-                <div className="p-2.5 rounded-xl bg-slate-950/80 border border-emerald-500/30 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-xs font-black text-emerald-300">
-                      我
-                    </span>
-                    <div>
-                      <div className="text-xs font-black text-white flex items-center gap-1.5">
-                        <span>{store.nickname}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 text-[9px]">
-                          🥊 物攻 {myPhyAtk} / 🪄 魔攻 {myMagAtk}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-emerald-400 font-bold">
-                        ✓ 今日已備戰 · 最高單擊 {store.personalMaxDamage} HP
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-black text-emerald-400 px-2 py-1 rounded bg-emerald-950">
-                    隊長
-                  </span>
-                </div>
-
-                {/* Teammates */}
+              <div className="space-y-2.5">
                 {store.squadMembers.map((member) => {
                   const isShaking = shakingMemberId === member.id;
                   return (
                     <div
                       key={member.id}
-                      className={`p-2.5 rounded-xl border transition flex flex-col gap-2 ${
+                      className={`p-3 rounded-xl border transition flex flex-col gap-2 ${
                         isShaking ? 'animate-bounce border-rose-400 bg-rose-950/40' : ''
                       } ${
-                        member.hasWorkedOutToday
+                        member.isSuspectedCheater
+                          ? 'bg-amber-950/30 border-amber-500/70'
+                          : member.hasWorkedOutToday
                           ? 'bg-slate-950/80 border-slate-800'
                           : 'bg-rose-950/25 border-rose-500/50'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5 min-w-0">
                           <span
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0 ${
-                              member.hasWorkedOutToday
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0 ${
+                              member.isSuspectedCheater
+                                ? 'bg-amber-500/20 border border-amber-400'
+                                : member.hasWorkedOutToday
                                 ? 'bg-cyan-500/20 border border-cyan-400/50'
                                 : 'bg-rose-500/20 border border-rose-400/50'
                             }`}
                           >
-                            {member.hasWorkedOutToday ? '💪' : '🛋️'}
+                            {member.isSuspectedCheater
+                              ? '🤥'
+                              : member.hasWorkedOutToday
+                              ? '💪'
+                              : '🛋️'}
                           </span>
                           <div className="min-w-0">
                             <div className="text-xs font-black text-white flex items-center gap-1.5 flex-wrap">
@@ -563,24 +723,60 @@ export const PlazaTab: React.FC = () => {
                                 {member.roleBadgeZh}
                               </span>
                             </div>
-                            <div className="text-[10px] text-slate-400 truncate">
-                              配裝：{member.gearDescZh}
+
+                            {/* Workout Audit Log (Rest Timer Verification) */}
+                            <div
+                              className={`text-[10px] font-bold mt-0.5 ${
+                                member.isSuspectedCheater
+                                  ? 'text-amber-300'
+                                  : member.hasWorkedOutToday
+                                  ? 'text-emerald-400'
+                                  : 'text-rose-300'
+                              }`}
+                            >
+                              {member.workoutAuditZh}
                             </div>
+
+                            {member.comboSkillAppliedZh && (
+                              <div className="text-[10px] text-cyan-300 font-black mt-0.5">
+                                {member.comboSkillAppliedZh}
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         <div className="text-right shrink-0">
-                          {member.hasWorkedOutToday ? (
+                          {member.isSuspectedCheater ? (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400 text-amber-300 text-[10px] font-black">
+                              刮痧 (-{member.damageDealt} HP)
+                            </span>
+                          ) : member.hasWorkedOutToday ? (
                             <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black">
                               ✓ 已出擊 (-{member.damageDealt} HP)
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-black">
-                              ⚠️ 今日未運動
+                              ⚠️ 未出勤
                             </span>
                           )}
                         </div>
                       </div>
+
+                      {/* Action Buttons for Cheating Teammate */}
+                      {member.isSuspectedCheater && (
+                        <div className="pt-1.5 border-t border-amber-500/30 flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-amber-200 font-bold">
+                            🚨 系統抓包他沒跑組間休息計時！
+                          </span>
+                          <button
+                            onClick={() => store.reportCheatingMember(member.id)}
+                            className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black flex items-center gap-1 shadow shrink-0"
+                          >
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                            <span>抓包作弊（沒收傷害罰他重練）</span>
+                          </button>
+                        </div>
+                      )}
 
                       {/* Urge Buttons for Slacking Teammate */}
                       {!member.hasWorkedOutToday && (
@@ -608,7 +804,7 @@ export const PlazaTab: React.FC = () => {
                             className="py-1.5 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/50 text-cyan-300 text-[10px] font-black flex items-center justify-center gap-1"
                           >
                             <Zap className="w-3 h-3" />
-                            <span>模擬他打卡</span>
+                            <span>模擬他真運動</span>
                           </button>
                         </div>
                       )}
@@ -706,7 +902,7 @@ export const PlazaTab: React.FC = () => {
                 {
                   rank: 5,
                   name: '街頭健體 · Leo',
-                  title: '🌱 連續打卡 3 天',
+                  title: '🤥 作弊被抓包懲處中',
                   score: 'Stage 1',
                   badge: '🥊 物攻 45',
                   isMe: false,
@@ -758,25 +954,25 @@ export const PlazaTab: React.FC = () => {
               [
                 {
                   name: '👑 晨間六點半修羅團 (4人)',
-                  sub: '本週全勤率 100% · 物魔雙修',
+                  sub: '組間休息全勤率 100% · 物魔雙修',
                   score: 'Stage 24',
                   isMe: false,
                 },
                 {
                   name: '⚡ 乳清狂飲者聯盟 (3人)',
-                  sub: '本週全勤率 95% · 暴擊特化',
+                  sub: '組間休息全勤率 95% · 暴擊特化',
                   score: 'Stage 15',
                   isMe: false,
                 },
                 {
-                  name: `${store.squadName} (3人 · 我的戰隊)`,
-                  sub: `今日出勤 ${attendedCount}/${totalSquadSize} · 接力削血中`,
+                  name: `${store.squadName} (${totalSquadSize}人 · 我的戰隊)`,
+                  sub: `真實出勤 ${legitSquadCount}/${totalSquadSize} · 接力削血中`,
                   score: `Stage ${store.squadMaxStage}`,
                   isMe: true,
                 },
                 {
                   name: '🌱 下班順便動一下 (2人)',
-                  sub: '本週全勤率 75%',
+                  sub: '組間休息全勤率 75%',
                   score: 'Stage 2',
                   isMe: false,
                 },
@@ -822,26 +1018,26 @@ export const PlazaTab: React.FC = () => {
               [
                 {
                   name: '健力泰坦 · 館長級巨巨',
-                  sub: '斯巴達披風 + 24K金槓 (弱點暴擊)',
+                  sub: '破甲＋燃脂魔焰連攜引爆',
                   dmg: 2450,
                   isMe: false,
                 },
                 {
                   name: '重訓狂人 · 阿凱',
-                  sub: '紅黑健力服 + 全勤狂暴加成',
+                  sub: '紅黑健力服 + 破甲重擊',
                   dmg: 1420,
                   isMe: false,
                 },
                 {
                   name: `${store.nickname} (我)`,
-                  sub: '任務達成 + 屬性弱點克制',
+                  sub: '真實組間計時 + 連攜技能爆發',
                   dmg: store.personalMaxDamage,
                   isMe: true,
                 },
                 {
-                  name: '有氧女神 · 小愛',
-                  sub: '高溫有氧魔法破盾',
-                  dmg: 620,
+                  name: '街頭健體 · Leo',
+                  sub: '🤥 3秒亂按作弊刮痧懲罰',
+                  dmg: 15,
                   isMe: false,
                 },
               ]
@@ -1106,7 +1302,7 @@ export const PlazaTab: React.FC = () => {
               </div>
               <div className="p-2 rounded-lg bg-slate-950/90 border border-slate-800 text-[11px] text-amber-300 font-bold leading-relaxed">
                 {missingMember
-                  ? `「全隊出勤 ${attendedCount}/${totalSquadSize}！高糖護盾鎖定中，@${missingMember.nameZh} 快去運動打卡破盾，別讓全隊拿不到本週寶箱！」`
+                  ? `「全隊真實出勤 ${legitSquadCount}/${totalSquadSize}！@${missingMember.nameZh} 快去運動跑組間休息破盾，一起刷【${bossTemplate.hiddenLoot.nameZh}】！」`
                   : `「全隊全員狂暴啟動中！快上線給 ${bossTemplate.nameZh} 最後一擊！」`}
               </div>
             </div>
@@ -1114,7 +1310,7 @@ export const PlazaTab: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => {
-                  const shareText = `🚨【FitMon 戰隊緊急討伐令】\n我們正在討伐 Stage ${store.squadStage}【${bossTemplate.nameZh}】（剩餘 ${currentHp} HP）！\n#拯救全隊就差你 快去運動打卡破盾：\nhttps://yuchienw.github.io/Fitmon/`;
+                  const shareText = `🚨【FitMon 戰隊緊急討伐令】\n我們正在討伐 Stage ${store.squadStage}【${bossTemplate.nameZh}】（剩餘 ${currentHp} HP），有機會掉落隱藏神裝【${bossTemplate.hiddenLoot.nameZh}】！\n#拯救全隊就差你 快去運動打卡：\nhttps://yuchienw.github.io/Fitmon/`;
                   if (navigator.clipboard) {
                     navigator.clipboard.writeText(shareText);
                   }
