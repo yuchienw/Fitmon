@@ -49,6 +49,12 @@ interface FinalBlowVictoryReport {
   droppedLootName: string;
 }
 
+interface RareLootDropReport {
+  stage: number;
+  boss: AdventureBoss;
+  strikeDamage: number;
+}
+
 export const PlazaTab: React.FC = () => {
   const store = useGameStore();
   const [mainSubTab, setMainSubTab] = useState<AdventureMainSubTab>('raid');
@@ -66,6 +72,10 @@ export const PlazaTab: React.FC = () => {
   // Final-Blow Boss Victory Auto-Popup Modal State (Only pops up when player lands the killing blow!)
   const [finalBlowReport, setFinalBlowReport] = useState<FinalBlowVictoryReport | null>(null);
   const killPosterCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Rare Loot Drop Auto-Popup Modal State (Pops up when player rolls the ~18% rare loot drop!)
+  const [lootDropReport, setLootDropReport] = useState<RareLootDropReport | null>(null);
+  const lootPosterCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Combat animation states
   const [isBossHit, setIsBossHit] = useState(false);
@@ -157,8 +167,10 @@ export const PlazaTab: React.FC = () => {
         setTimeout(() => setIsBossHit(false), 500);
         setTimeout(() => setFloatingHit(null), 2200);
 
-        // ONLY when this player delivers the FINAL BLOW that defeats the Boss:
-        // Pop up the pre-composed Boss Victory Share Modal!
+        // 1. When this player delivers the FINAL BLOW that defeats the Boss:
+        //    Pop up the pre-composed Boss Victory Share Modal!
+        // 2. Or when this player triggers the rare (~18%) Hidden Loot Drop:
+        //    Pop up the pre-composed Rare Loot Drop Share Modal!
         if (res.defeated) {
           setTimeout(() => {
             setFinalBlowReport({
@@ -169,6 +181,14 @@ export const PlazaTab: React.FC = () => {
               droppedLootName:
                 res.droppedLootName ||
                 `${bossBeforeStrike.hiddenLoot.emoji} ${bossBeforeStrike.hiddenLoot.nameZh}`,
+            });
+          }, 450);
+        } else if (res.droppedLootName) {
+          setTimeout(() => {
+            setLootDropReport({
+              stage: stageBeforeStrike,
+              boss: bossBeforeStrike,
+              strikeDamage: res.damage,
             });
           }, 450);
         }
@@ -454,6 +474,264 @@ export const PlazaTab: React.FC = () => {
     handleDownloadKillPoster();
   };
 
+  // Render the fixed, pre-composed SSR Rare Loot Drop Poster whenever lootDropReport is present
+  useEffect(() => {
+    if (!lootDropReport) return;
+    const canvas = lootPosterCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const W = 720;
+    const H = 960;
+    canvas.width = W;
+    canvas.height = H;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // 1. Royal Purple & Gold SSR Treasure Background
+    const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.34, 30, W * 0.5, H * 0.42, W * 0.85);
+    bgGrad.addColorStop(0, '#581c87');
+    bgGrad.addColorStop(0.45, '#1e1b4b');
+    bgGrad.addColorStop(1, '#090d16');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Golden SSR Sunburst Rays
+    ctx.save();
+    ctx.translate(W * 0.5, H * 0.35);
+    for (let i = 0; i < 20; i++) {
+      ctx.rotate((Math.PI * 2) / 20);
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(251, 191, 36, 0.11)' : 'rgba(192, 132, 252, 0.05)';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-34, -W);
+      ctx.lineTo(34, -W);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Outer Gold & Purple Frame
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, W - 40, H - 40);
+
+    // 2. Top Header: SSR RARE LOOT DROP
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    ctx.beginPath();
+    ctx.roundRect(44, 42, W - 88, 86, 18);
+    ctx.fill();
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '900 18px "Barlow Condensed", "Noto Sans TC", sans-serif';
+    ctx.fillText(`✨ SSR RARE LOOT DROP · 歐皇稀有噴裝捷報 ✨`, W / 2, 74);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 26px "Noto Sans TC", sans-serif';
+    ctx.fillText(
+      `恭喜打落隱藏神裝【${lootDropReport.boss.hiddenLoot.nameZh}】！`,
+      W / 2,
+      110
+    );
+
+    // 3. Treasure Stage Floor & Showcase (Giant SSR Item Pedestal on Left + Lucky Hero Avatar on Right)
+    const floorY = 500;
+    const floorGrad = ctx.createLinearGradient(22, floorY, 22, H - 22);
+    floorGrad.addColorStop(0, '#311042');
+    floorGrad.addColorStop(0.25, '#0f172a');
+    floorGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(22, floorY, W - 44, H - floorY - 22);
+
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(22, floorY);
+    ctx.lineTo(W - 22, floorY);
+    ctx.stroke();
+
+    // Left: Glowing SSR Treasure Circle
+    const itemX = 225;
+    const itemY = 320;
+    ctx.save();
+    ctx.fillStyle = 'rgba(88, 28, 135, 0.65)';
+    ctx.beginPath();
+    ctx.arc(itemX, itemY, 102, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.font = '112px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(lootDropReport.boss.hiddenLoot.emoji, itemX, itemY - 4);
+
+    // Slanted SSR Stamp
+    ctx.translate(itemX, itemY + 62);
+    ctx.rotate(-0.1);
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.roundRect(-115, -21, 230, 42, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.fillStyle = '#090d16';
+    ctx.font = '900 20px "Barlow Condensed", "Noto Sans TC", sans-serif';
+    ctx.fillText('★ SSR 稀有掉率 18% ★', 0, 2);
+    ctx.restore();
+
+    // Right: Lucky Player's Chibi Avatar Cheering
+    const heroX = 505;
+    const heroY = 445;
+    ctx.save();
+    ctx.translate(heroX, heroY);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.beginPath();
+    ctx.ellipse(0, 6, 62, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const avatarScale = 3.7;
+    ctx.scale(avatarScale, avatarScale);
+    drawMapleChibiAvatar(ctx, {
+      x: -28,
+      y: -60,
+      bodyStage: store.bodyStage,
+      equipped: store.equipped,
+      state: 'CHEER',
+      expressionOverride: 'smile',
+      facingRight: false,
+      frameTick: 10,
+    });
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.95)';
+    ctx.beginPath();
+    ctx.roundRect(heroX - 135, 458, 270, 36, 10);
+    ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#090d16';
+    ctx.font = '900 17px "Noto Sans TC", sans-serif';
+    ctx.fillText(`🎉 歐皇得主：${store.nickname}`, heroX, 481);
+    ctx.restore();
+
+    // 4. Lower Section: Item Attribute Card + Lucky Drop Quote
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    ctx.beginPath();
+    ctx.roundRect(44, 530, W - 88, 175, 18);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.65)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#c084fc';
+    ctx.font = '900 16px "Noto Sans TC", sans-serif';
+    ctx.fillText(
+      `👾 掉落出處：STAGE ${lootDropReport.stage} 【${lootDropReport.boss.nameZh}】`,
+      68,
+      568
+    );
+
+    ctx.fillStyle = '#fde047';
+    ctx.font = '900 34px "Noto Sans TC", sans-serif';
+    ctx.fillText(
+      `${lootDropReport.boss.hiddenLoot.emoji} ${lootDropReport.boss.hiddenLoot.nameZh}`,
+      68,
+      618
+    );
+
+    ctx.fillStyle = '#34d399';
+    ctx.font = '900 22px "Noto Sans TC", sans-serif';
+    ctx.fillText(`⚡ 裝備加成：${lootDropReport.boss.hiddenLoot.statDescZh}`, 68, 660);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '700 15px "Noto Sans TC", sans-serif';
+    ctx.fillText(
+      `（平均需全隊揮拳討伐 5～6 次才會爆出 1 件，非人人皆可入手！）`,
+      68,
+      690
+    );
+
+    // Bragging Banner
+    ctx.fillStyle = 'rgba(88, 28, 135, 0.45)';
+    ctx.beginPath();
+    ctx.roundRect(44, 725, W - 88, 132, 18);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(192, 132, 252, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '900 22px "Noto Sans TC", sans-serif';
+    ctx.fillText('「誰說運動不會噴寶？今天組間休息練滿直接掉神裝！」', W / 2, 778);
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '800 17px "Noto Sans TC", sans-serif';
+    ctx.fillText(`🛡️ 所屬戰隊：${store.squadName}`, W / 2, 822);
+
+    // 5. Bottom Official Brand Watermark
+    const todayStr = new Date().toLocaleDateString('zh-TW');
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '800 16px "Barlow Condensed", "Noto Sans TC", sans-serif';
+    ctx.fillText(
+      `⚡ ${BRAND_CONFIG.appName} Official Rare Loot Certificate · Lv.${store.level} ${store.nickname} · ${todayStr}`,
+      W / 2,
+      H - 42
+    );
+
+    ctx.restore();
+  }, [lootDropReport, store.bodyStage, store.equipped, store.level, store.nickname, store.squadName]);
+
+  const handleDownloadLootPoster = () => {
+    const canvas = lootPosterCanvasRef.current;
+    if (!canvas || !lootDropReport) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `fitmon-rare-loot-${lootDropReport.boss.hiddenLoot.id}.png`;
+    link.href = dataUrl;
+    link.click();
+    store.showToast('💾 已儲存歐皇稀有噴裝炫耀圖！');
+  };
+
+  const handleShareLootPoster = async () => {
+    const canvas = lootPosterCanvasRef.current;
+    if (!canvas || !lootDropReport) return;
+    try {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/png')
+      );
+      if (blob && typeof navigator !== 'undefined' && navigator.share) {
+        const file = new File(
+          [blob],
+          `fitmon-rare-loot-${lootDropReport.boss.hiddenLoot.id}.png`,
+          { type: 'image/png' }
+        );
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `FitMon 歐皇噴裝：我打到了隱藏神裝【${lootDropReport.boss.hiddenLoot.nameZh}】！`,
+            files: [file],
+          });
+          store.showToast('📲 已開啟系統分享選單！');
+          return;
+        }
+      }
+    } catch {
+      // fallback to download
+    }
+    handleDownloadLootPoster();
+  };
+
   // Sync inspectedMember with latest store state
   const liveInspectedMember = inspectedMember
     ? store.squadMembers.find((m) => m.id === inspectedMember.id) || null
@@ -575,6 +853,17 @@ export const PlazaTab: React.FC = () => {
           </div>
 
           <div className="pt-1 border-t border-slate-800 grid grid-cols-1 gap-1.5">
+            <button
+              onClick={() => {
+                store.setDevForceNextLootDrop();
+                setDevCheatOpen(false);
+              }}
+              className="w-full py-2 px-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 shadow"
+            >
+              <Gift className="w-4 h-4 stroke-[2.5px]" />
+              <span>🎁 下一拳 100% 必噴隱藏神裝（測試 18% 歐皇噴裝分享）</span>
+            </button>
+
             <button
               onClick={() => {
                 store.setDevBossHpToLow();
@@ -1590,7 +1879,7 @@ export const PlazaTab: React.FC = () => {
             </div>
 
             <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-              {ADVENTURE_BOSS_CATALOG.map((b) => {
+              {ADVENTURE_BOSS_CATALOG.map((b, idx) => {
                 const owned = store.collectedBossLoots.includes(b.hiddenLoot.id);
                 return (
                   <div
@@ -1608,19 +1897,30 @@ export const PlazaTab: React.FC = () => {
                           {b.hiddenLoot.nameZh}
                         </div>
                         <div className="text-[10px] text-amber-300 font-bold break-words">
-                          {b.hiddenLoot.statDescZh} · 出處：{b.nameZh}
+                          {b.hiddenLoot.statDescZh} · 出處：{b.nameZh} (掉率 18%)
                         </div>
                       </div>
                     </div>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-black shrink-0 ${
-                        owned
-                          ? 'bg-emerald-500 text-slate-950'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {owned ? '✓ 已入手' : '未掉落'}
-                    </span>
+                    {owned ? (
+                      <button
+                        onClick={() => {
+                          setLootBagOpen(false);
+                          setLootDropReport({
+                            stage: idx + 1,
+                            boss: b,
+                            strikeDamage: store.personalMaxDamage || 680,
+                          });
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-black shrink-0 flex items-center gap-1 shadow"
+                      >
+                        <Share2 className="w-3 h-3" />
+                        <span>曬裝分享</span>
+                      </button>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-black shrink-0 bg-slate-800 text-slate-400">
+                        未掉落
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -1756,6 +2056,70 @@ export const PlazaTab: React.FC = () => {
               className="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition"
             >
               稍後再說，繼續推進 Stage {store.squadStage}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* MODAL E: 🎁 RARE LOOT DROP SHARE PROMPT (歐皇稀有噴裝炫耀卡)        */}
+      {/* (Pops up when player rolls the ~18% hidden loot drop on a strike! */}
+      {/*  Renders a single pre-composed SSR treasure poster!)              */}
+      {/* ================================================================= */}
+      {lootDropReport && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 overflow-y-auto">
+          <div className="retro-box w-full max-w-sm rounded-2xl p-4 bg-slate-950 border-2 border-purple-400 space-y-3 relative max-h-[94vh] overflow-y-auto">
+            <button
+              onClick={() => setLootDropReport(null)}
+              aria-label="關閉稀有噴裝分享視窗"
+              className="absolute top-3 right-3 p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center space-y-1 pr-6">
+              <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400 text-purple-300 text-[10px] font-black inline-block">
+                🎁 SSR RARE LOOT · 歐皇降臨噴裝（掉寶率 18%）
+              </span>
+              <h3 className="text-sm font-black text-white">
+                幸運打落【{lootDropReport.boss.hiddenLoot.nameZh}】！是否分享炫耀？
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                不是每個人揮拳都有機會打到！系統已為你搭配好專屬歐皇噴裝圖
+              </p>
+            </div>
+
+            {/* Pre-composed fixed SSR loot drop poster */}
+            <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex justify-center">
+              <canvas
+                ref={lootPosterCanvasRef}
+                className="w-full max-w-[290px] rounded-xl border border-purple-400/50 shadow-2xl block"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleDownloadLootPoster}
+                className="retro-btn py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-xs flex items-center justify-center gap-1.5"
+              >
+                <Download className="w-4 h-4 text-cyan-400" />
+                <span>儲存噴裝圖</span>
+              </button>
+
+              <button
+                onClick={handleShareLootPoster}
+                className="retro-btn py-2.5 rounded-xl bg-gradient-to-r from-purple-400 via-fuchsia-400 to-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg"
+              >
+                <Share2 className="w-4 h-4 stroke-[2.5px]" />
+                <span>立即曬裝 (IG/LINE)</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setLootDropReport(null)}
+              className="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition"
+            >
+              收進寶物袋，繼續戰鬥
             </button>
           </div>
         </div>

@@ -204,6 +204,7 @@ interface GameState {
   bgmEnabled: boolean;
   isNightModeRoom: boolean;
   devRoomPoseOverride: RoomPoseOverride;
+  devForceNextLootDrop: boolean;
   memeStudioOpen: boolean;
   shareStudioContext: 'workout_photo' | 'boss_victory';
   settingsOpen: boolean;
@@ -381,6 +382,7 @@ interface GameState {
   updateBiometrics: (partial: Partial<GameState['biometrics']>) => void;
   setDevRoomPoseOverride: (pose: RoomPoseOverride) => void;
   setDevBossHpToLow: () => void;
+  setDevForceNextLootDrop: () => void;
   addDemoCoins: (amount: number) => void;
   refillStaminaFull: () => void;
   resetDemoState: () => void;
@@ -744,6 +746,7 @@ export const useGameStore = create<GameState>()(
       bgmEnabled: false,
       isNightModeRoom: false,
       devRoomPoseOverride: 'AUTO',
+      devForceNextLootDrop: false,
       memeStudioOpen: false,
       shareStudioContext: 'workout_photo',
       settingsOpen: false,
@@ -2018,17 +2021,19 @@ export const useGameStore = create<GameState>()(
         const finalDamage = Math.max(280, rawDmg);
         const newMaxDmg = Math.max(state.personalMaxDamage, finalDamage);
 
-        // Roll for Boss Hidden Rare Loot Drop (only on legit rest workout!)
+        // Roll for Boss Hidden Rare Loot Drop (18% base drop rate — ~1 in 5-6 strikes; or 100% if devForceNextLootDrop is enabled)
         let droppedLootName: string | undefined;
         const alreadyHasLoot = state.collectedBossLoots.includes(boss.hiddenLoot.id);
         const dropRoll = Math.random();
-        if (!alreadyHasLoot && dropRoll < 0.65 * lootChanceBoost) {
+        const isGuaranteedByCheat = state.devForceNextLootDrop;
+        if (isGuaranteedByCheat || (!alreadyHasLoot && dropRoll < 0.18 * lootChanceBoost)) {
           droppedLootName = `${boss.hiddenLoot.emoji} ${boss.hiddenLoot.nameZh}`;
         }
 
-        const updatedLoots = droppedLootName
-          ? [...state.collectedBossLoots, boss.hiddenLoot.id]
-          : state.collectedBossLoots;
+        const updatedLoots =
+          droppedLootName && !alreadyHasLoot
+            ? [...state.collectedBossLoots, boss.hiddenLoot.id]
+            : state.collectedBossLoots;
 
         if (mode === 'solo') {
           const remaining = state.soloBossHp - finalDamage;
@@ -2097,6 +2102,7 @@ export const useGameStore = create<GameState>()(
               adventureCooldownUntil: now + cooldownMs,
               activeTeamComboBuff: nextComboBuff,
               collectedBossLoots: updatedLoots,
+              devForceNextLootDrop: false,
             });
             state.showToast(
               droppedLootName
@@ -2118,6 +2124,7 @@ export const useGameStore = create<GameState>()(
               adventureCooldownUntil: now + cooldownMs,
               activeTeamComboBuff: nextComboBuff,
               collectedBossLoots: updatedLoots,
+              devForceNextLootDrop: false,
             });
             state.showToast(
               droppedLootName
@@ -2307,6 +2314,16 @@ export const useGameStore = create<GameState>()(
           adventureCooldownUntil: 0,
         });
         get().showToast('⚡ 外掛已將 Boss 血量設為 10 HP！現在揮拳即可觸發「最後一擊」戰報分享畫面！');
+      },
+
+      setDevForceNextLootDrop: () => {
+        soundFX.playBlip();
+        set({
+          devForceNextLootDrop: true,
+          todayWorkoutStatus: 'legit_rest',
+          adventureCooldownUntil: 0,
+        });
+        get().showToast('🎁 外掛已開啟：下一拳 100% 必噴隱藏稀有神裝！快揮拳體驗「噴裝分享畫面」！');
       },
 
       addDemoCoins: (amount) => {
