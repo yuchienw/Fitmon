@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img">
+  <title>熔岩起司黏怪</title>
+  <ellipse cx="512" cy="930" rx="280" ry="34" fill="#3A2A22" opacity="0.16"/>
+  
+  <g stroke="#3A2A22" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M240 320 H784 V680 C784 820 680 880 512 880 C344 880 240 820 240 680 Z" fill="#FFD15C" stroke-width="14"/>
+    <path d="M290 380 H730 V660 C730 770 650 820 512 820 C374 820 290 770 290 660 Z" fill="#FFE58A" stroke="none"/>
+    <ellipse cx="390" cy="480" rx="42" ry="36" fill="#F0A202" stroke-width="8"/>
+    <ellipse cx="620" cy="450" rx="32" ry="28" fill="#E8940A" stroke-width="8"/>
+    <ellipse cx="560" cy="640" rx="38" ry="32" fill="#F0A202" stroke-width="8"/>
+    <ellipse cx="380" cy="660" rx="24" ry="20" fill="#E8940A" stroke-width="8"/>
+    <path d="M470 850 C492 940 545 940 560 850" fill="#FFD15C" stroke-width="12"/>
+    <ellipse cx="430" cy="520" rx="38" ry="44" fill="#fffdf8" stroke-width="8"/>
+    <ellipse cx="575" cy="520" rx="38" ry="44" fill="#fffdf8" stroke-width="8"/>
+    <ellipse cx="438" cy="532" rx="14" ry="18" fill="#2A211C" stroke="none"/>
+    <ellipse cx="583" cy="532" rx="14" ry="18" fill="#2A211C" stroke="none"/>
+    <circle cx="444" cy="524" r="5" fill="#fff" stroke="none"/>
+    <circle cx="589" cy="524" r="5" fill="#fff" stroke="none"/>
+    <path d="M455 600 Q512 640 575 596" fill="none" stroke-width="10"/>
+    <ellipse cx="350" cy="575" rx="20" ry="12" fill="#F2A08A" opacity="0.75" stroke="none"/>
+    <ellipse cx="660" cy="575" rx="20" ry="12" fill="#F2A08A" opacity="0.75" stroke="none"/>
+    <path d="M260 540 Q170 580 150 690" fill="none" stroke="#FFD15C" stroke-width="34"/>
+    <path d="M260 540 Q170 580 150 690" fill="none" stroke-width="12"/>
+    <circle cx="140" cy="712" r="28" fill="#FFE58A" stroke-width="10"/>
+    <path d="M764 550 Q860 520 900 630" fill="none" stroke="#FFD15C" stroke-width="34"/>
+    <path d="M764 550 Q860 520 900 630" fill="none" stroke-width="12"/>
+    <circle cx="910" cy="650" r="28" fill="#FFE58A" stroke-width="10"/>
+  </g>
+
+</svg>

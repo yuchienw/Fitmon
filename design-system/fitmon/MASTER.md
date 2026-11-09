@@ -4,6 +4,8 @@
 > If that file exists, its rules **override** this Master file.
 > If not, strictly follow the rules below.
 
+> **Adventure override:** `design-system/fitmon/pages/adventure.md` replaces the dark palette for the adventure battle and share posters (cream Maple daylight).
+
 ---
 
 **Project:** FitMon

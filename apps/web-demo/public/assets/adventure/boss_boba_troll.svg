@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img">
+  <title>宵夜珍奶巨魔</title>
+  <ellipse cx="512" cy="930" rx="280" ry="34" fill="#3A2A22" opacity="0.16"/>
+  
+  <g stroke="#3A2A22" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M310 360 H714 L668 800 H356 Z" fill="#FF8FAB" stroke-width="14"/>
+    <path d="M340 450 H684 L656 760 H368 Z" fill="#FFB3C7" stroke="none"/>
+    <ellipse cx="512" cy="350" rx="220" ry="64" fill="#FFE4EE" stroke-width="12"/>
+    <ellipse cx="512" cy="322" rx="190" ry="42" fill="#FFF7FB" stroke-width="10"/>
+    <rect x="630" y="140" width="26" height="210" rx="13" fill="#7C4A32" stroke-width="10" transform="rotate(14 643 245)"/>
+    <ellipse cx="400" cy="690" rx="26" ry="24" fill="#2A211C" stroke-width="6"/>
+    <ellipse cx="480" cy="730" rx="28" ry="26" fill="#1C1614" stroke-width="6"/>
+    <ellipse cx="560" cy="710" rx="24" ry="22" fill="#2A211C" stroke-width="6"/>
+    <ellipse cx="630" cy="670" rx="22" ry="20" fill="#1C1614" stroke-width="6"/>
+    <ellipse cx="440" cy="520" rx="40" ry="46" fill="#fffdf8" stroke-width="8"/>
+    <ellipse cx="575" cy="520" rx="40" ry="46" fill="#fffdf8" stroke-width="8"/>
+    <ellipse cx="448" cy="530" rx="16" ry="20" fill="#2A211C" stroke="none"/>
+    <ellipse cx="583" cy="530" rx="16" ry="20" fill="#2A211C" stroke="none"/>
+    <circle cx="454" cy="520" r="6" fill="#fff" stroke="none"/>
+    <circle cx="589" cy="520" r="6" fill="#fff" stroke="none"/>
+    <path d="M460 590 Q512 628 575 586" fill="none" stroke-width="10"/>
+    <ellipse cx="370" cy="570" rx="22" ry="12" fill="#F43F5E" opacity="0.35" stroke="none"/>
+    <ellipse cx="650" cy="570" rx="22" ry="12" fill="#F43F5E" opacity="0.35" stroke="none"/>
+    <path d="M320 560 Q220 610 190 720" fill="none" stroke="#FF8FAB" stroke-width="32"/>
+    <path d="M320 560 Q220 610 190 720" fill="none" stroke-width="12"/>
+    <circle cx="178" cy="742" r="26" fill="#FFB3C7" stroke-width="10"/>
+    <path d="M704 580 Q810 620 840 720" fill="none" stroke="#FF8FAB" stroke-width="32"/>
+    <path d="M704 580 Q810 620 840 720" fill="none" stroke-width="12"/>
+    <circle cx="852" cy="740" r="26" fill="#FFB3C7" stroke-width="10"/>
+    <ellipse cx="430" cy="850" rx="38" ry="22" fill="#C45C78" stroke-width="8"/>
+    <ellipse cx="590" cy="850" rx="38" ry="22" fill="#C45C78" stroke-width="8"/>
+  </g>
+
+</svg>

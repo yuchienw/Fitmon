@@ -1514,3 +1514,64 @@ export function drawSingleItemThumbnail(
 
   ctx.restore();
 }
+
+const bossSpriteCache = new Map<string, HTMLImageElement>();
+const bossSpritePending = new Map<string, Promise<HTMLImageElement>>();
+const bossSpriteFailed = new Set<string>();
+
+export function bossSpriteUrl(spriteKey: string): string {
+  const base = import.meta.env.BASE_URL || './';
+  return `${base}assets/adventure/${spriteKey}.svg`;
+}
+
+export function loadBossSprite(spriteKey: string): Promise<HTMLImageElement> {
+  const cached = bossSpriteCache.get(spriteKey);
+  if (cached && cached.complete && cached.naturalWidth > 0) return Promise.resolve(cached);
+  const pending = bossSpritePending.get(spriteKey);
+  if (pending) return pending;
+  const created = new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      bossSpriteCache.set(spriteKey, image);
+      bossSpriteFailed.delete(spriteKey);
+      resolve(image);
+    };
+    image.onerror = () => {
+      bossSpritePending.delete(spriteKey);
+      bossSpriteFailed.add(spriteKey);
+      reject(new Error(`Failed to load boss sprite ${spriteKey}`));
+    };
+    image.src = bossSpriteUrl(spriteKey);
+  });
+  bossSpritePending.set(spriteKey, created);
+  return created;
+}
+
+export function drawBossSprite(
+  ctx: CanvasRenderingContext2D,
+  spriteKey: string,
+  x: number,
+  y: number,
+  size: number,
+  options?: { squash?: number; flash?: number; defeated?: boolean },
+): boolean {
+  if (bossSpriteFailed.has(spriteKey)) return false;
+  const image = bossSpriteCache.get(spriteKey);
+  if (!image || !image.complete || image.naturalWidth === 0) {
+    void loadBossSprite(spriteKey).catch(() => undefined);
+    return false;
+  }
+  const squash = options?.squash ?? 1;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.translate(x + size / 2, y + size);
+  ctx.scale(1 + (1 - squash) * 0.28, squash);
+  const filters: string[] = [];
+  if (options?.defeated) filters.push('grayscale(0.92)', 'brightness(0.82)');
+  if (options?.flash && options.flash > 0) filters.push(`brightness(${1 + options.flash * 1.35})`);
+  if (filters.length) ctx.filter = filters.join(' ');
+  ctx.drawImage(image, -size / 2, -size, size, size);
+  ctx.restore();
+  return true;
+}

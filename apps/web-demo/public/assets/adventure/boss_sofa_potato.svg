@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img">
+  <title>沙發馬鈴薯怪</title>
+  <ellipse cx="512" cy="930" rx="280" ry="34" fill="#3A2A22" opacity="0.16"/>
+  
+  <g stroke="#3A2A22" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="230" y="470" width="580" height="300" rx="70" fill="#D4533A" stroke-width="14"/>
+    <rect x="270" y="500" width="500" height="120" rx="28" fill="#E77862" stroke-width="8"/>
+    <rect x="280" y="640" width="470" height="100" rx="36" fill="#C44732" stroke-width="10"/>
+    <rect x="190" y="590" width="100" height="190" rx="42" fill="#C44732" stroke-width="12"/>
+    <rect x="740" y="590" width="100" height="190" rx="42" fill="#B83D2C" stroke-width="12"/>
+    <rect x="320" y="770" width="28" height="80" rx="10" fill="#6B3A28" stroke-width="8"/>
+    <rect x="680" y="770" width="28" height="80" rx="10" fill="#6B3A28" stroke-width="8"/>
+    <ellipse cx="530" cy="520" rx="200" ry="160" fill="#F3C56A" stroke-width="14"/>
+    <ellipse cx="600" cy="560" rx="110" ry="90" fill="#E2A84A" stroke="none"/>
+    <ellipse cx="450" cy="470" rx="26" ry="16" fill="#D39A45" stroke="none"/>
+    <ellipse cx="620" cy="450" rx="20" ry="14" fill="#D39A45" stroke="none"/>
+    <ellipse cx="510" cy="580" rx="16" ry="12" fill="#C9843A" stroke="none"/>
+    <ellipse cx="455" cy="500" rx="34" ry="38" fill="#fffdf8" stroke-width="8"/>
+    <ellipse cx="555" cy="500" rx="34" ry="38" fill="#fffdf8" stroke-width="8"/>
+    <ellipse cx="462" cy="508" rx="14" ry="16" fill="#2A211C" stroke="none"/>
+    <ellipse cx="562" cy="508" rx="14" ry="16" fill="#2A211C" stroke="none"/>
+    <circle cx="468" cy="500" r="5" fill="#fff" stroke="none"/>
+    <circle cx="568" cy="500" r="5" fill="#fff" stroke="none"/>
+    <path d="M475 555 Q520 590 570 552" fill="none" stroke-width="10"/>
+    <ellipse cx="400" cy="545" rx="18" ry="12" fill="#F2A08A" opacity="0.8" stroke="none"/>
+    <ellipse cx="620" cy="545" rx="18" ry="12" fill="#F2A08A" opacity="0.8" stroke="none"/>
+    <path d="M390 560 Q310 610 270 700" fill="none" stroke="#E7B85A" stroke-width="34"/>
+    <path d="M390 560 Q310 610 270 700" fill="none" stroke-width="12"/>
+    <rect x="214" y="688" width="70" height="108" rx="14" fill="#2C3338" stroke-width="10"/>
+    <circle cx="236" cy="722" r="8" fill="#F43F5E" stroke="none"/>
+    <circle cx="262" cy="722" r="8" fill="#10B981" stroke="none"/>
+    <rect x="230" y="748" width="38" height="22" rx="5" fill="#94A3B8" stroke="none"/>
+    <path d="M760 500 l130 36 -16 64 -130 -16 z" fill="#F6D34D" stroke-width="10"/>
+    <rect x="820" y="524" width="62" height="28" rx="6" fill="#E11D48" stroke="none"/>
+    <ellipse cx="430" cy="760" rx="34" ry="20" fill="#5C4636" stroke-width="8"/>
+    <ellipse cx="560" cy="768" rx="34" ry="20" fill="#5C4636" stroke-width="8"/>
+  </g>
+
+</svg>
