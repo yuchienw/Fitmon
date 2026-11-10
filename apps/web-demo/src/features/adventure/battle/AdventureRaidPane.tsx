@@ -46,6 +46,15 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
   const timeouts = useRef<number[]>([]);
 
   useEffect(() => {
+    store.setPeekMemberId(null);
+    store.setInspectMemberId(null);
+    return () => {
+      store.setPeekMemberId(null);
+      store.setInspectMemberId(null);
+    };
+  }, []);
+
+  useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);

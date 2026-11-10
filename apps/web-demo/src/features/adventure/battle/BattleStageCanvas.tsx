@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AdventureBoss, AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
 import { drawBossSprite, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { TeammatePeekCard } from '../../../components/adventure/TeammatePeekCard';
+import { useGameStore } from '../../../stores/useGameStore';
 
 export const LUNGE_MS = 180;
 export const BOSS_HIT_MS = 200;
@@ -32,24 +34,68 @@ interface DrawState {
   lungeAt: number | null;
   hitAt: number | null;
   reducedMotion: boolean;
+  peekMemberId?: string | null;
 }
 
 interface BattleStageCanvasProps extends DrawState {
   floatHit: StrikeFloat | null;
   hud: React.ReactNode;
+  onPeekMember?: (id: string | null) => void;
+}
+
+export function getBattleTeammatePos(
+  w: number,
+  h: number,
+  floorY: number,
+  teammateScale: number,
+  idx: number,
+  total: number,
+) {
+  let tx = Math.round(w * 0.16);
+  let ty = floorY - Math.round(h * 0.10);
+
+  if (total === 1) {
+    tx = Math.round(w * 0.16);
+    ty = floorY - Math.round(h * 0.10);
+  } else if (total === 2) {
+    tx = idx === 0 ? Math.max(Math.round(20 * teammateScale), Math.round(w * 0.11)) : Math.round(w * 0.22);
+    ty = floorY - Math.round(h * (idx === 0 ? 0.09 : 0.11));
+  } else {
+    if (idx === 0) {
+      tx = Math.max(Math.round(20 * teammateScale), Math.round(w * 0.095));
+      ty = floorY - Math.round(h * 0.09);
+    } else if (idx === 1) {
+      tx = Math.round(w * 0.175);
+      ty = floorY - Math.round(h * 0.11);
+    } else {
+      tx = Math.round(w * 0.255);
+      ty = floorY - Math.round(h * 0.09);
+    }
+  }
+  return { tx, ty };
 }
 
 export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
   floatHit,
   hud,
   reducedMotion,
+  peekMemberId,
+  onPeekMember,
   ...drawProps
 }) => {
+  const store = useGameStore();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
-  const drawRef = useRef<DrawState>({ ...drawProps, reducedMotion });
-  drawRef.current = { ...drawProps, reducedMotion };
+  const [layoutTick, setLayoutTick] = useState(0);
+
+  const effectivePeekId = peekMemberId !== undefined ? peekMemberId : store.peekMemberId;
+  const peekMember = effectivePeekId
+    ? store.squadMembers.find((m) => m.id === effectivePeekId)
+    : null;
+
+  const drawRef = useRef<DrawState>({ ...drawProps, reducedMotion, peekMemberId: effectivePeekId });
+  drawRef.current = { ...drawProps, reducedMotion, peekMemberId: effectivePeekId };
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -61,6 +107,7 @@ export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
       sizeRef.current = { w: rect.width, h: rect.height, dpr };
       canvas.width = Math.max(1, Math.floor(rect.width * dpr));
       canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      setLayoutTick((t) => t + 1);
     };
     apply();
     const observer = new ResizeObserver(apply);
@@ -87,9 +134,28 @@ export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  const handleStageClick = () => {
+    if (onPeekMember) {
+      onPeekMember(null);
+    } else {
+      store.setPeekMemberId(null);
+    }
+  };
+
+  const handleTeammateClick = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextId = effectivePeekId === id ? null : id;
+    if (onPeekMember) {
+      onPeekMember(nextId);
+    } else {
+      store.setPeekMemberId(nextId);
+    }
+  };
+
   return (
     <div
       ref={wrapRef}
+      onClick={handleStageClick}
       className="adventure-arena adventure-battle-canvas relative min-h-0 w-full flex-1"
       data-testid="battle-stage"
       data-arena="warm-daylight"
@@ -121,6 +187,51 @@ export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
           )}
         </div>
       )}
+
+      {/* DOM Hit Areas for Back-row Teammates (8px outer expanded) */}
+      {sizeRef.current.w > 0 &&
+        drawProps.teammates &&
+        drawProps.teammates.slice(0, 3).map((tm, idx) => {
+          const w = sizeRef.current.w;
+          const h = sizeRef.current.h;
+          const floorY = h * 0.8;
+          const scale = Math.max(1.85, Math.min(w / 165, h / 210, 2.5));
+          const teammateScale = scale * 0.65;
+          const total = Math.min(3, drawProps.teammates!.length);
+          const { tx, ty } = getBattleTeammatePos(w, h, floorY, teammateScale, idx, total);
+          const hitW = 56 * teammateScale + 16;
+          const hitH = 65 * teammateScale + 16;
+          const hitX = tx - 28 * teammateScale - 8;
+          const hitY = ty - 60 * teammateScale - 8;
+
+          return (
+            <button
+              key={tm.id}
+              type="button"
+              onClick={(e) => handleTeammateClick(tm.id, e)}
+              aria-label={`預覽隊友 ${tm.nameZh}`}
+              style={{
+                left: `${hitX}px`,
+                top: `${hitY}px`,
+                width: `${hitW}px`,
+                height: `${hitH}px`,
+              }}
+              className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95"
+            />
+          );
+        })}
+
+      {/* TeammatePeekCard at bottom-left */}
+      {peekMember && (
+        <TeammatePeekCard
+          member={peekMember}
+          onClose={() => {
+            if (onPeekMember) onPeekMember(null);
+            else store.setPeekMemberId(null);
+          }}
+        />
+      )}
+
       {hud}
     </div>
   );
@@ -216,27 +327,29 @@ export function paintArena(
     const activeTeammates = teammates.slice(0, 3);
     const teammateScale = scale * 0.65;
     activeTeammates.forEach((teammate, idx) => {
-      let tx = Math.round(w * 0.16);
-      let ty = floorY - Math.round(h * 0.10);
+      const { tx, ty } = getBattleTeammatePos(
+        w,
+        h,
+        floorY,
+        teammateScale,
+        idx,
+        activeTeammates.length,
+      );
 
-      if (activeTeammates.length === 1) {
-        tx = Math.round(w * 0.16);
-        ty = floorY - Math.round(h * 0.10);
-      } else if (activeTeammates.length === 2) {
-        tx = idx === 0 ? Math.max(Math.round(20 * teammateScale), Math.round(w * 0.11)) : Math.round(w * 0.22);
-        ty = floorY - Math.round(h * (idx === 0 ? 0.09 : 0.11));
-      } else {
-        // 3 Teammates: spread horizontally on left-rear (idx 0, 1) and direct-rear (idx 2)
-        if (idx === 0) {
-          tx = Math.max(Math.round(20 * teammateScale), Math.round(w * 0.095));
-          ty = floorY - Math.round(h * 0.09);
-        } else if (idx === 1) {
-          tx = Math.round(w * 0.175);
-          ty = floorY - Math.round(h * 0.11);
-        } else {
-          tx = Math.round(w * 0.255);
-          ty = floorY - Math.round(h * 0.09);
-        }
+      // Selected Teammate primary 2px aura ring (mockup 09)
+      if (state.peekMemberId === teammate.id) {
+        ctx.save();
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(249, 115, 22, 0.7)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.ellipse(tx, ty + 2, 22 * teammateScale, 7.5 * teammateScale, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(tx, ty - 28 * teammateScale, 18 * teammateScale, 32 * teammateScale, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
       }
 
       ctx.save();

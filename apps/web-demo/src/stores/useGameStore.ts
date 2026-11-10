@@ -406,6 +406,8 @@ interface GameState {
   todaySportType: AdventureSportSkillType;
   activeTeamComboBuff: 'none' | 'armor_break' | 'burn_mark' | 'crit_aura';
   collectedBossLoots: string[];
+  inspectMemberId: string | null;
+  peekMemberId: string | null;
 
   // UI Actions
   setActiveTab: (tab: MainTab) => void;
@@ -420,6 +422,8 @@ interface GameState {
   setSelectedProfileId: (id: string | null) => void;
   setSelectedHistorySessionId: (id: string | null) => void;
   setInspectedExerciseId: (id: string | null) => void;
+  setInspectMemberId: (id: string | null) => void;
+  setPeekMemberId: (id: string | null) => void;
   setShareRaidModalOpen: (open: boolean) => void;
   closeVictoryModal: () => void;
   showToast: (msg: string) => void;
@@ -1038,6 +1042,11 @@ export const useGameStore = create<GameState>()(
       todaySportType: 'cardio',
       activeTeamComboBuff: 'armor_break',
       collectedBossLoots: [],
+      inspectMemberId: null,
+      peekMemberId: null,
+
+      setInspectMemberId: (id) => set({ inspectMemberId: id }),
+      setPeekMemberId: (id) => set({ peekMemberId: id }),
 
       setActiveTab: (tab) => {
         soundFX.playBlip();

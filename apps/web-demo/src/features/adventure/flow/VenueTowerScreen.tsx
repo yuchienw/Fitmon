@@ -11,7 +11,7 @@ import {
   Shield,
   Sparkles,
 } from 'lucide-react';
-import { useGameStore } from '../../../stores/useGameStore';
+import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
 import { drawMapleChibiAvatar, bossSpriteUrl } from '../../../game/pixelSpriteDrawer';
 import {
   GYM_VENUES,
@@ -84,6 +84,11 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
   // Canvas for avatar standing on the current floor card
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  const teammates = store.squadMembers.slice(0, 3);
+  const isSquadTeam = !isSolo && teammates.length > 0;
+  const canvasW = isSquadTeam ? 112 : 80;
+  const canvasH = 80;
+
   useEffect(() => {
     let frame = 0;
     const canvas = canvasRef.current;
@@ -96,42 +101,132 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
-      // Glowing circle pedestal
-      ctx.save();
-      const pulse = Math.sin(now / 350) * 3;
-      ctx.fillStyle = 'rgba(251, 191, 36, 0.35)';
-      ctx.beginPath();
-      ctx.ellipse(w * 0.5, h * 0.85, 26 + pulse, 10 + pulse * 0.3, 0, 0, Math.PI * 2);
-      ctx.fill();
+      if (isSquadTeam) {
+        // Squad mode: draw teammates (scale 0.65 of hero, back row first)
+        const heroScale = 1.25;
+        const tmScale = heroScale * 0.65;
+        const total = teammates.length;
 
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(w * 0.5, h * 0.85, 20 + pulse * 0.5, 8 + pulse * 0.2, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+        teammates.forEach((tm, idx) => {
+          let tx = w * 0.28;
+          const ty = h * 0.82;
+          if (total === 1) {
+            tx = w * 0.28;
+          } else if (total === 2) {
+            tx = idx === 0 ? w * 0.18 : w * 0.40;
+          } else {
+            tx = idx === 0 ? w * 0.14 : idx === 1 ? w * 0.34 : w * 0.50;
+          }
 
-      // Avatar
-      ctx.save();
-      ctx.translate(w * 0.5, h * 0.85);
-      ctx.scale(1.4, 1.4);
-      drawMapleChibiAvatar(ctx, {
-        x: -28,
-        y: -60,
-        bodyStage: store.bodyStage,
-        equipped: store.equipped,
-        state: 'IDLE',
-        facingRight: true,
-        frameTick: Math.floor(now / 16),
-      });
-      ctx.restore();
+          // Small warm pedestal
+          ctx.save();
+          ctx.fillStyle = 'rgba(251, 191, 36, 0.25)';
+          ctx.beginPath();
+          ctx.ellipse(tx, ty + 2, 16 * tmScale, 5 * tmScale, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          const avatar = resolveSquadMemberAvatar(tm);
+          const bodyStage = tm.bodyStage || avatar.bodyStage;
+          const equipped = tm.equipped || avatar.equipped;
+
+          ctx.save();
+          ctx.translate(tx, ty);
+          ctx.scale(tmScale, tmScale);
+
+          if (!tm.hasWorkedOutToday) {
+            ctx.filter = 'grayscale(0.40)';
+          }
+
+          drawMapleChibiAvatar(ctx, {
+            x: -28,
+            y: -60,
+            bodyStage,
+            equipped,
+            state: 'IDLE',
+            facingRight: true,
+            frameTick: Math.floor(now / 16),
+          });
+
+          ctx.restore();
+
+          if (!tm.hasWorkedOutToday) {
+            ctx.save();
+            const headTopY = ty - 56 * tmScale;
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#6366f1';
+            ctx.fillText('Zzz', tx, headTopY);
+            ctx.restore();
+          }
+        });
+
+        // Hero on front right
+        const heroX = total === 1 ? w * 0.68 : total === 2 ? w * 0.72 : w * 0.76;
+        const heroY = h * 0.85;
+
+        ctx.save();
+        const pulse = Math.sin(now / 350) * 2;
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(heroX, heroY, 20 + pulse, 8 + pulse * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(heroX, heroY);
+        ctx.scale(heroScale, heroScale);
+        drawMapleChibiAvatar(ctx, {
+          x: -28,
+          y: -60,
+          bodyStage: store.bodyStage,
+          equipped: store.equipped,
+          state: 'IDLE',
+          facingRight: true,
+          frameTick: Math.floor(now / 16),
+        });
+        ctx.restore();
+      } else {
+        // Solo Mode: Hero alone on center pedestal
+        ctx.save();
+        const pulse = Math.sin(now / 350) * 3;
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(w * 0.5, h * 0.85, 26 + pulse, 10 + pulse * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(w * 0.5, h * 0.85, 20 + pulse * 0.5, 8 + pulse * 0.2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Avatar
+        ctx.save();
+        ctx.translate(w * 0.5, h * 0.85);
+        ctx.scale(1.4, 1.4);
+        drawMapleChibiAvatar(ctx, {
+          x: -28,
+          y: -60,
+          bodyStage: store.bodyStage,
+          equipped: store.equipped,
+          state: 'IDLE',
+          facingRight: true,
+          frameTick: Math.floor(now / 16),
+        });
+        ctx.restore();
+      }
 
       frame = requestAnimationFrame(render);
     };
 
     frame = requestAnimationFrame(render);
     return () => cancelAnimationFrame(frame);
-  }, [store.bodyStage, store.equipped]);
+  }, [store.bodyStage, store.equipped, isSquadTeam, teammates]);
 
   const handleSelectFloor = (floor: number) => {
     const status = getFloorStatus(floor);
@@ -218,8 +313,68 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
 
                 <div className="flex items-center justify-between">
                   {/* Avatar standing on pedestal */}
-                  <div className="h-20 w-20 shrink-0 overflow-hidden">
-                    <canvas ref={canvasRef} width={80} height={80} className="block h-20 w-20" />
+                  <div className={`relative shrink-0 overflow-hidden ${isSquadTeam ? 'h-20 w-28' : 'h-20 w-20'}`}>
+                    <canvas
+                      ref={canvasRef}
+                      width={canvasW}
+                      height={canvasH}
+                      className="block h-20 w-full"
+                    />
+
+                    {/* In squad mode: Paper dolls hit buttons (8px expanded) */}
+                    {isSquadTeam && (
+                      <>
+                        {/* Cluster hit area */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            store.setInspectMemberId(teammates[0].id);
+                          }}
+                          aria-label="檢視小隊成員"
+                          className="absolute inset-0 z-10 cursor-pointer"
+                        />
+
+                        {/* Individual teammates */}
+                        {teammates.map((tm, idx) => {
+                          const heroScale = 1.25;
+                          const tmScale = heroScale * 0.65;
+                          const total = teammates.length;
+                          let tx = canvasW * 0.28;
+                          const ty = canvasH * 0.82;
+                          if (total === 1) {
+                            tx = canvasW * 0.28;
+                          } else if (total === 2) {
+                            tx = idx === 0 ? canvasW * 0.18 : canvasW * 0.40;
+                          } else {
+                            tx = idx === 0 ? canvasW * 0.14 : idx === 1 ? canvasW * 0.34 : canvasW * 0.50;
+                          }
+                          const hitW = 56 * tmScale + 16;
+                          const hitH = 65 * tmScale + 16;
+                          const hitX = tx - 28 * tmScale - 8;
+                          const hitY = ty - 60 * tmScale - 8;
+
+                          return (
+                            <button
+                              key={tm.id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                store.setInspectMemberId(tm.id);
+                              }}
+                              aria-label={`檢視隊友 ${tm.nameZh}`}
+                              style={{
+                                left: `${hitX}px`,
+                                top: `${hitY}px`,
+                                width: `${hitW}px`,
+                                height: `${hitH}px`,
+                              }}
+                              className="absolute z-20 cursor-pointer rounded-xl border border-transparent transition-transform duration-120 active:scale-95"
+                            />
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
 
                   {/* Floor info */}

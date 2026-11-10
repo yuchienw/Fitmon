@@ -3,33 +3,36 @@ import {
   ChevronLeft,
   Copy,
   Check,
-  Clock,
   CheckCircle2,
   Share2,
-  Users,
   ChevronRight,
   UserPlus,
 } from 'lucide-react';
-import { useGameStore, resolveSquadMemberAvatar, SquadMemberState } from '../../../stores/useGameStore';
+import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
 import { drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
-import { AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
+import { TeammateStatusChip } from '../../../components/adventure/TeammateStatusChip';
+import { TeammateHitRect } from '../../../components/adventure/memberStats';
 
 interface SquadConfirmScreenProps {
   onBack: () => void;
   onEnterGymIsland: () => void;
   onOpenSquadManage?: () => void;
+  onInspectTeammate?: (memberId: string) => void;
 }
 
 export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
   onBack,
   onEnterGymIsland,
   onOpenSquadManage,
+  onInspectTeammate,
 }) => {
   const store = useGameStore();
   const [copied, setCopied] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const inviteCode = store.squadName ? `FIT${(Math.abs(store.squadName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 732)) % 900 + 100)}` : 'FIT732';
+  const inviteCode = store.squadName
+    ? `FIT${(Math.abs(store.squadName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 732)) % 900 + 100)}`
+    : 'FIT732';
 
   const copyInviteCode = () => {
     navigator.clipboard?.writeText(inviteCode).catch(() => undefined);
@@ -41,7 +44,37 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
   const teammates = store.squadMembers.slice(0, 3);
   const totalSlots = 3; // Max 3 teammates + 1 hero = 4 members
 
-  // Canvas render for the paper-doll squad on a cozy wooden deck with mountain view
+  // Slot x coordinates (canvas 360 x 210)
+  // Slot 0: left rear, Slot 1: right rear, Slot 2: far right rear
+  const slotXPositions = [360 * 0.16, 360 * 0.68, 360 * 0.84];
+  const deckY = 210 * 0.76;
+  const tmDeckY = deckY - 10;
+  const baseScale = Math.min(360 / 140, 2.5);
+  const tmScale = baseScale * 0.65;
+
+  // Compute hit rects with 8px expansion (canvas coords -> percentage for DOM)
+  const hitRects: TeammateHitRect[] = teammates.map((tm, idx) => {
+    const tx = slotXPositions[idx];
+    const ty = tmDeckY;
+    const hitW = 56 * tmScale + 16;
+    const hitH = 65 * tmScale + 16;
+    const hitX = tx - 28 * tmScale - 8;
+    const hitY = ty - 60 * tmScale - 8;
+    return {
+      memberId: tm.id,
+      x: hitX,
+      y: hitY,
+      width: hitW,
+      height: hitH,
+    };
+  });
+
+  const handleInspect = (memberId: string) => {
+    store.setInspectMemberId(memberId);
+    onInspectTeammate?.(memberId);
+  };
+
+  // Canvas render for paper-doll squad on cozy terrace deck
   useEffect(() => {
     let frame = 0;
     const canvas = canvasRef.current;
@@ -63,7 +96,6 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
       ctx.fillRect(0, 0, w, h);
 
       // Wooden Deck Floor
-      const deckY = h * 0.76;
       ctx.fillStyle = '#caa373';
       ctx.fillRect(0, deckY, w, h - deckY);
       // Deck Planks
@@ -86,14 +118,14 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
 
       // Wooden Signpost "Fitmon GYM ISLAND" on right
       ctx.save();
-      ctx.translate(w * 0.86, deckY - 42);
+      ctx.translate(w * 0.88, deckY - 42);
       ctx.fillStyle = '#a07246';
       ctx.fillRect(-2, 0, 5, 42);
       ctx.fillStyle = '#fff9ed';
       ctx.strokeStyle = '#6e4420';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(-28, -26, 56, 26, 4);
+      ctx.roundRect(-26, -26, 52, 26, 4);
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = '#4a2810';
@@ -104,63 +136,84 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
       ctx.fillText('GYM ISLAND', 0, -5);
       ctx.restore();
 
-      // 2. Draw Teammates FIRST (scale 0.65, in background, spread out)
-      const baseScale = Math.min(w / 140, 2.5);
-      const tmScale = baseScale * 0.65;
+      // 2. Draw Teammates & Empty Dashed Pedestals
+      for (let i = 0; i < totalSlots; i++) {
+        const tx = slotXPositions[i];
+        const tm = teammates[i];
 
-      teammates.forEach((tm, idx) => {
-        const avatar = resolveSquadMemberAvatar(tm);
-        const bodyStage = tm.bodyStage || avatar.bodyStage;
-        const equipped = tm.equipped || avatar.equipped;
-
-        let tx = w * 0.22;
-        let ty = deckY - 10;
-        if (teammates.length === 1) {
-          tx = w * 0.24;
-        } else if (teammates.length === 2) {
-          tx = idx === 0 ? w * 0.2 : w * 0.78;
-        } else {
-          if (idx === 0) tx = w * 0.16;
-          else if (idx === 1) tx = w * 0.68;
-          else tx = w * 0.84;
-        }
-
-        ctx.save();
-        ctx.translate(tx, ty);
-        ctx.scale(tmScale, tmScale);
-
-        if (!tm.hasWorkedOutToday) {
-          ctx.filter = 'grayscale(0.40)';
-        }
-
-        drawMapleChibiAvatar(ctx, {
-          x: -28,
-          y: -60,
-          bodyStage,
-          equipped,
-          state: 'IDLE',
-          facingRight: tx < w * 0.5,
-          frameTick: Math.floor(now / 16),
-        });
-
-        ctx.restore();
-
-        // If unattended: draw cute Zzz
-        if (!tm.hasWorkedOutToday) {
+        if (tm) {
+          // Soft pedestal underneath
           ctx.save();
-          const headTopY = ty - 64 * tmScale;
-          const zOff = Math.sin(now / 320 + idx) * 3;
-          ctx.fillStyle = '#64748b';
-          ctx.font = 'bold 11px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('Zzz', tx, headTopY + zOff);
+          ctx.fillStyle = 'rgba(164, 126, 79, 0.3)';
+          ctx.beginPath();
+          ctx.ellipse(tx, tmDeckY + 2, 22 * tmScale, 8 * tmScale, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          const avatar = resolveSquadMemberAvatar(tm);
+          const bodyStage = tm.bodyStage || avatar.bodyStage;
+          const equipped = tm.equipped || avatar.equipped;
+
+          ctx.save();
+          ctx.translate(tx, tmDeckY);
+          ctx.scale(tmScale, tmScale);
+
+          if (!tm.hasWorkedOutToday) {
+            ctx.filter = 'grayscale(0.40)';
+          }
+
+          drawMapleChibiAvatar(ctx, {
+            x: -28,
+            y: -60,
+            bodyStage,
+            equipped,
+            state: 'IDLE',
+            facingRight: tx < w * 0.5,
+            frameTick: Math.floor(now / 16),
+          });
+
+          ctx.restore();
+
+          // Unworked teammate: crisp floating Zzz
+          if (!tm.hasWorkedOutToday) {
+            ctx.save();
+            const headTopY = tmDeckY - 64 * tmScale;
+            const zOff = Math.sin(now / 320 + i) * 3;
+            ctx.font = '900 12px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ffffff';
+            ctx.strokeText('Zzz', tx, headTopY + zOff);
+            ctx.fillStyle = '#6366f1';
+            ctx.fillText('Zzz', tx, headTopY + zOff);
+            ctx.restore();
+          }
+        } else {
+          // Empty slot: Dashed pedestal on deck
+          ctx.save();
+          ctx.strokeStyle = '#a47e4f';
+          ctx.setLineDash([4, 3]);
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.ellipse(tx, tmDeckY - 4, 26, 9, 0, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         }
-      });
+      }
 
       // 3. Draw Hero in Front (scale 1.0)
+      const heroX = w * 0.44;
+      const heroY = deckY + 4;
       ctx.save();
-      ctx.translate(w * 0.44, deckY + 4);
+      ctx.fillStyle = 'rgba(164, 126, 79, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(heroX, heroY + 2, 28 * baseScale, 9 * baseScale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(heroX, heroY);
       ctx.scale(baseScale, baseScale);
       drawMapleChibiAvatar(ctx, {
         x: -28,
@@ -199,19 +252,73 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
         <div className="w-8" />
       </div>
 
-      {/* Main Chibi Canvas */}
-      <div className="retro-box overflow-hidden rounded-2xl bg-[#faf6f0]">
+      {/* Main Chibi Canvas & Hit Areas */}
+      <div className="retro-box relative overflow-hidden rounded-2xl bg-[#faf6f0]">
         <canvas
           ref={canvasRef}
           width={360}
           height={210}
           className="block h-52 w-full object-cover"
         />
+
+        {/* DOM Hit Areas for Teammate Paper Dolls (8px outer expanded) */}
+        {hitRects.map((rect, idx) => (
+          <button
+            key={rect.memberId}
+            type="button"
+            onClick={() => handleInspect(rect.memberId)}
+            aria-label={`檢視隊友 ${teammates[idx]?.nameZh || ''} 的配裝與素質`}
+            style={{
+              left: `${(rect.x / 360) * 100}%`,
+              top: `${(rect.y / 210) * 100}%`,
+              width: `${(rect.width / 360) * 100}%`,
+              height: `${(rect.height / 210) * 100}%`,
+            }}
+            className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95 hover:border-amber-400/40"
+          />
+        ))}
+
+        {/* Chips placed at the feet of each teammate on the deck */}
+        {slotXPositions.map((tx, idx) => {
+          const tm = teammates[idx];
+          if (tm) {
+            return (
+              <div
+                key={`chip_${tm.id}`}
+                style={{
+                  left: `${(tx / 360) * 100}%`,
+                  top: `${((deckY + 12) / 210) * 100}%`,
+                  transform: 'translateX(-50%)',
+                }}
+                className="absolute z-10"
+              >
+                <TeammateStatusChip
+                  member={tm}
+                  variant="combined"
+                  onClick={() => handleInspect(tm.id)}
+                />
+              </div>
+            );
+          }
+          return (
+            <div
+              key={`empty_chip_${idx}`}
+              style={{
+                left: `${(tx / 360) * 100}%`,
+                top: `${((deckY + 12) / 210) * 100}%`,
+                transform: 'translateX(-50%)',
+              }}
+              className="absolute z-10"
+            >
+              <TeammateStatusChip variant="empty" onClick={copyInviteCode} />
+            </div>
+          );
+        })}
       </div>
 
-      {/* Attendance & Name Capsules Row */}
+      {/* Attendance & Name Capsules Row (Secondary Accessibility Touch Targets) */}
       <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
-        {/* Hero Card */}
+        {/* Hero Card (Click does NOT open teammate sheet) */}
         <div className="retro-box rounded-xl bg-card p-1.5">
           <div className="truncate text-[11px] font-black text-foreground">
             {store.nickname || '你'}
@@ -222,37 +329,39 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
           </div>
         </div>
 
-        {/* Teammates Cards */}
+        {/* Teammates Cards (Clickable: opens same inspect sheet) */}
         {teammates.map((tm) => (
-          <div key={tm.id} className="retro-box rounded-xl bg-card p-1.5">
+          <div
+            key={tm.id}
+            onClick={() => handleInspect(tm.id)}
+            role="button"
+            tabIndex={0}
+            className="retro-box cursor-pointer rounded-xl bg-card p-1.5 transition-transform active:scale-95 hover:border-amber-400"
+          >
             <div className="truncate text-[11px] font-black text-foreground">
               {tm.nameZh.split('·')[1]?.trim() || tm.nameZh}
             </div>
-            {tm.hasWorkedOutToday ? (
-              <div className="mt-1 inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-800">
-                <Check className="h-3 w-3 stroke-[2.5]" />
-                <span>已運動</span>
-              </div>
-            ) : (
-              <div className="mt-1 inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-black text-amber-800">
-                <Clock className="h-3 w-3" />
-                <span>未運動</span>
-              </div>
-            )}
+            <div className="mt-1">
+              <TeammateStatusChip
+                member={tm}
+                variant="combined"
+                onClick={() => handleInspect(tm.id)}
+              />
+            </div>
           </div>
         ))}
 
-        {/* Empty Slots (Allowed! Can still enter gym island) */}
+        {/* Empty Slots */}
         {Array.from({ length: Math.max(0, totalSlots - teammates.length) }).map((_, idx) => (
           <div
-            key={`empty_${idx}`}
-            onClick={onOpenSquadManage}
+            key={`empty_slot_${idx}`}
+            onClick={copyInviteCode}
             role="button"
             tabIndex={0}
-            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 p-1.5 text-muted-foreground hover:bg-muted"
+            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 p-1.5 text-muted-foreground hover:bg-muted active:scale-95"
           >
-            <UserPlus className="h-3.5 w-3.5 opacity-60" />
-            <span className="mt-1 text-[10px] font-bold">尚有空槽</span>
+            <UserPlus className="h-3.5 w-3.5 opacity-60 text-amber-700" />
+            <span className="mt-1 text-[10px] font-bold text-amber-800">＋邀請</span>
           </div>
         ))}
       </div>

@@ -16,6 +16,7 @@ interface GymIslandMapScreenProps {
   mode: 'solo' | 'squad';
   onBack: () => void;
   onEnterVenueTower: (venueIndex: number) => void;
+  onBackToSquadConfirm?: () => void;
 }
 
 export function getAvatarStandPercent(venueIdx: number): { x: number; y: number } {
@@ -37,10 +38,42 @@ export function getAvatarStandPercent(venueIdx: number): { x: number; y: number 
   }
 }
 
+export function getIslandTeammatePos(
+  standX: number,
+  standY: number,
+  facingRight: boolean,
+  idx: number,
+  total: number,
+) {
+  let tx = standX - 24;
+  let ty = standY - 8;
+
+  if (total === 1) {
+    tx = facingRight ? standX - 24 : standX + 24;
+    ty = standY - 8;
+  } else if (total === 2) {
+    tx = idx === 0 ? standX - 24 : standX + 24;
+    ty = standY - 8;
+  } else {
+    if (idx === 0) {
+      tx = standX - 24;
+      ty = standY - 8;
+    } else if (idx === 1) {
+      tx = standX + 24;
+      ty = standY - 8;
+    } else {
+      tx = facingRight ? standX - 44 : standX + 44;
+      ty = standY - 6;
+    }
+  }
+  return { tx, ty };
+}
+
 export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
   mode,
   onBack,
   onEnterVenueTower,
+  onBackToSquadConfirm,
 }) => {
   const store = useGameStore();
   const isSolo = mode === 'solo';
@@ -50,6 +83,7 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
   const currentFloor = getFloorForStage(stage);
 
   const [selectedVenueIdx, setSelectedVenueIdx] = useState<number>(currentVenueIdx);
+  const [wrapSize, setWrapSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const selectedVenue = GYM_VENUES[selectedVenueIdx];
   const selectedBoss = ADVENTURE_BOSS_CATALOG[selectedVenue.bossIndex];
 
@@ -98,6 +132,11 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
         canvas.width = targetW;
         canvas.height = targetH;
       }
+      setWrapSize((prev) =>
+        prev.w === rect.width && prev.h === rect.height
+          ? prev
+          : { w: rect.width, h: rect.height }
+      );
     };
     syncSize();
     window.addEventListener('resize', syncSize);
@@ -282,28 +321,13 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
 
       if (!isSolo && teammates.length > 0) {
         teammates.forEach((tm, idx) => {
-          let tx = standX - 24;
-          let ty = standY - 8;
-
-          if (teammates.length === 1) {
-            tx = facingRight ? standX - 24 : standX + 24;
-            ty = standY - 8;
-          } else if (teammates.length === 2) {
-            tx = idx === 0 ? standX - 24 : standX + 24;
-            ty = standY - 8;
-          } else {
-            // 3 teammates: spread across rear left, rear right, and far side
-            if (idx === 0) {
-              tx = standX - 24;
-              ty = standY - 8;
-            } else if (idx === 1) {
-              tx = standX + 24;
-              ty = standY - 8;
-            } else {
-              tx = facingRight ? standX - 44 : standX + 44;
-              ty = standY - 6;
-            }
-          }
+          const { tx, ty } = getIslandTeammatePos(
+            standX,
+            standY,
+            facingRight,
+            idx,
+            teammates.length,
+          );
 
           ctx.save();
           ctx.translate(tx, ty);
@@ -429,6 +453,64 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
           </div>
           <div className="mx-auto -mt-0.5 h-1.5 w-1.5 rotate-45 bg-rose-500 border-r border-b border-white/80" />
         </div>
+
+        {/* Teammates Paper Dolls & Cluster Hit Areas (8px outer expanded) */}
+        {!isSolo && teammates.length > 0 && wrapSize.w > 0 && (
+          <>
+            {/* Team Cluster Bounding Area (opens first teammate in cluster) */}
+            <button
+              type="button"
+              onClick={() => store.setInspectMemberId(teammates[0].id)}
+              aria-label="檢視隊伍小隊成員"
+              style={{
+                left: `${(currentStandPercent.x / 100) * wrapSize.w - 56}px`,
+                top: `${(currentStandPercent.y / 100) * wrapSize.h - 52}px`,
+                width: '112px',
+                height: '62px',
+              }}
+              className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95"
+            />
+
+            {/* Individual Teammates Hit Rects (opens that specific teammate) */}
+            {teammates.map((tm, idx) => {
+              const standX = (currentStandPercent.x / 100) * wrapSize.w;
+              const standY = (currentStandPercent.y / 100) * wrapSize.h;
+              const heroScale = 1.05;
+              const teammateScale = heroScale * 0.65;
+              const facingRight = currentVenueIdx % 2 === 1;
+              const { tx, ty } = getIslandTeammatePos(
+                standX,
+                standY,
+                facingRight,
+                idx,
+                teammates.length,
+              );
+              const hitW = 56 * teammateScale + 16;
+              const hitH = 65 * teammateScale + 16;
+              const hitX = tx - 28 * teammateScale - 8;
+              const hitY = ty - 60 * teammateScale - 8;
+
+              return (
+                <button
+                  key={tm.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    store.setInspectMemberId(tm.id);
+                  }}
+                  aria-label={`檢視隊友 ${tm.nameZh}`}
+                  style={{
+                    left: `${hitX}px`,
+                    top: `${hitY}px`,
+                    width: `${hitW}px`,
+                    height: `${hitH}px`,
+                  }}
+                  className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95 hover:border-amber-400/40"
+                />
+              );
+            })}
+          </>
+        )}
 
         {/* 6 Interactive Venue Nodes Overlay */}
         {GYM_VENUES.map((venue) => {
