@@ -30,8 +30,13 @@ import {
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { bossSpriteUrl } from '../../game/pixelSpriteDrawer';
 import { AdventureRaidPane } from '../../features/adventure/battle/AdventureRaidPane';
+import { AdventureModeSelect } from '../../features/adventure/flow/AdventureModeSelect';
+import { SquadConfirmScreen } from '../../features/adventure/flow/SquadConfirmScreen';
+import { GymIslandMapScreen } from '../../features/adventure/flow/GymIslandMapScreen';
+import { VenueTowerScreen } from '../../features/adventure/flow/VenueTowerScreen';
 import { RareLootShareModal } from '../../features/adventure/share/RareLootShareModal';
 import { RareLootPosterData } from '../../features/adventure/share/types';
+import { TeammateInspectSheet } from '../adventure/TeammateInspectSheet';
 
 type AdventureMainSubTab = 'raid' | 'combat_stats' | 'squad_invite' | 'ladder';
 type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
@@ -40,6 +45,12 @@ export const PlazaTab: React.FC = () => {
   const store = useGameStore();
   const [mainSubTab, setMainSubTab] = useState<AdventureMainSubTab>('raid');
   const [adventureMode, setAdventureMode] = useState<'solo' | 'squad'>('solo');
+  const [adventureStep, setAdventureStep] = useState<
+    'mode_select' | 'squad_confirm' | 'map' | 'tower' | 'battle'
+  >('mode_select');
+  const [selectedVenueIdx, setSelectedVenueIdx] = useState<number>(() => {
+    return Math.max(0, (store.soloStage - 1) % 6);
+  });
   const [ladderCat, setLadderCat] = useState<LadderCategory>('solo_stage');
 
   // Squad Invite state
@@ -49,7 +60,6 @@ export const PlazaTab: React.FC = () => {
   // Floating HUD popovers & modals
   const [devCheatOpen, setDevCheatOpen] = useState(false);
   const [lootBagOpen, setLootBagOpen] = useState(false);
-  const [inspectedMember, setInspectedMember] = useState<SquadMemberState | null>(null);
   const [bagLootReport, setBagLootReport] = useState<RareLootPosterData | null>(null);
 
   const [shakingMemberId, setShakingMemberId] = useState<string | null>(null);
@@ -124,11 +134,6 @@ export const PlazaTab: React.FC = () => {
     store.nudgeSquadMember(memberId);
     setTimeout(() => setShakingMemberId(null), 600);
   };
-
-  // Sync inspectedMember with latest store state
-  const liveInspectedMember = inspectedMember
-    ? store.squadMembers.find((m) => m.id === inspectedMember.id) || null
-    : null;
 
   return (
     <div className={mainSubTab === 'raid' ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden' : 'relative space-y-2.5 p-3 pb-10'}>
@@ -274,13 +279,73 @@ export const PlazaTab: React.FC = () => {
       )}
 
       {mainSubTab === 'raid' && (
-        <AdventureRaidPane
-          adventureMode={adventureMode}
-          onAdventureModeChange={setAdventureMode}
-          onOpenSubTab={setMainSubTab}
-          onOpenLootBag={() => setLootBagOpen(true)}
-          onOpenDevCheat={() => setDevCheatOpen((open) => !open)}
-        />
+        <>
+          {adventureStep === 'mode_select' && (
+            <AdventureModeSelect
+              onSelectMode={(mode) => {
+                setAdventureMode(mode);
+                if (mode === 'squad') {
+                  setAdventureStep('squad_confirm');
+                } else {
+                  setAdventureStep('map');
+                }
+              }}
+              onOpenSubTab={setMainSubTab}
+              onOpenLootBag={() => setLootBagOpen(true)}
+              onOpenDevCheat={() => setDevCheatOpen((open) => !open)}
+            />
+          )}
+
+          {adventureStep === 'squad_confirm' && (
+            <SquadConfirmScreen
+              onBack={() => setAdventureStep('mode_select')}
+              onEnterGymIsland={() => setAdventureStep('map')}
+              onOpenSquadManage={() => setMainSubTab('squad_invite')}
+            />
+          )}
+
+          {adventureStep === 'map' && (
+            <GymIslandMapScreen
+              mode={adventureMode}
+              onBack={() => {
+                if (adventureMode === 'squad') {
+                  setAdventureStep('squad_confirm');
+                } else {
+                  setAdventureStep('mode_select');
+                }
+              }}
+              onEnterVenueTower={(venueIdx) => {
+                setSelectedVenueIdx(venueIdx);
+                setAdventureStep('tower');
+              }}
+            />
+          )}
+
+          {adventureStep === 'tower' && (
+            <VenueTowerScreen
+              venueIndex={selectedVenueIdx}
+              mode={adventureMode}
+              onBack={() => setAdventureStep('map')}
+              onEnterBattle={() => {
+                setAdventureStep('battle');
+              }}
+              onJumpToVenue={(venueIdx) => {
+                setSelectedVenueIdx(venueIdx);
+              }}
+            />
+          )}
+
+          {adventureStep === 'battle' && (
+            <AdventureRaidPane
+              adventureMode={adventureMode}
+              onBackToMap={() => setAdventureStep('tower')}
+              onAdventureModeChange={setAdventureMode}
+              onOpenSubTab={setMainSubTab}
+              onOpenLootBag={() => setLootBagOpen(true)}
+              onOpenDevCheat={() => setDevCheatOpen((open) => !open)}
+            />
+          )}
+        </>
       )}
 
       {/* ================================================================= */}
@@ -708,7 +773,7 @@ export const PlazaTab: React.FC = () => {
                 return (
                   <div
                     key={member.id}
-                    onClick={() => setInspectedMember(member)}
+                    onClick={() => store.setInspectMemberId(member.id)}
                     className={`cursor-pointer p-3 rounded-xl border flex items-start justify-between gap-2.5 ${
                       member.isSuspectedCheater
                         ? 'bg-amber-950/30 border-amber-400/60'
@@ -1007,95 +1072,29 @@ export const PlazaTab: React.FC = () => {
       )}
 
       {/* ================================================================= */}
-      {/* MODAL A: TEAMMATE AUDIT & URGE SHEET (點隊友頭像彈出詳情與督促)     */}
+      {/* TeammateInspectSheet (組隊確認／島／爬塔／我的隊伍清單 共用)          */}
       {/* ================================================================= */}
-      {liveInspectedMember && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="retro-box w-full max-w-sm rounded-2xl p-4 space-y-3 border-2 border-amber-400 relative">
-            <button
-              onClick={() => setInspectedMember(null)}
-              className="absolute top-3 right-3 p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-2.5">
-              <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center text-2xl">
-                {liveInspectedMember.isSuspectedCheater
-                  ? '🤥'
-                  : liveInspectedMember.hasWorkedOutToday
-                  ? '💪'
-                  : '🛋️'}
-              </div>
-              <div>
-                <div className="text-sm font-black text-white flex items-center gap-1.5">
-                  <span>{liveInspectedMember.nameZh}</span>
-                  <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px]">
-                    {liveInspectedMember.roleBadgeZh}
-                  </span>
-                </div>
-                <div className="text-xs font-bold text-amber-300 mt-0.5">
-                  本關共同削血貢獻：-{liveInspectedMember.damageDealt} HP
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-              <div className="text-[10px] font-black text-slate-400">
-                🔍 組間休息計時器驗證紀錄：
-              </div>
-              <div className="text-xs font-bold text-white">
-                {liveInspectedMember.workoutAuditZh}
-              </div>
-              {liveInspectedMember.comboSkillAppliedZh && (
-                <div className="text-[11px] font-black text-cyan-300 pt-1">
-                  {liveInspectedMember.comboSkillAppliedZh}
-                </div>
-              )}
-            </div>
-
-            {liveInspectedMember.isSuspectedCheater && (
-              <button
-                onClick={() => {
-                  store.reportCheatingMember(liveInspectedMember.id);
-                }}
-                className="w-full retro-btn py-2.5 px-3 rounded-xl bg-rose-600 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow"
-              >
-                <ShieldAlert className="w-4 h-4" />
-                <span>🚨 抓包作弊（沒收刮痧傷害 · 罰他重練）</span>
-              </button>
-            )}
-
-            {!liveInspectedMember.hasWorkedOutToday && (
-              <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  onClick={() => handleNudge(liveInspectedMember.id)}
-                  className="py-2 px-2 rounded-xl bg-rose-500 text-white text-[11px] font-black flex items-center justify-center gap-1 shadow"
-                >
-                  <Bell className="w-3.5 h-3.5" />
-                  <span>敲他 ({liveInspectedMember.nudgedCount})</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setInspectedMember(null);
-                    store.setShareRaidModalOpen(true);
-                  }}
-                  className="py-2 px-2 rounded-xl bg-amber-400 text-slate-950 text-[11px] font-black flex items-center justify-center gap-1"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>討伐令</span>
-                </button>
-                <button
-                  onClick={() => store.simulateFriendWorkoutJoin(liveInspectedMember.id)}
-                  className="py-2 px-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-[11px] font-black flex items-center justify-center gap-1"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>模擬運動</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+      {store.inspectMemberId && (
+        <TeammateInspectSheet
+          memberId={store.inspectMemberId}
+          context={
+            mainSubTab !== 'raid'
+              ? 'list'
+              : adventureStep === 'squad_confirm'
+              ? 'squad_confirm'
+              : adventureStep === 'map'
+              ? 'island'
+              : adventureStep === 'tower'
+              ? 'tower'
+              : 'squad_confirm'
+          }
+          onClose={() => store.setInspectMemberId(null)}
+          onNavigateToSquadConfirm={() => {
+            store.setInspectMemberId(null);
+            setAdventureStep('squad_confirm');
+          }}
+          onSelectMember={(id) => store.setInspectMemberId(id)}
+        />
       )}
 
       {/* ================================================================= */}

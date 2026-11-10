@@ -37,6 +37,8 @@ export interface SquadMemberState {
   comboSkillAppliedZh?: string;
   damageDealt: number;
   nudgedCount: number;
+  bodyStage?: AvatarBodyStage;
+  equipped?: Record<EquipSlot, string>;
 }
 
 export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
@@ -52,6 +54,14 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
     comboSkillAppliedZh: '🔨 連攜技【破甲重擊】：使下位隊友魔攻 ×2.0 倍',
     damageDealt: 650,
     nudgedCount: 0,
+    bodyStage: 'powerlifter',
+    equipped: {
+      hair: 'hair_maple_cap',
+      face: 'face_pixel_shades',
+      top: 'top_pump_cover',
+      bottom: 'bottom_camo_joggers',
+      accessory: 'acc_protein_shaker',
+    },
   },
   {
     id: 'friend_alice',
@@ -65,6 +75,14 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
     comboSkillAppliedZh: '🔥 連攜技【燃脂魔焰】：引爆破甲並融化高糖護盾',
     damageDealt: 0,
     nudgedCount: 0,
+    bodyStage: 'aesthetic',
+    equipped: {
+      hair: 'hair_ headband_red',
+      face: 'face_confident_smile',
+      top: 'top_crimson_sbd',
+      bottom: 'bottom_gold_tights',
+      accessory: 'acc_iron_dumbbell',
+    },
   },
   {
     id: 'friend_leo',
@@ -78,6 +96,14 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
     comboSkillAppliedZh: '⚠️ 未通過組間休息驗證（無法觸發連攜技）',
     damageDealt: 15,
     nudgedCount: 0,
+    bodyStage: 'aesthetic',
+    equipped: {
+      hair: 'hair_spiky_gold',
+      face: 'face_confident_smile',
+      top: 'top_bare_muscles',
+      bottom: 'bottom_camo_joggers',
+      accessory: 'acc_iron_dumbbell',
+    },
   },
   {
     id: 'celeb_titan_chen',
@@ -91,6 +117,14 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
     comboSkillAppliedZh: '🔨 連攜技【泰坦破甲】：全隊物攻與破甲倍率大幅提升',
     damageDealt: 920,
     nudgedCount: 0,
+    bodyStage: 'titan',
+    equipped: {
+      hair: 'hair_titan_crown',
+      face: 'face_fierce_grit',
+      top: 'top_bare_muscles',
+      bottom: 'bottom_navy_shorts',
+      accessory: 'acc_gold_barbell',
+    },
   },
   {
     id: 'celeb_aesthetic_lin',
@@ -104,6 +138,14 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
     comboSkillAppliedZh: '🔥 連攜技【燃脂魔焰】：對護盾型 Boss 造成 2.0 倍魔傷',
     damageDealt: 780,
     nudgedCount: 0,
+    bodyStage: 'aesthetic',
+    equipped: {
+      hair: 'hair_spiky_gold',
+      face: 'face_pixel_shades',
+      top: 'top_bare_muscles',
+      bottom: 'bottom_gold_tights',
+      accessory: 'acc_protein_shaker',
+    },
   },
   {
     id: 'friend_chloe',
@@ -117,8 +159,59 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
     comboSkillAppliedZh: '🌪️ 連攜技【聚氣暴擊】：全隊掉寶率 ×2 倍、弱點暴擊加成',
     damageDealt: 540,
     nudgedCount: 0,
+    bodyStage: 'beginner',
+    equipped: {
+      hair: 'hair_ headband_red',
+      face: 'face_confident_smile',
+      top: 'top_pump_cover',
+      bottom: 'bottom_navy_shorts',
+      accessory: 'acc_protein_shaker',
+    },
   },
 ];
+
+export function resolveSquadMemberAvatar(member: SquadMemberState): {
+  bodyStage: AvatarBodyStage;
+  equipped: Record<EquipSlot, string>;
+} {
+  if (member.bodyStage && member.equipped) {
+    return {
+      bodyStage: member.bodyStage,
+      equipped: member.equipped,
+    };
+  }
+  const foundCandidate = SQUAD_CANDIDATE_POOL.find(
+    (c) => c.id === member.id || c.nameZh === member.nameZh
+  );
+  if (foundCandidate?.bodyStage && foundCandidate.equipped) {
+    return {
+      bodyStage: foundCandidate.bodyStage,
+      equipped: foundCandidate.equipped,
+    };
+  }
+  const foundProfile = FRIEND_PROFILES.find(
+    (p) =>
+      p.id === member.id ||
+      p.nameZh.includes(member.nameZh) ||
+      member.nameZh.includes(p.nameZh)
+  );
+  if (foundProfile) {
+    return {
+      bodyStage: foundProfile.bodyStage,
+      equipped: foundProfile.equipped,
+    };
+  }
+  return {
+    bodyStage: 'aesthetic',
+    equipped: {
+      hair: 'hair_maple_cap',
+      face: 'face_confident_smile',
+      top: 'top_pump_cover',
+      bottom: 'bottom_navy_shorts',
+      accessory: 'acc_protein_shaker',
+    },
+  };
+}
 
 export interface LoggedSet {
   id: string;
@@ -313,6 +406,8 @@ interface GameState {
   todaySportType: AdventureSportSkillType;
   activeTeamComboBuff: 'none' | 'armor_break' | 'burn_mark' | 'crit_aura';
   collectedBossLoots: string[];
+  inspectMemberId: string | null;
+  peekMemberId: string | null;
 
   // UI Actions
   setActiveTab: (tab: MainTab) => void;
@@ -327,6 +422,8 @@ interface GameState {
   setSelectedProfileId: (id: string | null) => void;
   setSelectedHistorySessionId: (id: string | null) => void;
   setInspectedExerciseId: (id: string | null) => void;
+  setInspectMemberId: (id: string | null) => void;
+  setPeekMemberId: (id: string | null) => void;
   setShareRaidModalOpen: (open: boolean) => void;
   closeVictoryModal: () => void;
   showToast: (msg: string) => void;
@@ -879,6 +976,14 @@ export const useGameStore = create<GameState>()(
           comboSkillAppliedZh: '🔨 已施放【破甲重擊】：下位隊友魔攻 ×2.0 倍',
           damageDealt: 650,
           nudgedCount: 0,
+          bodyStage: 'powerlifter',
+          equipped: {
+            hair: 'hair_maple_cap',
+            face: 'face_pixel_shades',
+            top: 'top_pump_cover',
+            bottom: 'bottom_camo_joggers',
+            accessory: 'acc_protein_shaker',
+          },
         },
         {
           id: 'friend_leo',
@@ -891,6 +996,14 @@ export const useGameStore = create<GameState>()(
           isSuspectedCheater: true,
           damageDealt: 15,
           nudgedCount: 0,
+          bodyStage: 'aesthetic',
+          equipped: {
+            hair: 'hair_spiky_gold',
+            face: 'face_confident_smile',
+            top: 'top_bare_muscles',
+            bottom: 'bottom_camo_joggers',
+            accessory: 'acc_iron_dumbbell',
+          },
         },
         {
           id: 'friend_alice',
@@ -903,6 +1016,14 @@ export const useGameStore = create<GameState>()(
           isSuspectedCheater: false,
           damageDealt: 0,
           nudgedCount: 0,
+          bodyStage: 'aesthetic',
+          equipped: {
+            hair: 'hair_ headband_red',
+            face: 'face_confident_smile',
+            top: 'top_crimson_sbd',
+            bottom: 'bottom_gold_tights',
+            accessory: 'acc_iron_dumbbell',
+          },
         },
       ],
       adventureCooldownUntil: 0,
@@ -921,6 +1042,11 @@ export const useGameStore = create<GameState>()(
       todaySportType: 'cardio',
       activeTeamComboBuff: 'armor_break',
       collectedBossLoots: [],
+      inspectMemberId: null,
+      peekMemberId: null,
+
+      setInspectMemberId: (id) => set({ inspectMemberId: id }),
+      setPeekMemberId: (id) => set({ peekMemberId: id }),
 
       setActiveTab: (tab) => {
         soundFX.playBlip();
@@ -2460,6 +2586,41 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'fitmon-mvp-storage-v6',
+      version: 1,
+      migrate: (persistedState: unknown) => {
+        if (!persistedState || typeof persistedState !== 'object') return persistedState;
+        const state = persistedState as Record<string, unknown>;
+        if (Array.isArray(state.squadMembers)) {
+          state.squadMembers = (state.squadMembers as SquadMemberState[]).map((m) => {
+            const avatar = resolveSquadMemberAvatar(m);
+            return {
+              ...m,
+              bodyStage: m.bodyStage || avatar.bodyStage,
+              equipped: m.equipped || avatar.equipped,
+            };
+          });
+        }
+        if (typeof state.soloStage !== 'number' || state.soloStage < 1) {
+          state.soloStage = 1;
+        }
+        if (typeof state.squadStage !== 'number' || state.squadStage < 1) {
+          state.squadStage = 1;
+        }
+        return state;
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        if (Array.isArray(state.squadMembers)) {
+          state.squadMembers = state.squadMembers.map((m) => {
+            const avatar = resolveSquadMemberAvatar(m);
+            return {
+              ...m,
+              bodyStage: m.bodyStage || avatar.bodyStage,
+              equipped: m.equipped || avatar.equipped,
+            };
+          });
+        }
+      },
       partialize: (state) => ({
         locale: state.locale,
         themeMode: state.themeMode,
