@@ -47,3 +47,4 @@ fitmon/
 2. **LLM 協作與維護規範**：請查閱 [`llm-wiki/ops/wiki_protocol.md`](llm-wiki/ops/wiki_protocol.md)
 3. **歷史演進與推演脈絡**：請查閱 [`llm-wiki/logs/changelog.md`](llm-wiki/logs/changelog.md)
 4. **技術選型決策記錄 (ADR-0001)**：請查閱 [`llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md`](llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md)
+5. **資安防護與 Pre-commit 設定**：請查閱 [`docs/security/pre-commit.md`](docs/security/pre-commit.md)

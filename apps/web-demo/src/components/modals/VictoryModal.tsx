@@ -77,7 +77,8 @@ export const VictoryModal: React.FC = () => {
         <div className="space-y-2 pt-1">
           <button
             onClick={() => {
-              store.setTodayWorkoutStatus('legit_rest');
+              const targetStatus = data.workoutStatus ?? store.todayWorkoutStatus;
+              store.setTodayWorkoutStatus(targetStatus);
               store.closeVictoryModal();
               store.setActiveTab('plaza');
             }}
