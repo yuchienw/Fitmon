@@ -1,0 +1,32 @@
+#!/bin/sh
+set -e
+
+if [ "$SKIP_GITLEAKS" = "1" ] || [ "$SKIP_GITLEAKS" = "true" ]; then
+  echo "⚠️ SKIP_GITLEAKS is set; skipping gitleaks secret scanning."
+  exit 0
+fi
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "❌ [Security Error] gitleaks is not installed or not in PATH."
+  echo "To prevent accidental credential leaks, commits are blocked."
+  echo ""
+  echo "Installation options:"
+  echo "  - macOS:   brew install gitleaks"
+  echo "  - Linux:   Install via package manager or download from:"
+  echo "             https://github.com/gitleaks/gitleaks/releases"
+  echo "  - Windows: scoop install gitleaks / choco install gitleaks"
+  echo ""
+  echo "To bypass this check temporarily in an emergency:"
+  echo "  SKIP_GITLEAKS=1 git commit -m \"...\""
+  exit 1
+fi
+
+GITLEAKS_VER=$(gitleaks version 2>/dev/null | tr -d 'v' | head -n 1)
+MAJOR=$(echo "$GITLEAKS_VER" | cut -d. -f1)
+MINOR=$(echo "$GITLEAKS_VER" | cut -d. -f2)
+
+if [ "$MAJOR" -gt 8 ] 2>/dev/null || ( [ "$MAJOR" -eq 8 ] && [ "$MINOR" -ge 19 ] ) 2>/dev/null; then
+  gitleaks git --staged --pre-commit --redact --verbose
+else
+  gitleaks protect --staged --redact --verbose
+fi
