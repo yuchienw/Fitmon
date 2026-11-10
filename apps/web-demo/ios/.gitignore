@@ -11,3 +11,9 @@ capacitor-cordova-ios-plugins
 # Generated Config files
 App/App/capacitor.config.json
 App/App/config.xml
+
+# Google Services & Secrets / Provisioning
+GoogleService-Info.plist
+AuthKey_*.p8
+*.p12
+*.mobileprovision

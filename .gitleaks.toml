@@ -1,0 +1,16 @@
+# Gitleaks Configuration
+# Extends default rules and configures allowlists for build outputs, dependencies, and lockfiles.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for build outputs, dependencies, and lockfiles"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)dist/''',
+  '''(^|/)build/''',
+  '''(^|/)\.next/''',
+  '''(^|/)\.vite/''',
+  '''package-lock\.json''',
+]
