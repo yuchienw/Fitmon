@@ -663,12 +663,13 @@
 - 預設分支 `main` 已合併 [PR #1](https://github.com/yuchienw/Fitmon/pull/1)、[PR #2](https://github.com/yuchienw/Fitmon/pull/2)、[PR #3](https://github.com/yuchienw/Fitmon/pull/3)，HEAD 為 `4d42d26`（2026-11-10 13:35 Asia/Taipei），但入口文件與看板仍停留在 11/07 的 v2.9.4／`468d239`，且根目錄 README、`AGENT.md`、協作 SOP 仍寫 Phase 0 與程式碼凍結。
 - [PR #4](https://github.com/yuchienw/Fitmon/pull/4) 資安清單第一批仍為開啟、未合併。
 - 幕僚長轉述 YuChien 於 2026-11-10 親口做成的決定，需以會議紀錄入庫，並把可直接落到看板上的事項寫入 `PROJECT_STATE.md`。
-- 產品規格既有矛盾（站內動態牆存廢、PARK-002 與冒險 RPG 的關係、裝備是否影響數值）**不在本次修改範圍**，待 YuChien 確認。
+- YuChien 於 2026-11-10 15:04（Asia/Taipei）直接告知紀錄，確認站內動態牆已廢除（改成合照，已無打賞與發布拍立得）、遊戲模式改為冒險 RPG（冒險模式／Boss，取代 PARK-002）、以及可用遊戲幣購買有數值的服飾裝備（每日取得管道有限，最多以兩倍券增加取得，不能課金購買遊戲幣）。上述決定已記入會議紀錄；主題 wiki 規格頁本次不改，留待後續 PR。
 
 ### 2. 思考推演與決策脈絡 (Deduction & Rationale)
 - 即時階段、版本與待辦改由 `PROJECT_STATE.md` 作為唯一來源，避免入口文件再保存會過時的快照。
 - SOP 中「🟡 待討論清單 (Backlog)」與現行看板欄位不符，改為對齊既有的進行中／已完成／擱置欄位。
 - 會議紀錄只記載來源所載、由 YuChien 親口做成的決定；待辦若無指定負責人或期限，一律寫「待指定」。
+- 15:04 確認的三項決定以原話記入會議紀錄，不在本次改寫主題 wiki 規格頁或看板中仍互相矛盾的規格段落。
 - 本次僅改文件，不改程式；等 YuChien 同意後才合併本 PR。
 
 ### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
