@@ -21,7 +21,7 @@
 ## 跨層追溯鏈結
 
 - **即時狀態與任務看板**：[`PROJECT_STATE.md`](../PROJECT_STATE.md)
-- **重大架構決策 (ADR)**：[`ADR-0001 (Web-to-Mobile)`](../adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md) ｜ [`ADR-0002 (App 外殼與局部畫布)`](../adr/0002-app-shell-with-embedded-pixel-canvas.md) ｜ [`ADR-0003 (每日打卡固定 XP)`](../adr/0003-daily-checkin-fixed-xp.md)
+- **重大架構決策 (ADR)**：[`ADR-0001 (Web-to-Mobile)`](../adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md) ｜ [`ADR-0002 (App 外殼與局部畫布)`](../adr/0002-app-shell-with-embedded-pixel-canvas.md) ｜ [`ADR-0003 (每日打卡固定 XP)`](../adr/0003-daily-checkin-fixed-xp.md) ｜ [`ADR-0004 (最低年齡 13 與未成年保護)`](../adr/0004-minimum-age-13-minor-protection.md) ｜ [`ADR-0005 (兩倍券只在遊戲裡賺、買斷外觀)`](../adr/0005-double-coupon-earn-only-cosmetic-revenue.md)
 - **長期人機協作溝通 SOP**：[`ops/collaboration_sop.md`](../ops/collaboration_sop.md)
 - **Agent 讀寫規範手冊**：[`AGENT.md`](../AGENT.md)
 - **資料庫遷移腳本**：[`supabase/migrations/20261101_init_fitmon_game_schema.sql`](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)

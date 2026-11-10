@@ -662,22 +662,23 @@
 ### 1. 觸發原因 (Trigger / Context)
 - 預設分支 `main` 已合併 [PR #1](https://github.com/yuchienw/Fitmon/pull/1)、[PR #2](https://github.com/yuchienw/Fitmon/pull/2)、[PR #3](https://github.com/yuchienw/Fitmon/pull/3)，其後亦合併 [PR #4](https://github.com/yuchienw/Fitmon/pull/4)，HEAD 為 `c82b17b`（2026-11-10 15:08 Asia/Taipei），但入口文件與看板在同步前仍停留在 11/07 的 v2.9.4／`468d239`，且根目錄 README、`AGENT.md`、協作 SOP 仍寫 Phase 0 與程式碼凍結。
 - 幕僚長轉述 YuChien 於 2026-11-10 親口做成的決定，需以會議紀錄入庫，並把可直接落到看板上的事項寫入 `PROJECT_STATE.md`。
-- YuChien 於 2026-11-10 15:04（Asia/Taipei）直接告知紀錄，確認站內動態牆已廢除（改成合照，已無打賞與發布拍立得）、遊戲模式改為冒險 RPG（冒險模式／Boss，取代 PARK-002）、以及可用遊戲幣購買有數值的服飾裝備（每日取得管道有限，最多以兩倍券增加取得，不能課金購買遊戲幣）。
+- YuChien 於 2026-11-10 15:04（Asia/Taipei）直接告知紀錄，確認站內動態牆已廢除（改成合照，已無打賞與發布拍立得）、遊戲模式改為冒險 RPG（冒險模式／Boss，取代 PARK-002），以及原話：「因為加入冒險模式，所以可以用遊戲幣買服飾裝備，但是每日可獲得錢的管道是有限的，最多只能使用兩倍券的效果增加遊戲幣取得，不能用課金購買」。該句「不能用課金購買」的對象（遊戲幣／裝備／兩倍券）待 YuChien 確認，文件不把它寫成通則。
 - 幕僚長轉述，YuChien 在幕僚長聊天室於 15:08 拍板：新玩家從 Lv.1 開始；已通關樓層可重打但不給首通獎勵和掉落；教練提的運動規則沒有採用（原話：「以有運動作為推廣性質，不應該強求使用者一定要做什麼項目」），產品經理和教練重新提方案；拿掉付費跳過冷卻；不恢復公開動態牆，改走戰隊和站外分享；合併 PR #4（merge `c82b17b`）。
-- 同日 15:55 拍板 D-3 運動規則選方案 B：每天打卡一次，固定給 XP（提案是 100 XP，為「提案值」）；不指定項目、不處罰，保留每天打一次 Boss，也保留「我不舒服」按鈕和免責聲明。未選方案 A（按計時分鐘數給分）、C（打卡基本分加時間加分，教練和產品經理推薦，標為提議）。另寫 [`ADR-0003`](../adr/0003-daily-checkin-fixed-xp.md)。上述決定記入會議紀錄與看板；主題 wiki 規格頁本次不改，留待後續 PR。
+- 同日 15:55 拍板 D-3 運動規則選方案 B：每天打卡一次，固定給 XP（提案是 100 XP，為「提案值」）；不指定項目、不處罰，保留每天打一次 Boss，也保留「我不舒服」按鈕和免責聲明。未選方案 A（按計時分鐘數給分）、C（打卡基本分加時間加分，教練和產品經理推薦，標為提議）。另寫 [`ADR-0003`](../adr/0003-daily-checkin-fixed-xp.md)。
+- 同日 16:00，幕僚長轉述 YuChien 親口決定：最低使用年齡 13 歲以上，並加上未成年保護（不能加陌生人、不能聊天、內購要家長同意或設上限、轉蛋要限制、要有檢舉和封鎖）；未採用資安和產品經理「只限 18 歲以上」的提議。另寫 [`ADR-0004`](../adr/0004-minimum-age-13-minor-protection.md)。兩倍券只能在遊戲裡賺，不能用真錢買；收入改靠真錢買斷外觀。另寫 [`ADR-0005`](../adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。16:00 已明確決定兩倍券不能用真錢買；遊戲幣本身是否可用真錢購買，仍待 YuChien 確認。上述決定記入會議紀錄與看板；主題 wiki 規格頁本次不改，留待後續 PR。
 
 ### 2. 思考推演與決策脈絡 (Deduction & Rationale)
 - 即時階段、版本與待辦改由 `PROJECT_STATE.md` 作為唯一來源，避免入口文件再保存會過時的快照。
 - SOP 中「🟡 待討論清單 (Backlog)」與現行看板欄位不符，改為對齊既有的進行中／已完成／擱置欄位。
 - 會議紀錄只記載來源所載、由 YuChien 親口做成的決定；待辦若無指定負責人或期限，一律寫「待指定」。
-- 15:04、15:08、15:55 的決定以原話記入會議紀錄；可直接落地的事項寫入看板；D-3 方案 B 另寫 ADR-0003。不在本次改寫主題 wiki 規格頁，亦不改寫看板中既有的歷史已完成規格段落。
+- 15:04、15:08、15:55、16:00 的決定以原話記入會議紀錄；可直接落地的事項寫入看板；並另寫 ADR-0003、ADR-0004、ADR-0005。15:04「不能用課金購買」依原話記載，不改寫成通則。不在本次改寫主題 wiki 規格頁，亦不改寫看板中既有的歷史已完成規格段落。
 - 本次僅改文件，不改程式；等 YuChien 同意後才合併本 PR。
 
 ### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
 - [`README.md`](../../README.md)（根目錄）：移除 Phase 0／程式碼凍結狀態板，改指向 `PROJECT_STATE.md`；保留 main 上 PR #4 新增的資安／pre-commit 連結，並加上會議紀錄連結。
 - [`AGENT.md`](../AGENT.md)、[`ops/collaboration_sop.md`](../ops/collaboration_sop.md)：開局對齊改讀看板；修正已不存在的 Backlog 欄位說明。
-- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：同步至 main HEAD `c82b17b`；記入已合併 PR #1–#4（PR #4 合併於 2026-11-10 15:08 Asia/Taipei，merge commit `c82b17b`）；新增刪除「速記」、上架時程暫不排定、資安第二批與 Supabase 一併進行、測試外掛暫留至接雲端前，以及新玩家 Lv.1、樓層重打無首通獎勵、拿掉付費跳過冷卻、D-3 每日打卡固定 XP 等看板事項。
+- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：同步至 main HEAD `c82b17b`；記入已合併 PR #1–#4（PR #4 合併於 2026-11-10 15:08 Asia/Taipei，merge commit `c82b17b`）；新增刪除「速記」、上架時程暫不排定、資安第二批與 Supabase 一併進行、測試外掛暫留至接雲端前，以及新玩家 Lv.1、樓層重打無首通獎勵、拿掉付費跳過冷卻、D-3 每日打卡固定 XP、最低年齡 13 歲與未成年保護、兩倍券只能在遊戲裡賺且收入改靠買斷外觀等看板事項。
 - [`logs/changelog.md`](changelog.md)：追加本筆。
-- [`logs/meetings/README.md`](meetings/README.md)、[`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：新增會議紀錄目錄規範與第一份紀錄（含 15:04、15:08、15:55 決策）。
-- [`adr/0003-daily-checkin-fixed-xp.md`](../adr/0003-daily-checkin-fixed-xp.md)：新增 D-3 每日打卡固定 XP 決策紀錄。
-- [`wiki/00_INDEX.md`](../wiki/00_INDEX.md)、[`README.md`](../README.md)（知識庫）：加上會議紀錄資料夾相對路徑連結；索引補上 ADR-0003。
+- [`logs/meetings/README.md`](meetings/README.md)、[`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：新增會議紀錄目錄規範與第一份紀錄（含 15:04、15:08、15:55、16:00 決策）。
+- [`adr/0003-daily-checkin-fixed-xp.md`](../adr/0003-daily-checkin-fixed-xp.md)、[`adr/0004-minimum-age-13-minor-protection.md`](../adr/0004-minimum-age-13-minor-protection.md)、[`adr/0005-double-coupon-earn-only-cosmetic-revenue.md`](../adr/0005-double-coupon-earn-only-cosmetic-revenue.md)：新增 D-3 每日打卡固定 XP、最低年齡 13 與未成年保護、兩倍券只在遊戲裡賺與買斷外觀收入之決策紀錄。
+- [`wiki/00_INDEX.md`](../wiki/00_INDEX.md)、[`README.md`](../README.md)（知識庫）：加上會議紀錄資料夾相對路徑連結；索引補上 ADR-0003、ADR-0004、ADR-0005。

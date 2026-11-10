@@ -11,7 +11,7 @@
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、雙情境拍貼、開源科學動作庫、Tap Titans 冒險推圖 |
 | **目前階段** | **Phase 1：Web Demo & Native iOS/Android 實機測試與打磨期** | 已合併冒險 PR #1–#3 與資安第一批 PR #4；上架時程暫不排定（等 App 做到 YuChien 滿意再談） |
 | **當前版本** | `v2.9.4-analytics-queue-polish` | 文件不擅自升版。11/10 已在此版本之上合併暖日光戰場、健身房島爬塔與組隊檢視 |
-| **最後更新時間** | `2026-11-10 15:59 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後更新時間** | `2026-11-10 16:03 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
 | **最後 Git Commit** | `c82b17b` | 本次文件同步時的 main HEAD（[PR #4](https://github.com/yuchienw/Fitmon/pull/4) 合併 commit） |
 | **當前焦點 (Current Focus)** | 專注好用、好玩、修 bug（一輪約一週）；上架時程暫不排定 |
 
@@ -25,6 +25,8 @@
 - [ ] **TASK-FLOOR-REPLAY-NO-FIRST-CLEAR**：已通關的樓層可以重打，但不給首通獎勵和掉落。
 - [ ] **TASK-REMOVE-PAID-COOLDOWN-SKIP**：拿掉付費跳過冷卻。
 - [ ] **TASK-D3-DAILY-CHECKIN-FIXED-XP**：D-3 運動規則採方案 B：每天打卡一次，固定給 XP（提案值 100 XP）；不指定項目、不處罰，保留每天打一次 Boss，也保留「我不舒服」按鈕和免責聲明。詳見 [`ADR-0003`](adr/0003-daily-checkin-fixed-xp.md)。
+- [ ] **TASK-MIN-AGE-13-MINOR-PROTECTION**：最低使用年齡 13 歲以上，並加上未成年保護：不能加陌生人、不能聊天、內購要家長同意或設上限、轉蛋要限制、要有檢舉和封鎖。詳見 [`ADR-0004`](adr/0004-minimum-age-13-minor-protection.md)。
+- [ ] **TASK-DOUBLE-COUPON-EARN-ONLY**：兩倍券只能在遊戲裡賺，不能用真錢買；收入改靠真錢買斷外觀。詳見 [`ADR-0005`](adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。
 - [ ] **SEC-BATCH-2**：資安第二批修正與 Supabase（MILESTONE-2）一起做；測試外掛暫時保留，接雲端前再移除。
 - [ ] **MVP-V2.9-ADVENTURE-PLAYTEST**：實機安裝至 iPhone（Xcode 執行安裝）與朋友測試新版 `[⚔️ 冒險]`、我的紀錄月/週切換與雙情境拍貼工坊分享至 IG/LINE
 
