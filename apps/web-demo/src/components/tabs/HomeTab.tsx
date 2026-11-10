@@ -161,7 +161,7 @@ export const HomeTab: React.FC = () => {
             <span>討伐 Boss</span>
           </div>
           <span className="text-[10px] opacity-90 font-bold font-mono">
-            STAGE {store.squadStage} · 組隊刷寶
+            STAGE {store.soloStage} 單人 · STAGE {store.squadStage} 組隊
           </span>
         </button>
 

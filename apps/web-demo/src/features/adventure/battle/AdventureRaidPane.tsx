@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ADVENTURE_BOSS_CATALOG } from '../../../config/catalogConfig';
 import { loadBossSprite } from '../../../game/pixelSpriteDrawer';
-import { useGameStore } from '../../../stores/useGameStore';
+import { resolveSquadMemberAvatar, useGameStore } from '../../../stores/useGameStore';
 import { RareLootShareModal } from '../share/RareLootShareModal';
 import { RareLootPosterData, VictoryPosterData } from '../share/types';
 import { VictoryShareModal } from '../share/VictoryShareModal';
@@ -13,13 +13,15 @@ import {
   FLOAT_MS,
   LUNGE_MS,
   StrikeFloat,
+  TeammateDrawConfig,
 } from './BattleStageCanvas';
 import { SkillDeck } from './SkillDeck';
 import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 
 interface AdventureRaidPaneProps {
   adventureMode: 'solo' | 'squad';
-  onAdventureModeChange: (mode: 'solo' | 'squad') => void;
+  onBackToMap: () => void;
+  onAdventureModeChange?: (mode: 'solo' | 'squad') => void;
   onOpenSubTab: (tab: 'combat_stats' | 'squad_invite' | 'ladder') => void;
   onOpenLootBag: () => void;
   onOpenDevCheat: () => void;
@@ -27,7 +29,7 @@ interface AdventureRaidPaneProps {
 
 export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
   adventureMode,
-  onAdventureModeChange,
+  onBackToMap,
   onOpenSubTab,
   onOpenLootBag,
   onOpenDevCheat,
@@ -71,6 +73,19 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
   const today = new Date().toISOString().slice(0, 10);
   const iapUsedToday =
     store.dailyIapCooldownResetDate === today && (store.dailyIapCooldownResetCount || 0) >= 1;
+
+  const teammates: TeammateDrawConfig[] = isSolo
+    ? []
+    : store.squadMembers.slice(0, 3).map((m) => {
+        const avatar = resolveSquadMemberAvatar(m);
+        return {
+          id: m.id,
+          nameZh: m.nameZh,
+          bodyStage: m.bodyStage || avatar.bodyStage,
+          equipped: m.equipped || avatar.equipped,
+          hasWorkedOutToday: m.hasWorkedOutToday,
+        };
+      });
 
   const strike = () => {
     if (phase !== 'idle') return;
@@ -132,6 +147,7 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
         boss={boss}
         bodyStage={store.bodyStage}
         equipped={store.equipped}
+        teammates={teammates}
         phase={phase}
         lungeAt={lungeAt}
         hitAt={hitAt}
@@ -145,7 +161,7 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
             currentHp={currentHp}
             maxHp={maxHp}
             armorBreak={store.activeTeamComboBuff === 'armor_break'}
-            onModeChange={onAdventureModeChange}
+            onBackToMap={onBackToMap}
             onOpenSubTab={onOpenSubTab}
             onOpenLootBag={onOpenLootBag}
             onOpenDevCheat={onOpenDevCheat}

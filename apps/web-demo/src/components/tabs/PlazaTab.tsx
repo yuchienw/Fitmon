@@ -30,6 +30,10 @@ import {
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { bossSpriteUrl } from '../../game/pixelSpriteDrawer';
 import { AdventureRaidPane } from '../../features/adventure/battle/AdventureRaidPane';
+import { AdventureModeSelect } from '../../features/adventure/flow/AdventureModeSelect';
+import { SquadConfirmScreen } from '../../features/adventure/flow/SquadConfirmScreen';
+import { GymIslandMapScreen } from '../../features/adventure/flow/GymIslandMapScreen';
+import { VenueTowerScreen } from '../../features/adventure/flow/VenueTowerScreen';
 import { RareLootShareModal } from '../../features/adventure/share/RareLootShareModal';
 import { RareLootPosterData } from '../../features/adventure/share/types';
 
@@ -40,6 +44,12 @@ export const PlazaTab: React.FC = () => {
   const store = useGameStore();
   const [mainSubTab, setMainSubTab] = useState<AdventureMainSubTab>('raid');
   const [adventureMode, setAdventureMode] = useState<'solo' | 'squad'>('solo');
+  const [adventureStep, setAdventureStep] = useState<
+    'mode_select' | 'squad_confirm' | 'map' | 'tower' | 'battle'
+  >('mode_select');
+  const [selectedVenueIdx, setSelectedVenueIdx] = useState<number>(() => {
+    return Math.max(0, (store.soloStage - 1) % 6);
+  });
   const [ladderCat, setLadderCat] = useState<LadderCategory>('solo_stage');
 
   // Squad Invite state
@@ -274,13 +284,73 @@ export const PlazaTab: React.FC = () => {
       )}
 
       {mainSubTab === 'raid' && (
-        <AdventureRaidPane
-          adventureMode={adventureMode}
-          onAdventureModeChange={setAdventureMode}
-          onOpenSubTab={setMainSubTab}
-          onOpenLootBag={() => setLootBagOpen(true)}
-          onOpenDevCheat={() => setDevCheatOpen((open) => !open)}
-        />
+        <>
+          {adventureStep === 'mode_select' && (
+            <AdventureModeSelect
+              onSelectMode={(mode) => {
+                setAdventureMode(mode);
+                if (mode === 'squad') {
+                  setAdventureStep('squad_confirm');
+                } else {
+                  setAdventureStep('map');
+                }
+              }}
+              onOpenSubTab={setMainSubTab}
+              onOpenLootBag={() => setLootBagOpen(true)}
+              onOpenDevCheat={() => setDevCheatOpen((open) => !open)}
+            />
+          )}
+
+          {adventureStep === 'squad_confirm' && (
+            <SquadConfirmScreen
+              onBack={() => setAdventureStep('mode_select')}
+              onEnterGymIsland={() => setAdventureStep('map')}
+              onOpenSquadManage={() => setMainSubTab('squad_invite')}
+            />
+          )}
+
+          {adventureStep === 'map' && (
+            <GymIslandMapScreen
+              mode={adventureMode}
+              onBack={() => {
+                if (adventureMode === 'squad') {
+                  setAdventureStep('squad_confirm');
+                } else {
+                  setAdventureStep('mode_select');
+                }
+              }}
+              onEnterVenueTower={(venueIdx) => {
+                setSelectedVenueIdx(venueIdx);
+                setAdventureStep('tower');
+              }}
+            />
+          )}
+
+          {adventureStep === 'tower' && (
+            <VenueTowerScreen
+              venueIndex={selectedVenueIdx}
+              mode={adventureMode}
+              onBack={() => setAdventureStep('map')}
+              onEnterBattle={() => {
+                setAdventureStep('battle');
+              }}
+              onJumpToVenue={(venueIdx) => {
+                setSelectedVenueIdx(venueIdx);
+              }}
+            />
+          )}
+
+          {adventureStep === 'battle' && (
+            <AdventureRaidPane
+              adventureMode={adventureMode}
+              onBackToMap={() => setAdventureStep('tower')}
+              onAdventureModeChange={setAdventureMode}
+              onOpenSubTab={setMainSubTab}
+              onOpenLootBag={() => setLootBagOpen(true)}
+              onOpenDevCheat={() => setDevCheatOpen((open) => !open)}
+            />
+          )}
+        </>
       )}
 
       {/* ================================================================= */}

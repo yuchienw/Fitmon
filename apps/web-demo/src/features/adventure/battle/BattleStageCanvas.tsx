@@ -15,10 +15,19 @@ export interface StrikeFloat {
   droppedLootName?: string;
 }
 
+export interface TeammateDrawConfig {
+  id: string;
+  nameZh: string;
+  bodyStage: AvatarBodyStage;
+  equipped: Record<EquipSlot, string>;
+  hasWorkedOutToday: boolean;
+}
+
 interface DrawState {
   boss: AdventureBoss;
   bodyStage: AvatarBodyStage;
   equipped: Record<EquipSlot, string>;
+  teammates?: TeammateDrawConfig[];
   phase: 'idle' | 'lunge' | 'hit';
   lungeAt: number | null;
   hitAt: number | null;
@@ -69,7 +78,7 @@ export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
         if (ctx) {
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
           ctx.clearRect(0, 0, w, h);
-          paintArena(ctx, w, h, now, drawRef.current);
+          paintArena(ctx, w, h, now, drawRef.current, drawRef.current.teammates);
         }
       }
       frame = requestAnimationFrame(tick);
@@ -117,12 +126,13 @@ export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
   );
 };
 
-function paintArena(
+export function paintArena(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   now: number,
   state: DrawState,
+  teammates: TeammateDrawConfig[] = state.teammates || [],
 ) {
   const hitElapsed = state.hitAt == null ? Number.POSITIVE_INFINITY : now - state.hitAt;
   const lungeElapsed = state.lungeAt == null ? 0 : now - state.lungeAt;
@@ -198,9 +208,80 @@ function paintArena(
     }
   }
 
-  const scale = Math.max(2.2, Math.min(h / 190, 3.35));
+  const scale = Math.max(1.85, Math.min(w / 165, h / 210, 2.5));
+  const heroBaseX = Math.round(w * 0.33);
+
+  // 1. Draw Teammates FIRST (scale 0.65, in back-left and direct-rear, floor higher by ~8-12% h)
+  if (teammates && teammates.length > 0) {
+    const activeTeammates = teammates.slice(0, 3);
+    const teammateScale = scale * 0.65;
+    activeTeammates.forEach((teammate, idx) => {
+      let tx = Math.round(w * 0.16);
+      let ty = floorY - Math.round(h * 0.10);
+
+      if (activeTeammates.length === 1) {
+        tx = Math.round(w * 0.16);
+        ty = floorY - Math.round(h * 0.10);
+      } else if (activeTeammates.length === 2) {
+        tx = idx === 0 ? Math.max(Math.round(20 * teammateScale), Math.round(w * 0.11)) : Math.round(w * 0.22);
+        ty = floorY - Math.round(h * (idx === 0 ? 0.09 : 0.11));
+      } else {
+        // 3 Teammates: spread horizontally on left-rear (idx 0, 1) and direct-rear (idx 2)
+        if (idx === 0) {
+          tx = Math.max(Math.round(20 * teammateScale), Math.round(w * 0.095));
+          ty = floorY - Math.round(h * 0.09);
+        } else if (idx === 1) {
+          tx = Math.round(w * 0.175);
+          ty = floorY - Math.round(h * 0.11);
+        } else {
+          tx = Math.round(w * 0.255);
+          ty = floorY - Math.round(h * 0.09);
+        }
+      }
+
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.scale(teammateScale, teammateScale);
+
+      if (!teammate.hasWorkedOutToday) {
+        ctx.filter = 'grayscale(0.40)';
+      }
+
+      drawMapleChibiAvatar(ctx, {
+        x: -28,
+        y: -60,
+        bodyStage: teammate.bodyStage,
+        equipped: teammate.equipped,
+        state: state.phase === 'hit' ? 'CHEER' : 'IDLE',
+        facingRight: true,
+        frameTick: Math.floor(now / 16),
+      });
+
+      ctx.restore();
+
+      // Unattended teammate: draw bold and crisp Zzz above head
+      if (!teammate.hasWorkedOutToday) {
+        ctx.save();
+        const headTopY = ty - 56 * teammateScale;
+        const zOff = state.reducedMotion ? 0 : Math.sin(now / 300 + idx * 1.5) * 3;
+        const zX = tx + 4;
+        const zY = headTopY - 4 + zOff;
+        ctx.font = '900 13px "Noto Sans TC", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#ffffff';
+        ctx.strokeText('Zzz', zX, zY);
+        ctx.fillStyle = '#4f46e5';
+        ctx.fillText('Zzz', zX, zY);
+        ctx.restore();
+      }
+    });
+  }
+
+  // 2. Draw Hero in front (scale 1.0)
   ctx.save();
-  ctx.translate(w * 0.24 + lunge, floorY + 2);
+  ctx.translate(heroBaseX + lunge, floorY + 2);
   ctx.scale(scale, scale);
   drawMapleChibiAvatar(ctx, {
     x: -28,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dumbbell, Flame, Gift, Menu, Trophy, Users, Wrench, Zap } from 'lucide-react';
+import { ChevronLeft, Dumbbell, Flame, Gift, Menu, Trophy, Users, Wrench, Zap } from 'lucide-react';
 import { AdventureBoss } from '../../../config/catalogConfig';
 
 interface BattleHudProps {
@@ -9,7 +9,7 @@ interface BattleHudProps {
   currentHp: number;
   maxHp: number;
   armorBreak: boolean;
-  onModeChange: (mode: 'solo' | 'squad') => void;
+  onBackToMap: () => void;
   onOpenSubTab: (tab: 'combat_stats' | 'squad_invite' | 'ladder') => void;
   onOpenLootBag: () => void;
   onOpenDevCheat: () => void;
@@ -28,7 +28,7 @@ export const BattleHud: React.FC<BattleHudProps> = ({
   currentHp,
   maxHp,
   armorBreak,
-  onModeChange,
+  onBackToMap,
   onOpenSubTab,
   onOpenLootBag,
   onOpenDevCheat,
@@ -50,31 +50,19 @@ export const BattleHud: React.FC<BattleHudProps> = ({
       data-testid="battle-hud"
     >
       <div className="pointer-events-auto flex h-5 items-center gap-1">
-        <div className="flex shrink-0 rounded-full bg-muted p-px" role="group" aria-label="單人或組隊">
-          {(
-            [
-              { id: 'solo' as const, label: '單' },
-              { id: 'squad' as const, label: '隊' },
-            ]
-          ).map((item) => {
-            const active = mode === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onModeChange(item.id)}
-                className={`h-5 min-w-5 rounded-full px-1.5 text-[10px] font-black transition-colors duration-150 ${
-                  active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
+        <button
+          type="button"
+          aria-label="返回地圖"
+          onClick={onBackToMap}
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition-transform active:scale-95 shadow-sm"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
         <span className="shrink-0 rounded-full bg-primary px-1.5 text-[10px] font-black leading-5 text-primary-foreground">
           STAGE {stage}
+        </span>
+        <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-bold leading-5 text-muted-foreground">
+          {mode === 'squad' ? '組隊' : '單人'}
         </span>
         <h2 className="min-w-0 truncate text-[13px] font-black leading-5 text-foreground">{bossName}</h2>
         {armorBreak && mode === 'squad' && (
