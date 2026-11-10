@@ -35,11 +35,23 @@ export interface BossHiddenLoot {
   statDescZh: string;
 }
 
+export type AdventureBossSpriteKey =
+  | 'boss_sofa_potato'
+  | 'boss_boba_troll'
+  | 'boss_phone_ghost'
+  | 'boss_cheese_slime'
+  | 'boss_alarm_demon'
+  | 'boss_fried_chicken_lord';
+
 export interface AdventureBoss {
   id: string;
   stageNumber: number;
   nameZh: string;
+  /** Legacy copy marker. Battle, posters, and raid art must use spriteKey, not this field. */
   emoji: string;
+  spriteKey: AdventureBossSpriteKey;
+  bgKey: string;
+  landmarkKey: string;
   subtitleZh: string;
   descriptionZh: string;
   maxHp: number;
@@ -57,6 +69,9 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     stageNumber: 1,
     nameZh: '沙發馬鈴薯怪',
     emoji: '🥔',
+    spriteKey: 'boss_sofa_potato',
+    bgKey: 'arena_warm_daylight',
+    landmarkKey: 'landmark_lazy_sofa',
     subtitleZh: '陷在沙發爬不起來的怠惰巨物',
     descriptionZh: '肚子彈出洋芋片包裝，極度討厭站立與出汗！',
     maxHp: 1000,
@@ -77,6 +92,9 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     stageNumber: 2,
     nameZh: '宵夜珍奶巨魔',
     emoji: '🧋',
+    spriteKey: 'boss_boba_troll',
+    bgKey: 'arena_warm_daylight',
+    landmarkKey: 'landmark_boba_station',
     subtitleZh: '深夜 11 點誘惑發作的糖分史萊姆',
     descriptionZh: '全身覆蓋黑糖珍珠糖霜，物理打擊容易陷進去，怕高溫有氧魔法！',
     maxHp: 1800,
@@ -97,6 +115,9 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     stageNumber: 3,
     nameZh: '熬夜低頭幽靈',
     emoji: '📱',
+    spriteKey: 'boss_phone_ghost',
+    bgKey: 'arena_warm_daylight',
+    landmarkKey: 'landmark_phone_booth',
     subtitleZh: '駝背滑手機、黑眼圈深重的幽魂',
     descriptionZh: '圓肩與烏龜頸防禦極高，需要深蹲引體向上的強大力量打破姿勢！',
     maxHp: 2600,
@@ -117,6 +138,9 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     stageNumber: 4,
     nameZh: '熔岩起司黏怪',
     emoji: '🧀',
+    spriteKey: 'boss_cheese_slime',
+    bgKey: 'arena_warm_daylight',
+    landmarkKey: 'landmark_cheese_runway',
     subtitleZh: '牽絲高熱量的碳水油膩霸主',
     descriptionZh: '油膩防禦超強，唯有大排汗的有氧心肺魔法才能高溫蒸發！',
     maxHp: 3500,
@@ -137,6 +161,9 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     stageNumber: 5,
     nameZh: '賴床貪睡魔神',
     emoji: '⏰',
+    spriteKey: 'boss_alarm_demon',
+    bgKey: 'arena_warm_daylight',
+    landmarkKey: 'landmark_alarm_tower',
     subtitleZh: '按了 8 次貪睡鬧鐘的棉被封印怪',
     descriptionZh: '厚重棉被阻擋攻擊，需要晨型重訓者揮出千鈞重拳破除封印！',
     maxHp: 4800,
@@ -157,6 +184,9 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
     stageNumber: 6,
     nameZh: '暴食炸雞領主',
     emoji: '🍗',
+    spriteKey: 'boss_fried_chicken_lord',
+    bgKey: 'arena_warm_daylight',
+    landmarkKey: 'landmark_chicken_throne',
     subtitleZh: '戰隊世界 Boss · 金黃酥脆的萬卡霸王',
     descriptionZh: '外層硬油炸酥皮需物攻破盾，內層飽和脂肪需魔攻蒸發，需戰隊合作！',
     maxHp: 8000,

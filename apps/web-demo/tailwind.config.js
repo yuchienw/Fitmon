@@ -7,6 +7,27 @@ export default {
   theme: {
     extend: {
       colors: {
+        background: 'var(--color-background)',
+        foreground: 'var(--color-foreground)',
+        card: 'var(--color-card)',
+        muted: {
+          DEFAULT: 'var(--color-muted)',
+          foreground: 'var(--color-muted-foreground)',
+        },
+        border: 'var(--color-border)',
+        primary: {
+          DEFAULT: 'var(--color-primary)',
+          foreground: 'var(--color-on-primary)',
+        },
+        secondary: {
+          DEFAULT: 'var(--color-secondary)',
+          foreground: 'var(--color-on-secondary)',
+        },
+        accent: {
+          DEFAULT: 'var(--color-accent)',
+          foreground: 'var(--color-on-accent)',
+        },
+        destructive: 'var(--color-destructive)',
         retro: {
           bg: '#0b0d13',
           card: '#131722',

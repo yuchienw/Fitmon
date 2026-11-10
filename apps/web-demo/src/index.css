@@ -83,6 +83,27 @@
   --app-shell-bg: #faf6f0;
   --app-bar-bg: rgba(255, 252, 247, 0.95);
   --app-border: #e5dccb;
+  /* MASTER token names, cream Maple values (adventure + light shell) */
+  --color-background: #faf6f0;
+  --color-card: #ffffff;
+  --color-muted: #efe8dc;
+  --color-border: #e5dccb;
+  --color-foreground: #29221e;
+  --color-muted-foreground: #786b63;
+  --color-primary: #f97316;
+  --color-on-primary: #0f172a;
+  --color-secondary: #f59e0b;
+  --color-on-secondary: #0f172a;
+  --color-accent: #10b981;
+  --color-on-accent: #0f172a;
+  --color-destructive: #f43f5e;
+  --color-on-destructive: #ffffff;
+  --color-ring: #f97316;
+  --color-arena-top: #fff8ec;
+  --color-arena-bottom: #f5e6c8;
+  --color-hp-start: #f97316;
+  --color-hp-end: #f59e0b;
+  --shadow-card: 0 4px 0 #d8ccb8;
   color: #29221e;
 }
 
@@ -369,8 +390,107 @@
 }
 
 /* ============================================================================
+   ADVENTURE BATTLE — cream Maple daylight (P0)
+   Battle canvas height = 100dvh − TopHeader − BottomNav − SkillDeck(120px).
+   The live shell already subtracts the real header and nav; the raid pane then
+   reserves --adventure-skill-deck-h so the stage matches that formula.
+   Do not put game-stage-dark on this arena. That class stays for non-adventure
+   surfaces and a possible P2 night skin.
+   ============================================================================ */
+:root {
+  --adventure-top-header-h: calc(var(--safe-top, 0px) + 48px);
+  --adventure-bottom-nav-h: calc(48px + 0.375rem + 0.375rem + var(--safe-bottom, 0px));
+  --adventure-skill-deck-h: 120px;
+  --adventure-hud-h: 56px;
+  --adventure-battle-canvas-h: calc(
+    100dvh - var(--adventure-top-header-h) - var(--adventure-bottom-nav-h) - var(--adventure-skill-deck-h)
+  );
+}
+
+.adventure-shell {
+  --color-background: #faf6f0;
+  --color-card: #ffffff;
+  --color-muted: #efe8dc;
+  --color-border: #e5dccb;
+  --color-foreground: #29221e;
+  --color-muted-foreground: #786b63;
+  --color-primary: #f97316;
+  --color-on-primary: #0f172a;
+  --color-secondary: #f59e0b;
+  --color-on-secondary: #0f172a;
+  --color-accent: #10b981;
+  --color-on-accent: #0f172a;
+  --color-destructive: #f43f5e;
+  --color-on-destructive: #ffffff;
+  --color-ring: #f97316;
+  --color-arena-top: #fff8ec;
+  --color-arena-bottom: #f5e6c8;
+  --color-hp-start: #f97316;
+  --color-hp-end: #f59e0b;
+  --shadow-card: 0 4px 0 #d8ccb8;
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.adventure-arena {
+  background:
+    radial-gradient(circle at 82% 10%, rgba(255, 214, 120, 0.9), rgba(255, 214, 120, 0) 26%),
+    linear-gradient(180deg, var(--color-arena-top), var(--color-arena-bottom));
+  color: var(--color-foreground);
+}
+
+.adventure-battle-canvas {
+  height: var(--adventure-battle-canvas-h);
+  max-height: 100%;
+}
+
+.adventure-skill-deck {
+  height: var(--adventure-skill-deck-h);
+  flex: 0 0 var(--adventure-skill-deck-h);
+  background: var(--color-card);
+  border-top: 2px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+@keyframes adv-float {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-42px); }
+}
+
+@keyframes adv-crit {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@keyframes adv-loot-flash {
+  0% { opacity: 0; transform: translateY(8px) scale(0.92); }
+  25% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-16px) scale(1); }
+}
+
+.adv-float {
+  animation: adv-float 700ms ease-out forwards;
+}
+
+.adv-crit {
+  animation: adv-crit 320ms ease-out;
+}
+
+.adv-loot-flash {
+  animation: adv-loot-flash 600ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adv-crit,
+  .adv-shake {
+    animation: none !important;
+  }
+}
+
+/* ============================================================================
    GAME STAGE VIEWPORT PROTECTION (.game-stage-dark)
-   Keep RPG battle arenas & dark game stages authentic in both Light & Dark themes
+   Kept for non-adventure surfaces. Adventure battle uses .adventure-arena.
    ============================================================================ */
 .theme-light .game-stage-dark {
   background-color: #16131d !important;

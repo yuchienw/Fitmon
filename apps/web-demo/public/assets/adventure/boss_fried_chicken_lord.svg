@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img">
+  <title>暴食炸雞領主</title>
+  <ellipse cx="512" cy="930" rx="280" ry="34" fill="#3A2A22" opacity="0.16"/>
+  
+  <g stroke="#3A2A22" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M280 460 H760 L820 860 H220 Z" fill="#C23B22" stroke-width="12"/>
+    <path d="M250 540 Q180 650 220 800 L330 760 Q280 650 350 560 Z" fill="#E9842A" stroke-width="12"/>
+    <ellipse cx="520" cy="580" rx="220" ry="190" fill="#F6B34A" stroke-width="14"/>
+    <ellipse cx="600" cy="620" rx="110" ry="90" fill="#E5922E" stroke="none"/>
+    <circle cx="400" cy="520" r="26" fill="#F8C56A" stroke-width="8"/>
+    <circle cx="650" cy="510" r="20" fill="#F8C56A" stroke-width="8"/>
+    <circle cx="560" cy="690" r="18" fill="#E5922E" stroke-width="8"/>
+    <path d="M430 250 L470 330 H420 L490 410 H400 L470 250 Z" fill="#F4C95D" stroke-width="10"/>
+    <path d="M490 230 L545 340 H490 L600 430 H450 L545 230 Z" fill="#FFE08A" stroke-width="10"/>
+    <path d="M575 250 L630 330 H575 L660 410 H540 L640 250 Z" fill="#F4C95D" stroke-width="10"/>
+    <circle cx="520" cy="300" r="14" fill="#F43F5E" stroke-width="6"/>
+    <ellipse cx="450" cy="560" rx="38" ry="44" fill="#fffdf8" stroke-width="8"/>
+    <ellipse cx="590" cy="560" rx="38" ry="44" fill="#fffdf8" stroke-width="8"/>
+    <ellipse cx="458" cy="572" rx="14" ry="18" fill="#2A211C" stroke="none"/>
+    <ellipse cx="598" cy="572" rx="14" ry="18" fill="#2A211C" stroke="none"/>
+    <circle cx="464" cy="564" r="5" fill="#fff" stroke="none"/>
+    <circle cx="604" cy="564" r="5" fill="#fff" stroke="none"/>
+    <path d="M475 640 Q520 676 585 636" fill="none" stroke-width="10"/>
+    <path d="M740 470 Q850 520 870 660" fill="none" stroke="#F6B34A" stroke-width="32"/>
+    <path d="M740 470 Q850 520 870 660" fill="none" stroke-width="12"/>
+    <ellipse cx="430" cy="830" rx="46" ry="24" fill="#8A5A2B" stroke-width="8"/>
+    <ellipse cx="620" cy="830" rx="46" ry="24" fill="#8A5A2B" stroke-width="8"/>
+  </g>
+
+</svg>

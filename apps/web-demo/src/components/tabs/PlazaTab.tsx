@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Users,
   ShieldAlert,
@@ -7,53 +7,34 @@ import {
   Bell,
   Share2,
   Zap,
-  Clock,
-  Ticket,
-  Gem,
   Shirt,
   Sparkles,
   Copy,
   X,
   Gift,
-  Lock,
   Wrench,
   UserPlus,
   Edit3,
-  Download,
   Flame,
 } from 'lucide-react';
 import {
   useGameStore,
   TodayWorkoutStatus,
-  AdventureSportSkillType,
   SquadMemberState,
   SQUAD_CANDIDATE_POOL,
 } from '../../stores/useGameStore';
 import {
   ADVENTURE_BOSS_CATALOG,
   AVATAR_ITEMS,
-  AdventureBoss,
 } from '../../config/catalogConfig';
-import { BRAND_CONFIG } from '../../config/economyConfig';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
-import { drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
+import { bossSpriteUrl } from '../../game/pixelSpriteDrawer';
+import { AdventureRaidPane } from '../../features/adventure/battle/AdventureRaidPane';
+import { RareLootShareModal } from '../../features/adventure/share/RareLootShareModal';
+import { RareLootPosterData } from '../../features/adventure/share/types';
 
 type AdventureMainSubTab = 'raid' | 'combat_stats' | 'squad_invite' | 'ladder';
 type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
-
-interface FinalBlowVictoryReport {
-  clearedStage: number;
-  boss: AdventureBoss;
-  finalBlowDamage: number;
-  attackTypeLabel: string;
-  droppedLootName: string;
-}
-
-interface RareLootDropReport {
-  stage: number;
-  boss: AdventureBoss;
-  strikeDamage: number;
-}
 
 export const PlazaTab: React.FC = () => {
   const store = useGameStore();
@@ -69,33 +50,9 @@ export const PlazaTab: React.FC = () => {
   const [devCheatOpen, setDevCheatOpen] = useState(false);
   const [lootBagOpen, setLootBagOpen] = useState(false);
   const [inspectedMember, setInspectedMember] = useState<SquadMemberState | null>(null);
+  const [bagLootReport, setBagLootReport] = useState<RareLootPosterData | null>(null);
 
-  // Final-Blow Boss Victory Auto-Popup Modal State (Only pops up when player lands the killing blow!)
-  const [finalBlowReport, setFinalBlowReport] = useState<FinalBlowVictoryReport | null>(null);
-  const killPosterCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  // Rare Loot Drop Auto-Popup Modal State (Pops up when player rolls the ~18% rare loot drop!)
-  const [lootDropReport, setLootDropReport] = useState<RareLootDropReport | null>(null);
-  const lootPosterCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  // Combat animation states
-  const [isBossHit, setIsBossHit] = useState(false);
-  const [isAvatarLunging, setIsAvatarLunging] = useState(false);
-  const [floatingHit, setFloatingHit] = useState<{
-    damage: number;
-    isCrit: boolean;
-    label: string;
-    droppedLootName?: string;
-    isCheatPenalty?: boolean;
-  } | null>(null);
   const [shakingMemberId, setShakingMemberId] = useState<string | null>(null);
-  const [nowMs, setNowMs] = useState(Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   // Calculate player's current gear stats & attack damage range
   const slotLabels: { slot: keyof typeof store.equipped; labelZh: string }[] = [
     { slot: 'hair', labelZh: '頭飾' },
@@ -145,8 +102,6 @@ export const PlazaTab: React.FC = () => {
     ? Math.round(bossTemplate.maxHp * (1 + (currentStage - 1) * 0.25))
     : Math.round(bossTemplate.maxHp * 1.8 * (1 + (currentStage - 1) * 0.25));
   const currentHp = Math.min(maxHp, isSoloMode ? store.soloBossHp : store.squadBossHp);
-  const hpPercent = Math.max(0, Math.min(100, Math.round((currentHp / maxHp) * 100)));
-  const isLootCollected = store.collectedBossLoots.includes(bossTemplate.hiddenLoot.id);
 
   // Squad Boss info for Squad Invite tab reference
   const squadBossTemplate =
@@ -156,94 +111,12 @@ export const PlazaTab: React.FC = () => {
   );
   const squadCurrentHp = Math.min(squadMaxHp, store.squadBossHp);
 
-  // Cooldown status
-  const cooldownRemainingSec = Math.max(
-    0,
-    Math.floor((store.adventureCooldownUntil - nowMs) / 1000)
-  );
-  const isOnCooldown = cooldownRemainingSec > 0;
-
-  const todayIsoDate = new Date().toISOString().slice(0, 10);
-  const iapResetUsedToday =
-    store.dailyIapCooldownResetDate === todayIsoDate &&
-    (store.dailyIapCooldownResetCount || 0) >= 1;
-
-  const formatCooldown = (totalSec: number) => {
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
   // Squad attendance
   const legitSquadCount =
     (store.todayWorkoutStatus === 'legit_rest' ? 1 : 0) +
     store.squadMembers.filter((m) => m.hasWorkedOutToday && !m.isSuspectedCheater).length;
   const totalSquadSize = 1 + store.squadMembers.length;
-  const isFullAttendance = legitSquadCount === totalSquadSize;
   const missingMember = store.squadMembers.find((m) => !m.hasWorkedOutToday);
-
-  const handleManualStrike = () => {
-    if (store.todayWorkoutStatus === 'none') {
-      store.setActiveTab('workout');
-      store.showToast(
-        isSoloMode
-          ? '🏋️ 請先完成今日運動並跑完組間休息，即可回來單人出拳挑戰 Boss！'
-          : '🏋️ 請先完成今日運動並跑完組間休息，即可回來與隊友一起消磨 Boss 血量！'
-      );
-      return;
-    }
-    if (isOnCooldown) return;
-
-    // Capture the Boss & Stage before the strike in case this strike is the Final Blow
-    const stageBeforeStrike = isSoloMode ? store.soloStage : store.squadStage;
-    const bossBeforeStrike =
-      ADVENTURE_BOSS_CATALOG[(stageBeforeStrike - 1) % ADVENTURE_BOSS_CATALOG.length];
-
-    setIsAvatarLunging(true);
-    setTimeout(() => {
-      const res = store.attackAdventureBoss(adventureMode);
-      setIsAvatarLunging(false);
-      if (res) {
-        setIsBossHit(true);
-        setFloatingHit({
-          damage: res.damage,
-          isCrit: res.isCrit,
-          label: res.attackTypeLabel,
-          droppedLootName: res.droppedLootName,
-          isCheatPenalty: res.isCheatPenalty,
-        });
-        setTimeout(() => setIsBossHit(false), 500);
-        setTimeout(() => setFloatingHit(null), 2200);
-
-        // 1. When this player delivers the FINAL BLOW that defeats the Boss:
-        //    Pop up the pre-composed Boss Victory Share Modal!
-        // 2. Or when this player triggers the rare (~18%) Hidden Loot Drop:
-        //    Pop up the pre-composed Rare Loot Drop Share Modal!
-        if (res.defeated) {
-          setTimeout(() => {
-            setFinalBlowReport({
-              clearedStage: stageBeforeStrike,
-              boss: bossBeforeStrike,
-              finalBlowDamage: res.damage,
-              attackTypeLabel: res.attackTypeLabel,
-              droppedLootName:
-                res.droppedLootName ||
-                `${bossBeforeStrike.hiddenLoot.emoji} ${bossBeforeStrike.hiddenLoot.nameZh}`,
-            });
-          }, 450);
-        } else if (res.droppedLootName) {
-          setTimeout(() => {
-            setLootDropReport({
-              stage: stageBeforeStrike,
-              boss: bossBeforeStrike,
-              strikeDamage: res.damage,
-            });
-          }, 450);
-        }
-      }
-    }, 220);
-  };
 
   const handleNudge = (memberId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -252,543 +125,14 @@ export const PlazaTab: React.FC = () => {
     setTimeout(() => setShakingMemberId(null), 600);
   };
 
-  // Render the fixed, pre-composed Final-Blow Boss Victory Poster whenever finalBlowReport is present
-  useEffect(() => {
-    if (!finalBlowReport) return;
-    const canvas = killPosterCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const W = 720;
-    const H = 960;
-    canvas.width = W;
-    canvas.height = H;
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-
-    // 1. Dark Golden-Crimson Raid Colosseum Background
-    const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.34, 30, W * 0.5, H * 0.42, W * 0.85);
-    bgGrad.addColorStop(0, '#451a03');
-    bgGrad.addColorStop(0.45, '#1e1b4b');
-    bgGrad.addColorStop(1, '#090d16');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, W, H);
-
-    // Victory Sunburst Rays
-    ctx.save();
-    ctx.translate(W * 0.5, H * 0.34);
-    for (let i = 0; i < 18; i++) {
-      ctx.rotate((Math.PI * 2) / 18);
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(251, 191, 36, 0.08)' : 'rgba(244, 63, 94, 0.04)';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(-38, -W);
-      ctx.lineTo(38, -W);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Outer Gold Arcade Frame
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(20, 20, W - 40, H - 40);
-
-    // 2. Top Header: FINAL BLOW · BOSS CLEARED
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-    ctx.beginPath();
-    ctx.roundRect(44, 42, W - 88, 86, 18);
-    ctx.fill();
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = '900 18px "Barlow Condensed", "Noto Sans TC", sans-serif';
-    ctx.fillText(`⚡ FINAL BLOW · 戰隊討伐最後一擊捷報 ⚡`, W / 2, 74);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 28px "Noto Sans TC", sans-serif';
-    ctx.fillText(
-      `STAGE ${finalBlowReport.clearedStage} 【${finalBlowReport.boss.nameZh}】討伐成功！`,
-      W / 2,
-      110
-    );
-
-    // 3. Arena Floor & Visual Showdown (Defeated Boss on Left + Final-Blow Hero Avatar on Right)
-    const floorY = 500;
-    const floorGrad = ctx.createLinearGradient(22, floorY, 22, H - 22);
-    floorGrad.addColorStop(0, '#1e293b');
-    floorGrad.addColorStop(0.2, '#0f172a');
-    floorGrad.addColorStop(1, '#020617');
-    ctx.fillStyle = floorGrad;
-    ctx.fillRect(22, floorY, W - 44, H - floorY - 22);
-
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(22, floorY);
-    ctx.lineTo(W - 22, floorY);
-    ctx.stroke();
-
-    // Left: Defeated Boss Medallion + Slanted "最後一擊斬殺" Stamp
-    const bossX = 220;
-    const bossY = 320;
-    ctx.save();
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-    ctx.beginPath();
-    ctx.arc(bossX, bossY, 96, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(244, 63, 94, 0.65)';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-
-    ctx.font = '106px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(finalBlowReport.boss.emoji, bossX, bossY);
-
-    // Slanted Stamp
-    ctx.translate(bossX, bossY + 54);
-    ctx.rotate(-0.14);
-    ctx.fillStyle = '#e11d48';
-    ctx.beginPath();
-    ctx.roundRect(-110, -22, 220, 44, 10);
-    ctx.fill();
-    ctx.strokeStyle = '#fde047';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 22px "Barlow Condensed", "Noto Sans TC", sans-serif';
-    ctx.fillText('💥 DEFEATED 擊破', 0, 2);
-    ctx.restore();
-
-    // Right: Final-Blow Player's Chibi Avatar on Victory Podium
-    const heroX = 505;
-    const heroY = 445;
-    ctx.save();
-    ctx.translate(heroX, heroY);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.beginPath();
-    ctx.ellipse(0, 6, 62, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    const avatarScale = 3.7;
-    ctx.scale(avatarScale, avatarScale);
-    drawMapleChibiAvatar(ctx, {
-      x: -28,
-      y: -60,
-      bodyStage: store.bodyStage,
-      equipped: store.equipped,
-      state: 'CHEER',
-      expressionOverride: 'smile',
-      facingRight: false,
-      frameTick: 10,
-    });
-    ctx.restore();
-
-    // Final-Blow Badge under Hero
-    ctx.save();
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.95)';
-    ctx.beginPath();
-    ctx.roundRect(heroX - 135, 458, 270, 36, 10);
-    ctx.fill();
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#022c22';
-    ctx.font = '900 17px "Noto Sans TC", sans-serif';
-    ctx.fillText(`👑 最後一擊終結者：${store.nickname}`, heroX, 481);
-    ctx.restore();
-
-    // 4. Lower Section: Final Blow Damage + Shared Squad Co-op Contribution Card
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect(44, 526, W - 88, 134, 18);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(52, 211, 153, 0.55)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#34d399';
-    ctx.font = '800 16px "Noto Sans TC", sans-serif';
-    ctx.fillText(`⚔️ 致勝絕招：${finalBlowReport.attackTypeLabel}`, 68, 560);
-
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = '900 44px "Barlow Condensed", monospace';
-    ctx.fillText(`-${finalBlowReport.finalBlowDamage.toLocaleString()} HP (最後一擊)`, 68, 608);
-
-    ctx.fillStyle = '#fde047';
-    ctx.font = '800 17px "Noto Sans TC", sans-serif';
-    ctx.fillText(
-      `🎁 戰利品掉落：${finalBlowReport.droppedLootName}   ·   賞金 +${finalBlowReport.boss.rewardCoins} 🪙`,
-      68,
-      642
-    );
-
-    // Squad Co-op Contribution Box
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect(44, 678, W - 88, 190, 18);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = '900 18px "Noto Sans TC", sans-serif';
-    ctx.fillText(`🛡️ ${store.squadName} · 全隊共同消磨血量紀錄`, 68, 712);
-
-    const allPartyRows = [
-      {
-        name: `${store.nickname} (最後一擊 👑)`,
-        dmg: `${finalBlowReport.finalBlowDamage.toLocaleString()} HP`,
-        highlight: true,
-      },
-      ...store.squadMembers.map((m) => ({
-        name: m.nameZh,
-        dmg: m.hasWorkedOutToday ? `${m.damageDealt.toLocaleString()} HP` : '未出勤 (0 HP)',
-        highlight: false,
-      })),
-    ];
-
-    allPartyRows.slice(0, 4).forEach((row, idx) => {
-      const y = 748 + idx * 30;
-      ctx.fillStyle = row.highlight ? '#34d399' : '#cbd5e1';
-      ctx.font = row.highlight
-        ? '900 16px "Noto Sans TC", sans-serif'
-        : '700 15px "Noto Sans TC", sans-serif';
-      ctx.fillText(`${idx + 1}. ${row.name}`, 68, y);
-
-      ctx.textAlign = 'right';
-      ctx.fillStyle = row.highlight ? '#fbbf24' : '#f8fafc';
-      ctx.font = '900 17px "Barlow Condensed", monospace';
-      ctx.fillText(row.dmg, W - 68, y);
-      ctx.textAlign = 'left';
-    });
-
-    // 5. Bottom Official Brand Watermark
-    const todayStr = new Date().toLocaleDateString('zh-TW');
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '800 16px "Barlow Condensed", "Noto Sans TC", sans-serif';
-    ctx.fillText(
-      `⚡ ${BRAND_CONFIG.appName} Official Raid Certificate · Lv.${store.level} ${store.nickname} · ${todayStr}`,
-      W / 2,
-      H - 42
-    );
-
-    ctx.restore();
-  }, [finalBlowReport, store.bodyStage, store.equipped, store.level, store.nickname, store.squadMembers, store.squadName]);
-
-  const handleDownloadKillPoster = () => {
-    const canvas = killPosterCanvasRef.current;
-    if (!canvas || !finalBlowReport) return;
-    const dataUrl = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `fitmon-boss-clear-stage-${finalBlowReport.clearedStage}.png`;
-    link.href = dataUrl;
-    link.click();
-    store.showToast('💾 已儲存 Boss 最後一擊討伐戰報圖！');
-  };
-
-  const handleShareKillPoster = async () => {
-    const canvas = killPosterCanvasRef.current;
-    if (!canvas || !finalBlowReport) return;
-    try {
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((b) => resolve(b), 'image/png')
-      );
-      if (blob && typeof navigator !== 'undefined' && navigator.share) {
-        const file = new File(
-          [blob],
-          `fitmon-boss-clear-stage-${finalBlowReport.clearedStage}.png`,
-          { type: 'image/png' }
-        );
-        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `FitMon 討伐捷報：我給出了 Stage ${finalBlowReport.clearedStage} Boss 最後一擊！`,
-            files: [file],
-          });
-          store.showToast('📲 已開啟系統分享選單！');
-          return;
-        }
-      }
-    } catch {
-      // fallback to download
-    }
-    handleDownloadKillPoster();
-  };
-
-  // Render the fixed, pre-composed SSR Rare Loot Drop Poster whenever lootDropReport is present
-  useEffect(() => {
-    if (!lootDropReport) return;
-    const canvas = lootPosterCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const W = 720;
-    const H = 960;
-    canvas.width = W;
-    canvas.height = H;
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-
-    // 1. Royal Purple & Gold SSR Treasure Background
-    const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.34, 30, W * 0.5, H * 0.42, W * 0.85);
-    bgGrad.addColorStop(0, '#581c87');
-    bgGrad.addColorStop(0.45, '#1e1b4b');
-    bgGrad.addColorStop(1, '#090d16');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, W, H);
-
-    // Golden SSR Sunburst Rays
-    ctx.save();
-    ctx.translate(W * 0.5, H * 0.35);
-    for (let i = 0; i < 20; i++) {
-      ctx.rotate((Math.PI * 2) / 20);
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(251, 191, 36, 0.11)' : 'rgba(192, 132, 252, 0.05)';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(-34, -W);
-      ctx.lineTo(34, -W);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Outer Gold & Purple Frame
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(20, 20, W - 40, H - 40);
-
-    // 2. Top Header: SSR RARE LOOT DROP
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect(44, 42, W - 88, 86, 18);
-    ctx.fill();
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = '900 18px "Barlow Condensed", "Noto Sans TC", sans-serif';
-    ctx.fillText(`✨ SSR RARE LOOT DROP · 歐皇稀有噴裝捷報 ✨`, W / 2, 74);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '900 26px "Noto Sans TC", sans-serif';
-    ctx.fillText(
-      `恭喜打落隱藏神裝【${lootDropReport.boss.hiddenLoot.nameZh}】！`,
-      W / 2,
-      110
-    );
-
-    // 3. Treasure Stage Floor & Showcase (Giant SSR Item Pedestal on Left + Lucky Hero Avatar on Right)
-    const floorY = 500;
-    const floorGrad = ctx.createLinearGradient(22, floorY, 22, H - 22);
-    floorGrad.addColorStop(0, '#311042');
-    floorGrad.addColorStop(0.25, '#0f172a');
-    floorGrad.addColorStop(1, '#020617');
-    ctx.fillStyle = floorGrad;
-    ctx.fillRect(22, floorY, W - 44, H - floorY - 22);
-
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(22, floorY);
-    ctx.lineTo(W - 22, floorY);
-    ctx.stroke();
-
-    // Left: Glowing SSR Treasure Circle
-    const itemX = 225;
-    const itemY = 320;
-    ctx.save();
-    ctx.fillStyle = 'rgba(88, 28, 135, 0.65)';
-    ctx.beginPath();
-    ctx.arc(itemX, itemY, 102, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#fde047';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-
-    ctx.font = '112px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(lootDropReport.boss.hiddenLoot.emoji, itemX, itemY - 4);
-
-    // Slanted SSR Stamp
-    ctx.translate(itemX, itemY + 62);
-    ctx.rotate(-0.1);
-    ctx.fillStyle = '#f59e0b';
-    ctx.beginPath();
-    ctx.roundRect(-115, -21, 230, 42, 10);
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-    ctx.fillStyle = '#090d16';
-    ctx.font = '900 20px "Barlow Condensed", "Noto Sans TC", sans-serif';
-    ctx.fillText('★ SSR 稀有掉率 18% ★', 0, 2);
-    ctx.restore();
-
-    // Right: Lucky Player's Chibi Avatar Cheering
-    const heroX = 505;
-    const heroY = 445;
-    ctx.save();
-    ctx.translate(heroX, heroY);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.beginPath();
-    ctx.ellipse(0, 6, 62, 16, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    const avatarScale = 3.7;
-    ctx.scale(avatarScale, avatarScale);
-    drawMapleChibiAvatar(ctx, {
-      x: -28,
-      y: -60,
-      bodyStage: store.bodyStage,
-      equipped: store.equipped,
-      state: 'CHEER',
-      expressionOverride: 'smile',
-      facingRight: false,
-      frameTick: 10,
-    });
-    ctx.restore();
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(251, 191, 36, 0.95)';
-    ctx.beginPath();
-    ctx.roundRect(heroX - 135, 458, 270, 36, 10);
-    ctx.fill();
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#090d16';
-    ctx.font = '900 17px "Noto Sans TC", sans-serif';
-    ctx.fillText(`🎉 歐皇得主：${store.nickname}`, heroX, 481);
-    ctx.restore();
-
-    // 4. Lower Section: Item Attribute Card + Lucky Drop Quote
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-    ctx.beginPath();
-    ctx.roundRect(44, 530, W - 88, 175, 18);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.65)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#c084fc';
-    ctx.font = '900 16px "Noto Sans TC", sans-serif';
-    ctx.fillText(
-      `👾 掉落出處：STAGE ${lootDropReport.stage} 【${lootDropReport.boss.nameZh}】`,
-      68,
-      568
-    );
-
-    ctx.fillStyle = '#fde047';
-    ctx.font = '900 34px "Noto Sans TC", sans-serif';
-    ctx.fillText(
-      `${lootDropReport.boss.hiddenLoot.emoji} ${lootDropReport.boss.hiddenLoot.nameZh}`,
-      68,
-      618
-    );
-
-    ctx.fillStyle = '#34d399';
-    ctx.font = '900 22px "Noto Sans TC", sans-serif';
-    ctx.fillText(`⚡ 裝備加成：${lootDropReport.boss.hiddenLoot.statDescZh}`, 68, 660);
-
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '700 15px "Noto Sans TC", sans-serif';
-    ctx.fillText(
-      `（平均需全隊揮拳討伐 5～6 次才會爆出 1 件，非人人皆可入手！）`,
-      68,
-      690
-    );
-
-    // Bragging Banner
-    ctx.fillStyle = 'rgba(88, 28, 135, 0.45)';
-    ctx.beginPath();
-    ctx.roundRect(44, 725, W - 88, 132, 18);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(192, 132, 252, 0.5)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = '900 22px "Noto Sans TC", sans-serif';
-    ctx.fillText('「誰說運動不會噴寶？今天組間休息練滿直接掉神裝！」', W / 2, 778);
-
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = '800 17px "Noto Sans TC", sans-serif';
-    ctx.fillText(`🛡️ 所屬戰隊：${store.squadName}`, W / 2, 822);
-
-    // 5. Bottom Official Brand Watermark
-    const todayStr = new Date().toLocaleDateString('zh-TW');
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '800 16px "Barlow Condensed", "Noto Sans TC", sans-serif';
-    ctx.fillText(
-      `⚡ ${BRAND_CONFIG.appName} Official Rare Loot Certificate · Lv.${store.level} ${store.nickname} · ${todayStr}`,
-      W / 2,
-      H - 42
-    );
-
-    ctx.restore();
-  }, [lootDropReport, store.bodyStage, store.equipped, store.level, store.nickname, store.squadName]);
-
-  const handleDownloadLootPoster = () => {
-    const canvas = lootPosterCanvasRef.current;
-    if (!canvas || !lootDropReport) return;
-    const dataUrl = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `fitmon-rare-loot-${lootDropReport.boss.hiddenLoot.id}.png`;
-    link.href = dataUrl;
-    link.click();
-    store.showToast('💾 已儲存歐皇稀有噴裝炫耀圖！');
-  };
-
-  const handleShareLootPoster = async () => {
-    const canvas = lootPosterCanvasRef.current;
-    if (!canvas || !lootDropReport) return;
-    try {
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((b) => resolve(b), 'image/png')
-      );
-      if (blob && typeof navigator !== 'undefined' && navigator.share) {
-        const file = new File(
-          [blob],
-          `fitmon-rare-loot-${lootDropReport.boss.hiddenLoot.id}.png`,
-          { type: 'image/png' }
-        );
-        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: `FitMon 歐皇噴裝：我打到了隱藏神裝【${lootDropReport.boss.hiddenLoot.nameZh}】！`,
-            files: [file],
-          });
-          store.showToast('📲 已開啟系統分享選單！');
-          return;
-        }
-      }
-    } catch {
-      // fallback to download
-    }
-    handleDownloadLootPoster();
-  };
-
   // Sync inspectedMember with latest store state
   const liveInspectedMember = inspectedMember
     ? store.squadMembers.find((m) => m.id === inspectedMember.id) || null
     : null;
 
   return (
-    <div className="p-3 space-y-2.5 pb-10 relative">
-      {/* 1. COMPACT GAME HUD TOP BAR: 3 RPG VIEW PILLS + LOOT BAG + DEV CHEAT BUTTON */}
+    <div className={mainSubTab === 'raid' ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden' : 'relative space-y-2.5 p-3 pb-10'}>
+      {mainSubTab !== 'raid' && (
       <div className="flex items-center justify-between gap-1.5 flex-wrap">
         <div
           role="tablist"
@@ -848,10 +192,11 @@ export const PlazaTab: React.FC = () => {
           </button>
         </div>
       </div>
+      )}
 
       {/* FLOATING DEV CHEAT POPOVER (Hidden until 🛠️ 外掛 is tapped) */}
       {devCheatOpen && (
-        <div className="p-3 rounded-2xl bg-slate-950/95 backdrop-blur-md border-2 border-cyan-400 shadow-2xl space-y-2.5 z-40">
+        <div className="absolute left-2 right-2 top-2 z-40 space-y-2.5 rounded-2xl border-2 border-cyan-400 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between text-xs font-black text-cyan-300">
             <span>🛠️ MVP 驗收測試外掛（運動判定 / 最後一擊斬殺測試）</span>
             <button
@@ -928,555 +273,14 @@ export const PlazaTab: React.FC = () => {
         </div>
       )}
 
-      {/* ================================================================= */}
-      {/* TAB 1: ⚔️ ADVENTURE ARENA (SOLO ADVENTURE VS SQUAD ADVENTURE)     */}
-      {/* ================================================================= */}
       {mainSubTab === 'raid' && (
-        <div className="space-y-2.5">
-          {/* SOLO vs SQUAD ADVENTURE MODE SWITCHER */}
-          <div className="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-2xl border border-slate-800">
-            <button
-              onClick={() => setAdventureMode('solo')}
-              className={`p-2 rounded-xl text-left transition flex items-center justify-between gap-1.5 ${
-                isSoloMode
-                  ? 'bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 shadow-md'
-                  : 'text-slate-300 hover:text-white bg-slate-950/50'
-              }`}
-            >
-              <div>
-                <div className="text-xs font-black flex items-center gap-1">
-                  <span>🗡️ 單人冒險</span>
-                </div>
-                <div
-                  className={`text-[10px] font-bold mt-0.5 ${
-                    isSoloMode ? 'text-slate-900' : 'text-slate-400'
-                  }`}
-                >
-                  單人輸出 · 1.0x 怪物強度
-                </div>
-              </div>
-              <span
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-black shrink-0 ${
-                  isSoloMode
-                    ? 'bg-slate-950/20 text-slate-950'
-                    : 'bg-slate-800 text-cyan-300'
-                }`}
-              >
-                S.{store.soloStage}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setAdventureMode('squad')}
-              className={`p-2 rounded-xl text-left transition flex items-center justify-between gap-1.5 ${
-                !isSoloMode
-                  ? 'bg-gradient-to-r from-emerald-400 to-amber-400 text-slate-950 shadow-md'
-                  : 'text-slate-300 hover:text-white bg-slate-950/50'
-              }`}
-            >
-              <div>
-                <div className="text-xs font-black flex items-center gap-1">
-                  <span>🛡️ 組隊冒險</span>
-                </div>
-                <div
-                  className={`text-[10px] font-bold mt-0.5 ${
-                    !isSoloMode ? 'text-slate-900' : 'text-slate-400'
-                  }`}
-                >
-                  全隊共鬥 · 1.8x 怪物強度
-                </div>
-              </div>
-              <span
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-black shrink-0 ${
-                  !isSoloMode
-                    ? 'bg-slate-950/20 text-slate-950'
-                    : 'bg-slate-800 text-emerald-300'
-                }`}
-              >
-                S.{store.squadStage}
-              </span>
-            </button>
-          </div>
-
-          {/* 1. IMMERSIVE DARK RPG BATTLE STAGE VIEWPORT */}
-          <div className="game-stage-dark rounded-3xl border-2 border-slate-700/90 shadow-2xl overflow-hidden relative p-3.5 space-y-3">
-            {/* Ambient Dungeon Grid & Glow */}
-            <div
-              className="absolute inset-0 opacity-20 pointer-events-none"
-              style={{
-                backgroundImage:
-                  'radial-gradient(circle at 75% 30%, rgba(244,63,94,0.35), transparent 55%), radial-gradient(circle at 25% 45%, rgba(16,185,129,0.25), transparent 50%)',
-              }}
-            />
-
-            {/* Top HUD Row: Progress Pill + Boss Weakness & Loot Pill */}
-            <div className="relative z-10 flex items-center justify-between gap-1.5 flex-wrap">
-              <div
-                className={`px-2.5 py-1 rounded-xl bg-black/60 border text-[11px] font-black flex items-center gap-1.5 ${
-                  isSoloMode
-                    ? 'border-cyan-400/50 text-cyan-300'
-                    : 'border-emerald-400/40 text-emerald-300'
-                }`}
-              >
-                {isSoloMode ? (
-                  <>
-                    <Swords className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                    <span>單人冒險進度 · STAGE {currentStage}（1.0x 標準強度）</span>
-                  </>
-                ) : (
-                  <>
-                    <Users className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>組隊同步進度 · STAGE {currentStage}（1.8x 團隊強度）</span>
-                  </>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1">
-                <span className="px-2 py-1 rounded-lg bg-black/60 border border-amber-400/50 text-[10px] font-black text-amber-300">
-                  弱點:{bossTemplate.weakness === 'phy' ? '🥊物攻' : bossTemplate.weakness === 'mag' ? '🪄魔攻' : '⚡全能'}
-                </span>
-                <button
-                  onClick={() => setLootBagOpen(true)}
-                  className="px-2 py-1 rounded-lg bg-black/60 border border-purple-400/50 text-[10px] font-black text-amber-300 flex items-center gap-1"
-                >
-                  <span>{bossTemplate.hiddenLoot.emoji}</span>
-                  <span>{isLootCollected ? '已掉寶' : '可噴裝'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Boss Name Banner + HP Bar */}
-            <div className="relative z-10 space-y-1">
-              <div className="flex items-center justify-between px-1 gap-2 flex-wrap">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-white text-[10px] font-black shrink-0 ${
-                      isSoloMode ? 'bg-cyan-600' : 'bg-rose-500'
-                    }`}
-                  >
-                    {isSoloMode ? `單人 STAGE ${currentStage}` : `組隊 STAGE ${currentStage}`}
-                  </span>
-                  <h3 className="text-sm font-black text-white break-words">
-                    {bossTemplate.nameZh}
-                  </h3>
-                </div>
-                <span className="text-[11px] font-mono font-black text-amber-300 shrink-0">
-                  賞金 +{bossTemplate.rewardCoins}🪙
-                </span>
-              </div>
-
-              <div className="relative h-6 w-full rounded-full bg-black/80 border-2 border-rose-500/60 overflow-hidden shadow-inner">
-                <div
-                  className="h-full bg-gradient-to-r from-rose-600 via-orange-500 to-amber-400 transition-all duration-300"
-                  style={{ width: `${hpPercent}%` }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono font-black text-white drop-shadow">
-                  ❤️ {isSoloMode ? '單人消磨血量' : '全隊共同消磨'}：{currentHp.toLocaleString()} / {maxHp.toLocaleString()} HP ({hpPercent}%)
-                </div>
-              </div>
-
-              {!isSoloMode && store.activeTeamComboBuff === 'armor_break' && (
-                <div className="px-2.5 py-1 rounded-lg bg-cyan-950/90 border border-cyan-400/60 text-center text-[10px] font-black text-cyan-200">
-                  🔨 隊友阿凱已破甲！選【🔥 燃脂魔焰】出擊享 2.0 倍連攜引爆！
-                </div>
-              )}
-            </div>
-
-            {/* Visual Showdown Stage: Hero Paper-Doll vs Giant Boss */}
-            <div className="relative z-10 h-44 flex items-center justify-between px-3 pt-2">
-              {/* Left: Player Hero + Quick Gear Pill */}
-              <div
-                className={`flex flex-col items-center transition-transform duration-200 ${
-                  isAvatarLunging ? 'translate-x-14 scale-110' : ''
-                }`}
-              >
-                <div className="rounded-2xl border-2 border-emerald-400/60 bg-slate-900/90 p-1.5 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
-                  <AvatarPortraitCanvas
-                    bodyStage={store.bodyStage}
-                    equipped={store.equipped}
-                    size={78}
-                  />
-                </div>
-                <button
-                  onClick={() => store.setWardrobeModalOpen(true)}
-                  className="mt-1.5 px-2 py-0.5 rounded-full bg-slate-800 border border-slate-600 text-[10px] font-black text-white flex items-center gap-1 shadow"
-                >
-                  <Shirt className="w-3 h-3 text-cyan-300" />
-                  <span>🥊{myPhyAtk} · 🪄{myMagAtk}</span>
-                </button>
-              </div>
-
-              {/* Center: Floating Hit Numbers & Loot Drop Callout */}
-              <div className="flex flex-col items-center justify-center z-20 pointer-events-none">
-                {floatingHit ? (
-                  <div className="animate-bounce text-center space-y-1">
-                    <span className="px-2 py-0.5 rounded-full bg-black/90 border border-amber-400 text-[10px] font-black text-amber-300 block">
-                      {floatingHit.label}
-                    </span>
-                    <div
-                      className={`font-mono font-black ${
-                        floatingHit.isCheatPenalty
-                          ? 'text-base text-slate-400'
-                          : floatingHit.isCrit
-                          ? 'text-2xl text-amber-300 drop-shadow-[0_2px_10px_rgba(251,191,36,0.9)]'
-                          : 'text-xl text-rose-400'
-                      }`}
-                    >
-                      -{floatingHit.damage} HP!
-                    </div>
-                    {floatingHit.droppedLootName && (
-                      <span className="px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 text-[10px] font-black block shadow-lg">
-                        🎁 噴裝：{floatingHit.droppedLootName}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-mono font-black text-slate-400">
-                    VS
-                  </div>
-                )}
-              </div>
-
-              {/* Right: Giant Animated Boss Sprite */}
-              <div
-                onClick={handleManualStrike}
-                className={`cursor-pointer flex flex-col items-center transition-transform duration-150 ${
-                  isBossHit ? 'translate-x-3 -translate-y-2 scale-90 brightness-150' : ''
-                }`}
-              >
-                <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-rose-950/90 to-slate-900 border-2 border-rose-500/60 flex items-center justify-center text-6xl shadow-[0_0_30px_rgba(244,63,94,0.35)] relative">
-                  <span>{bossTemplate.emoji}</span>
-                  {isBossHit && (
-                    <span className="absolute -top-2 -right-2 text-2xl animate-ping">💥</span>
-                  )}
-                </div>
-                <span className="mt-1.5 px-2 py-0.5 rounded-full bg-rose-950/90 border border-rose-500/40 text-rose-200 text-[10px] font-black text-center leading-tight">
-                  {bossTemplate.subtitleZh}
-                </span>
-              </div>
-            </div>
-
-            {/* Bottom of Stage: Solo Challenger Dock vs 4-Player Shared Squad Dock */}
-            {isSoloMode ? (
-              <div className="relative z-10 pt-2 border-t border-white/10 space-y-2">
-                <div className="flex items-center justify-between px-0.5 gap-1.5 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-black text-cyan-300">
-                      🗡️ 單人孤狼挑戰 · 獨立輸出
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 text-[10px] font-black">
-                      沒朋友也能單刷衝榜
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setLadderCat('solo_stage');
-                      setMainSubTab('ladder');
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-[10px] flex items-center gap-1 shadow"
-                  >
-                    <Trophy className="w-3 h-3" />
-                    <span>查看個人天梯</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-700">
-                    <div className="text-[10px] text-slate-400 font-bold">今日出擊狀態</div>
-                    <div className="text-xs font-black text-emerald-300 mt-0.5">
-                      {store.todayWorkoutStatus === 'legit_rest'
-                        ? '✅ 已充能完畢'
-                        : store.todayWorkoutStatus === 'cheated_fast'
-                        ? '⚠️ 刮痧懲罰中'
-                        : '🔒 待運動充能'}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-700">
-                    <div className="text-[10px] text-slate-400 font-bold">個人最高關卡</div>
-                    <div className="text-xs font-mono font-black text-cyan-300 mt-0.5">
-                      Stage {store.personalMaxStage}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-700">
-                    <div className="text-[10px] text-slate-400 font-bold">單擊最高傷害</div>
-                    <div className="text-xs font-mono font-black text-amber-300 mt-0.5">
-                      {store.personalMaxDamage.toLocaleString()} HP
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="relative z-10 pt-2 border-t border-white/10 space-y-2">
-                <div className="flex items-center justify-between px-0.5 gap-1.5 flex-wrap">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] font-black text-white break-words">
-                      🛡️ {store.squadName}
-                    </span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-black ${
-                        isFullAttendance
-                          ? 'bg-emerald-500 text-slate-950'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
-                      }`}
-                    >
-                      今日已出擊 {legitSquadCount}/{totalSquadSize} {isFullAttendance ? '⚡狂暴1.5x' : ''}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setMainSubTab('squad_invite')}
-                      className="px-2 py-0.5 rounded-lg bg-cyan-500/20 border border-cyan-400/60 text-cyan-300 font-black text-[10px] flex items-center gap-1 hover:bg-cyan-500/30 transition"
-                    >
-                      <UserPlus className="w-3 h-3" />
-                      <span>邀請朋友</span>
-                    </button>
-                    <button
-                      onClick={() => store.setShareRaidModalOpen(true)}
-                      className="px-2 py-0.5 rounded-lg bg-emerald-500 text-slate-950 font-black text-[10px] flex items-center gap-1 shadow"
-                    >
-                      <Share2 className="w-3 h-3" />
-                      <span>催促全隊</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 4-Slot Horizontal Squad Cards */}
-                <div className="grid grid-cols-4 gap-1.5">
-                  {/* Slot 1: Captain / Me */}
-                  <div
-                    className={`p-1.5 rounded-xl border text-center flex flex-col items-center justify-between ${
-                      store.todayWorkoutStatus === 'legit_rest'
-                        ? 'bg-emerald-950/60 border-emerald-400'
-                        : store.todayWorkoutStatus === 'cheated_fast'
-                        ? 'bg-rose-950/60 border-rose-400'
-                        : 'bg-slate-900/90 border-slate-700'
-                    }`}
-                  >
-                    <div className="text-base">
-                      {store.todayWorkoutStatus === 'legit_rest'
-                        ? '🦸'
-                        : store.todayWorkoutStatus === 'cheated_fast'
-                        ? '🤥'
-                        : '😴'}
-                    </div>
-                    <div className="text-[10px] font-black text-white break-words leading-tight w-full">
-                      {store.nickname}
-                    </div>
-                    <span className="mt-1 px-1 py-0.5 rounded bg-black/50 text-[9px] font-black text-emerald-300 w-full leading-tight">
-                      {store.todayWorkoutStatus === 'legit_rest'
-                        ? '✅ 已充能'
-                        : store.todayWorkoutStatus === 'cheated_fast'
-                        ? '⚠️ 刮痧中'
-                        : '🔒 未運動'}
-                    </span>
-                  </div>
-
-                  {/* Slots 2~4: Joined Squad Friends or Captain Invite Slot */}
-                  {[0, 1, 2].map((slotIdx) => {
-                    const member = store.squadMembers[slotIdx];
-                    if (!member) {
-                      return (
-                        <button
-                          key={`empty_slot_${slotIdx}`}
-                          onClick={() => setMainSubTab('squad_invite')}
-                          className="p-1.5 rounded-xl border border-dashed border-cyan-400/50 bg-slate-900/50 hover:bg-cyan-950/40 text-center flex flex-col items-center justify-center gap-1 transition min-h-[72px]"
-                        >
-                          <UserPlus className="w-4 h-4 text-cyan-400" />
-                          <span className="text-[10px] font-black text-cyan-300 leading-tight">
-                            ＋ 邀朋友入隊
-                          </span>
-                        </button>
-                      );
-                    }
-                    const isShaking = shakingMemberId === member.id;
-                    return (
-                      <div
-                        key={member.id}
-                        onClick={() => setInspectedMember(member)}
-                        className={`cursor-pointer p-1.5 rounded-xl border text-center flex flex-col items-center justify-between transition ${
-                          isShaking ? 'animate-bounce border-rose-400 bg-rose-950/80' : ''
-                        } ${
-                          member.isSuspectedCheater
-                            ? 'bg-amber-950/60 border-amber-400'
-                            : member.hasWorkedOutToday
-                            ? 'bg-emerald-950/50 border-emerald-500/50'
-                            : 'bg-rose-950/40 border-rose-500/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center gap-0.5">
-                          <span className="text-base">
-                            {member.isSuspectedCheater
-                              ? '🤥'
-                              : member.hasWorkedOutToday
-                              ? '💪'
-                              : '💤'}
-                          </span>
-                          <span className="text-[9px] font-black text-slate-300">
-                            {member.roleType === 'phy'
-                              ? '🥊'
-                              : member.roleType === 'mag'
-                              ? '🪄'
-                              : '🛡️'}
-                          </span>
-                        </div>
-
-                        <div className="text-[10px] font-black text-white break-words leading-tight w-full">
-                          {member.nameZh.split(' · ').pop()}
-                        </div>
-
-                        {member.isSuspectedCheater ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              store.reportCheatingMember(member.id);
-                            }}
-                            className="mt-1 w-full py-0.5 rounded bg-rose-600 text-white text-[9px] font-black shadow animate-pulse"
-                          >
-                            🚨 抓包
-                          </button>
-                        ) : !member.hasWorkedOutToday ? (
-                          <button
-                            onClick={(e) => handleNudge(member.id, e)}
-                            className="mt-1 w-full py-0.5 rounded bg-rose-500 text-white text-[9px] font-black shadow"
-                          >
-                            🔨 敲他{member.nudgedCount > 0 ? `(${member.nudgedCount})` : ''}
-                          </button>
-                        ) : (
-                          <span className="mt-1 px-1 py-0.5 rounded bg-black/50 text-[9px] font-black text-emerald-300 w-full leading-tight">
-                            ✅ -{member.damageDealt}HP
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 2. TACTICAL COMMAND DECK: 3 COMPACT SKILL SLOTS + GIANT 3D STRIKE BUTTON */}
-          <div className="retro-box rounded-2xl p-3 space-y-2.5">
-            {/* 3 Sport Combo Skill Orbs */}
-            <div className="grid grid-cols-3 gap-1.5">
-              {(
-                [
-                  {
-                    id: 'strength',
-                    icon: '🔨',
-                    skill: '破甲重擊',
-                    sub: '重訓 · 掛破甲',
-                  },
-                  {
-                    id: 'cardio',
-                    icon: '🔥',
-                    skill: '燃脂魔焰',
-                    sub: '有氧 · 2x引爆',
-                  },
-                  {
-                    id: 'bodyweight',
-                    icon: '🌪️',
-                    skill: '聚氣暴擊',
-                    sub: '徒手 · 掉寶x2',
-                  },
-                ] as {
-                  id: AdventureSportSkillType;
-                  icon: string;
-                  skill: string;
-                  sub: string;
-                }[]
-              ).map((sp) => {
-                const active = store.todaySportType === sp.id;
-                return (
-                  <button
-                    key={sp.id}
-                    onClick={() => store.setTodaySportType(sp.id)}
-                    className={`p-2 rounded-xl border text-center transition ${
-                      active
-                        ? 'bg-cyan-950/70 border-cyan-400 text-white shadow ring-1 ring-cyan-400/50'
-                        : 'bg-slate-900 border-slate-800 text-slate-400'
-                    }`}
-                  >
-                    <div className="text-xs font-black text-amber-300 flex items-center justify-center gap-1">
-                      <span>{sp.icon}</span>
-                      <span>{sp.skill}</span>
-                    </div>
-                    <div className="text-[10px] text-cyan-300 font-bold mt-0.5">{sp.sub}</div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Giant 3D Strike CTA or Cooldown Bar (No on-demand Boss report button here!) */}
-            {store.todayWorkoutStatus === 'none' ? (
-              <button
-                onClick={handleManualStrike}
-                className="w-full retro-btn py-3.5 rounded-2xl bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
-              >
-                <Lock className="w-4 h-4" />
-                <span>🔒 先去【運動】完成組間休息充能 ➔</span>
-              </button>
-            ) : !isOnCooldown ? (
-              <button
-                onClick={handleManualStrike}
-                className={`w-full retro-btn py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl ${
-                  store.todayWorkoutStatus === 'cheated_fast'
-                    ? 'bg-rose-600 text-white'
-                    : 'bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-slate-950'
-                }`}
-              >
-                <Swords className="w-5 h-5 stroke-[2.5px]" />
-                <span>
-                  {store.todayWorkoutStatus === 'cheated_fast'
-                    ? '🤥 心虛出擊（未休息懲罰刮痧 -15 HP）'
-                    : `⚔️ 施放【${
-                        store.todaySportType === 'strength'
-                          ? '破甲重擊'
-                          : store.todaySportType === 'cardio'
-                          ? '燃脂魔焰'
-                          : '聚氣暴擊'
-                      }】${isSoloMode ? '單人討伐 Boss！' : '與隊友消磨 Boss 血量！'}`}
-                </span>
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <div className="w-full py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-bold flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-amber-400 animate-spin" />
-                    <span>今日已出拳消磨血量 · 下次冷卻：</span>
-                  </span>
-                  <span className="font-mono font-black text-amber-400 text-sm">
-                    {formatCooldown(cooldownRemainingSec)}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => store.resetAdventureCooldown('ticket')}
-                    className="retro-btn py-2.5 px-3 rounded-xl bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5"
-                  >
-                    <Ticket className="w-3.5 h-3.5" />
-                    <span>討伐券重置 ({store.raidTickets})</span>
-                  </button>
-                  <button
-                    onClick={() => store.resetAdventureCooldown('iap')}
-                    disabled={iapResetUsedToday}
-                    className={`retro-btn py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition ${
-                      iapResetUsedToday
-                        ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                        : 'bg-purple-600 hover:bg-purple-500 text-white shadow'
-                    }`}
-                  >
-                    <Gem className="w-3.5 h-3.5" />
-                    <span>
-                      {iapResetUsedToday ? '今日秒解已用完 (1/1)' : 'NT$30 秒解冷卻 (限1次)'}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <AdventureRaidPane
+          adventureMode={adventureMode}
+          onAdventureModeChange={setAdventureMode}
+          onOpenSubTab={setMainSubTab}
+          onOpenLootBag={() => setLootBagOpen(true)}
+          onOpenDevCheat={() => setDevCheatOpen((open) => !open)}
+        />
       )}
 
       {/* ================================================================= */}
@@ -2340,8 +1144,8 @@ export const PlazaTab: React.FC = () => {
                       <button
                         onClick={() => {
                           setLootBagOpen(false);
-                          setLootDropReport({
-                            stage: idx + 1,
+                          setBagLootReport({
+                            stage: b.stageNumber,
                             boss: b,
                             strikeDamage: store.personalMaxDamage || 680,
                           });
@@ -2387,7 +1191,11 @@ export const PlazaTab: React.FC = () => {
             </div>
 
             <div className="p-4 rounded-xl bg-rose-950/50 border-2 border-rose-500/50 text-center space-y-2">
-              <div className="text-5xl">{bossTemplate.emoji}</div>
+              <img
+                src={bossSpriteUrl(bossTemplate.spriteKey)}
+                alt={bossTemplate.nameZh}
+                className="mx-auto h-24 w-24 object-contain"
+              />
               <div className="text-sm font-black text-white">
                 STAGE {store.squadStage} · {bossTemplate.nameZh}
               </div>
@@ -2432,133 +1240,23 @@ export const PlazaTab: React.FC = () => {
         </div>
       )}
 
-      {/* ================================================================= */}
-      {/* MODAL D: 🏆 FINAL-BLOW BOSS VICTORY SHARE PROMPT                  */}
-      {/* (ONLY pops up when player delivers the killing blow to the Boss!  */}
-      {/*  Renders a single pre-composed poster image — NOT MemeStudio!)     */}
-      {/* ================================================================= */}
-      {finalBlowReport && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 overflow-y-auto">
-          <div className="retro-box w-full max-w-sm rounded-2xl p-4 bg-slate-950 border-2 border-amber-400 space-y-3 relative max-h-[94vh] overflow-y-auto">
-            <button
-              onClick={() => setFinalBlowReport(null)}
-              aria-label="關閉最後一擊戰報"
-              className="absolute top-3 right-3 p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="text-center space-y-1 pr-6">
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-400 text-amber-300 text-[10px] font-black inline-block">
-                👑 FINAL BLOW · 你給出了 Boss 最後一擊！
-              </span>
-              <h3 className="text-sm font-black text-white">
-                成功斬殺 Stage {finalBlowReport.clearedStage}【{finalBlowReport.boss.nameZh}】！是否分享戰報？
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                系統已自動為你與隊友搭配好專屬討伐捷報圖，可直接分享至 IG / LINE
-              </p>
-            </div>
-
-            {/* Pre-composed fixed artwork poster (no complex sliders or photo upload) */}
-            <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex justify-center">
-              <canvas
-                ref={killPosterCanvasRef}
-                className="w-full max-w-[290px] rounded-xl border border-amber-400/40 shadow-2xl block"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={handleDownloadKillPoster}
-                className="retro-btn py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-xs flex items-center justify-center gap-1.5"
-              >
-                <Download className="w-4 h-4 text-cyan-400" />
-                <span>儲存戰報圖</span>
-              </button>
-
-              <button
-                onClick={handleShareKillPoster}
-                className="retro-btn py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg"
-              >
-                <Share2 className="w-4 h-4 stroke-[2.5px]" />
-                <span>立即分享 (IG/LINE)</span>
-              </button>
-            </div>
-
-            <button
-              onClick={() => setFinalBlowReport(null)}
-              className="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition"
-            >
-              稍後再說，繼續推進 Stage {store.squadStage}
-            </button>
+      {bagLootReport && (
+        <div
+          className="fixed z-[60]"
+          style={{
+            top: 'var(--adventure-top-header-h)',
+            bottom: 'var(--adventure-bottom-nav-h)',
+            left: '50%',
+            width: 'min(100vw, 430px)',
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="relative h-full w-full">
+            <RareLootShareModal report={bagLootReport} onClose={() => setBagLootReport(null)} />
           </div>
         </div>
       )}
 
-      {/* ================================================================= */}
-      {/* MODAL E: 🎁 RARE LOOT DROP SHARE PROMPT (歐皇稀有噴裝炫耀卡)        */}
-      {/* (Pops up when player rolls the ~18% hidden loot drop on a strike! */}
-      {/*  Renders a single pre-composed SSR treasure poster!)              */}
-      {/* ================================================================= */}
-      {lootDropReport && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 overflow-y-auto">
-          <div className="retro-box w-full max-w-sm rounded-2xl p-4 bg-slate-950 border-2 border-purple-400 space-y-3 relative max-h-[94vh] overflow-y-auto">
-            <button
-              onClick={() => setLootDropReport(null)}
-              aria-label="關閉稀有噴裝分享視窗"
-              className="absolute top-3 right-3 p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="text-center space-y-1 pr-6">
-              <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400 text-purple-300 text-[10px] font-black inline-block">
-                🎁 SSR RARE LOOT · 歐皇降臨噴裝（掉寶率 18%）
-              </span>
-              <h3 className="text-sm font-black text-white">
-                幸運打落【{lootDropReport.boss.hiddenLoot.nameZh}】！是否分享炫耀？
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                不是每個人揮拳都有機會打到！系統已為你搭配好專屬歐皇噴裝圖
-              </p>
-            </div>
-
-            {/* Pre-composed fixed SSR loot drop poster */}
-            <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex justify-center">
-              <canvas
-                ref={lootPosterCanvasRef}
-                className="w-full max-w-[290px] rounded-xl border border-purple-400/50 shadow-2xl block"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={handleDownloadLootPoster}
-                className="retro-btn py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-xs flex items-center justify-center gap-1.5"
-              >
-                <Download className="w-4 h-4 text-cyan-400" />
-                <span>儲存噴裝圖</span>
-              </button>
-
-              <button
-                onClick={handleShareLootPoster}
-                className="retro-btn py-2.5 rounded-xl bg-gradient-to-r from-purple-400 via-fuchsia-400 to-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg"
-              >
-                <Share2 className="w-4 h-4 stroke-[2.5px]" />
-                <span>立即曬裝 (IG/LINE)</span>
-              </button>
-            </div>
-
-            <button
-              onClick={() => setLootDropReport(null)}
-              className="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-bold transition"
-            >
-              收進寶物袋，繼續戰鬥
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
