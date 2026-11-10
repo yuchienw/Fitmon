@@ -1,17 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 import { AvatarBodyStage, EquipSlot, RoomSlot } from '../config/catalogConfig';
-import { drawMapleChibiAvatar } from './pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from './pixelSpriteDrawer';
 
 interface AvatarPortraitCanvasProps {
-  bodyStage: AvatarBodyStage;
-  equipped: Record<EquipSlot, string>;
+  bodyStage?: AvatarBodyStage;
+  equipped?: Partial<Record<EquipSlot, string>>;
+  status?: 'ready' | 'partial' | 'syncing';
   room?: Record<RoomSlot, string>;
   size?: number;
 }
 
 export const AvatarPortraitCanvas: React.FC<AvatarPortraitCanvasProps> = ({
   bodyStage,
-  equipped,
+  equipped = {},
+  status = 'ready',
   size = 48,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -28,21 +30,29 @@ export const AvatarPortraitCanvas: React.FC<AvatarPortraitCanvasProps> = ({
     ctx.clearRect(0, 0, 128, 128);
 
     // Warm sunlit portrait backdrop
-    ctx.fillStyle = '#fef3c7';
+    ctx.fillStyle = status === 'syncing' ? '#faf6f0' : '#fef3c7';
     ctx.fillRect(0, 0, 128, 128);
 
     ctx.scale(2, 2);
-    drawMapleChibiAvatar(ctx, {
-      x: 4,
-      y: 2,
-      bodyStage,
-      equipped,
-      state: 'IDLE',
-      facingRight: true,
-      frameTick: 4,
-    });
+    if (status === 'syncing' || !bodyStage) {
+      drawCreamChibiSilhouette(ctx, {
+        x: 32,
+        y: 58,
+        facingRight: true,
+      });
+    } else {
+      drawMapleChibiAvatar(ctx, {
+        x: 4,
+        y: 2,
+        bodyStage,
+        equipped,
+        state: 'IDLE',
+        facingRight: true,
+        frameTick: 4,
+      });
+    }
     ctx.restore();
-  }, [bodyStage, equipped]);
+  }, [bodyStage, equipped, status]);
 
   return (
     <canvas

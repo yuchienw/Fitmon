@@ -25,6 +25,12 @@ export type TodayWorkoutStatus = 'none' | 'legit_rest' | 'cheated_fast';
 export type AdventureSportSkillType = 'strength' | 'cardio' | 'bodyweight';
 export type RoomPoseOverride = 'AUTO' | 'IDLE' | 'SQUAT' | 'CURL' | 'WALK';
 
+export interface SquadMemberAvatarCache {
+  bodyStage: AvatarBodyStage;
+  equipped: Partial<Record<EquipSlot, string>>;
+  updatedAt: number;
+}
+
 export interface SquadMemberState {
   id: string;
   nameZh: string;
@@ -38,7 +44,8 @@ export interface SquadMemberState {
   damageDealt: number;
   nudgedCount: number;
   bodyStage?: AvatarBodyStage;
-  equipped?: Record<EquipSlot, string>;
+  equipped?: Partial<Record<EquipSlot, string>>;
+  avatarCache?: SquadMemberAvatarCache;
 }
 
 export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
@@ -170,46 +177,85 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
   },
 ];
 
-export function resolveSquadMemberAvatar(member: SquadMemberState): {
-  bodyStage: AvatarBodyStage;
-  equipped: Record<EquipSlot, string>;
-} {
-  if (member.bodyStage && member.equipped) {
+export interface ResolvedSquadAvatar {
+  status: 'ready' | 'partial' | 'syncing';
+  source?: 'self' | 'cache';
+  bodyStage?: AvatarBodyStage;
+  equipped?: Partial<Record<EquipSlot, string>>;
+}
+
+export function resolveSquadMemberAvatar(member: SquadMemberState): ResolvedSquadAvatar {
+  // 1. Full self data: bodyStage has a value and equipped is an object
+  if (member.bodyStage && member.equipped && typeof member.equipped === 'object') {
+    if (!member.avatarCache || member.avatarCache.bodyStage !== member.bodyStage) {
+      member.avatarCache = {
+        bodyStage: member.bodyStage,
+        equipped: { ...member.equipped },
+        updatedAt: Date.now(),
+      };
+    }
     return {
+      status: 'ready',
+      source: 'self',
       bodyStage: member.bodyStage,
       equipped: member.equipped,
     };
   }
-  const foundCandidate = SQUAD_CANDIDATE_POOL.find(
-    (c) => c.id === member.id || c.nameZh === member.nameZh
-  );
-  if (foundCandidate?.bodyStage && foundCandidate.equipped) {
+
+  // 2. Missing some fields: check member.avatarCache first
+  if (member.avatarCache?.bodyStage) {
+    const mergedEquipped: Partial<Record<EquipSlot, string>> = {
+      ...(member.avatarCache.equipped || {}),
+      ...(member.equipped || {}),
+    };
+    const effectiveBody = member.bodyStage || member.avatarCache.bodyStage;
     return {
-      bodyStage: foundCandidate.bodyStage,
-      equipped: foundCandidate.equipped,
+      status: 'ready',
+      source: 'cache',
+      bodyStage: effectiveBody,
+      equipped: mergedEquipped,
     };
   }
-  const foundProfile = FRIEND_PROFILES.find(
-    (p) =>
-      p.id === member.id ||
-      p.nameZh.includes(member.nameZh) ||
-      member.nameZh.includes(p.nameZh)
-  );
-  if (foundProfile) {
+
+  // 3. Exact ID match only (remove nameZh/includes fuzzy match)
+  const candidate = SQUAD_CANDIDATE_POOL.find((c) => c.id === member.id);
+  const profile = FRIEND_PROFILES.find((p) => p.id === member.id);
+  const matched = candidate || profile;
+
+  if (matched?.bodyStage && matched?.equipped) {
+    const mergedEquipped: Partial<Record<EquipSlot, string>> = {
+      ...matched.equipped,
+      ...(member.equipped || {}),
+    };
+    const effectiveBody = member.bodyStage || matched.bodyStage;
+    member.avatarCache = {
+      bodyStage: effectiveBody,
+      equipped: mergedEquipped,
+      updatedAt: Date.now(),
+    };
     return {
-      bodyStage: foundProfile.bodyStage,
-      equipped: foundProfile.equipped,
+      status: 'ready',
+      source: 'cache',
+      bodyStage: effectiveBody,
+      equipped: mergedEquipped,
     };
   }
+
+  // 4. Partial data: has some equipped slots or has bodyStage
+  const knownBody = member.bodyStage || member.avatarCache?.bodyStage || matched?.bodyStage;
+  const knownEquipped = member.equipped || member.avatarCache?.equipped || matched?.equipped;
+  if (knownBody || (knownEquipped && Object.keys(knownEquipped).length > 0)) {
+    return {
+      status: 'partial',
+      source: member.avatarCache || matched ? 'cache' : 'self',
+      bodyStage: knownBody,
+      equipped: knownEquipped || {},
+    };
+  }
+
+  // 5. Completely no data: syncing (PR #2 QA: strictly forbidden to fallback to default Maple)
   return {
-    bodyStage: 'aesthetic',
-    equipped: {
-      hair: 'hair_maple_cap',
-      face: 'face_confident_smile',
-      top: 'top_pump_cover',
-      bottom: 'bottom_navy_shorts',
-      accessory: 'acc_protein_shaker',
-    },
+    status: 'syncing',
   };
 }
 
@@ -486,6 +532,7 @@ interface GameState {
   setSquadName: (name: string) => void;
   recruitSquadMember: (candidate: SquadMemberState) => void;
   kickSquadMember: (memberId: string) => void;
+  refreshSquadMemberAvatar: (memberId: string) => boolean;
   setTodayWorkoutStatus: (status: TodayWorkoutStatus) => void;
   setTodaySportType: (sport: AdventureSportSkillType) => void;
 
@@ -2513,6 +2560,33 @@ export const useGameStore = create<GameState>()(
         state.showToast(`🚪 已將【${target.nameZh}】移出戰隊，可從下方招募新戰友！`);
       },
 
+      refreshSquadMemberAvatar: (memberId) => {
+        const state = get();
+        const m = state.squadMembers.find((item) => item.id === memberId);
+        if (!m) return false;
+        // Exact ID match only (candidate pool or friend profiles)
+        const candidate = SQUAD_CANDIDATE_POOL.find((c) => c.id === m.id);
+        const profile = FRIEND_PROFILES.find((p) => p.id === m.id);
+        const matched = candidate || profile;
+        if (matched?.bodyStage && matched?.equipped) {
+          const cache: SquadMemberAvatarCache = {
+            bodyStage: matched.bodyStage,
+            equipped: { ...matched.equipped },
+            updatedAt: Date.now(),
+          };
+          const updated = state.squadMembers.map((item) => {
+            if (item.id !== memberId) return item;
+            return {
+              ...item,
+              avatarCache: cache,
+            };
+          });
+          set({ squadMembers: updated });
+          return true;
+        }
+        return false;
+      },
+
       setTodayWorkoutStatus: (status) => {
         soundFX.playBlip();
         set({ todayWorkoutStatus: status, adventureCooldownUntil: 0 });
@@ -2590,16 +2664,6 @@ export const useGameStore = create<GameState>()(
       migrate: (persistedState: unknown) => {
         if (!persistedState || typeof persistedState !== 'object') return persistedState;
         const state = persistedState as Record<string, unknown>;
-        if (Array.isArray(state.squadMembers)) {
-          state.squadMembers = (state.squadMembers as SquadMemberState[]).map((m) => {
-            const avatar = resolveSquadMemberAvatar(m);
-            return {
-              ...m,
-              bodyStage: m.bodyStage || avatar.bodyStage,
-              equipped: m.equipped || avatar.equipped,
-            };
-          });
-        }
         if (typeof state.soloStage !== 'number' || state.soloStage < 1) {
           state.soloStage = 1;
         }
@@ -2608,18 +2672,9 @@ export const useGameStore = create<GameState>()(
         }
         return state;
       },
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        if (Array.isArray(state.squadMembers)) {
-          state.squadMembers = state.squadMembers.map((m) => {
-            const avatar = resolveSquadMemberAvatar(m);
-            return {
-              ...m,
-              bodyStage: m.bodyStage || avatar.bodyStage,
-              equipped: m.equipped || avatar.equipped,
-            };
-          });
-        }
+      onRehydrateStorage: () => () => {
+        // Real fields and avatarCache are naturally preserved by partialize.
+        // Fallback avatars must never be written back to state.
       },
       partialize: (state) => ({
         locale: state.locale,

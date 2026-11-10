@@ -24,10 +24,12 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
         type="button"
         onClick={onClick}
         aria-label="邀請新隊友"
-        className={`inline-flex h-[22px] items-center gap-1 rounded-full border border-dashed border-amber-500/50 bg-amber-50/80 px-2 text-[10px] font-black text-amber-900 shadow-sm transition-transform active:scale-95 hover:bg-amber-100 ${className}`}
+        className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center p-1 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
       >
-        <UserPlus className="h-3 w-3 text-amber-700" />
-        <span className="whitespace-nowrap">{emptyLabel}</span>
+        <span className="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-dashed border-amber-500/50 bg-amber-50/90 px-2.5 py-1 text-[12px] font-black text-amber-900 shadow-sm hover:bg-amber-100">
+          <UserPlus className="h-4 w-4 text-amber-700" />
+          <span className="whitespace-nowrap">{emptyLabel}</span>
+        </span>
       </button>
     );
   }
@@ -39,21 +41,21 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
     return (
       <div
         onClick={onClick}
-        className={`inline-flex h-[24px] items-center gap-1.5 rounded-full px-2.5 text-[11px] font-black shadow-sm ${
+        className={`inline-flex min-h-[32px] items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] shadow-sm ${
           worked
-            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300/80'
-            : 'bg-amber-100 text-amber-800 border border-amber-300/80'
+            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold'
+            : 'bg-amber-100 text-amber-950 border border-amber-400 font-black'
         } ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
       >
         {worked ? (
           <>
-            <Check className="h-3.5 w-3.5 stroke-[2.5] text-emerald-700" />
+            <Check className="h-4 w-4 stroke-[2.5] text-emerald-700" />
             <span>今日已運動 ✓</span>
           </>
         ) : (
           <>
-            <span className="font-mono text-xs font-bold text-amber-700">Zzz</span>
-            <span>今日未運動</span>
+            <span className="font-mono text-[12px] font-black text-amber-950">Zzz</span>
+            <span className="font-black text-amber-950">今日未運動</span>
           </>
         )}
       </div>
@@ -64,11 +66,11 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
     return (
       <div
         onClick={onClick}
-        className={`inline-flex h-[24px] items-center gap-1.5 rounded-full px-2.5 text-[11px] font-black shadow-sm bg-rose-100 text-rose-800 border border-rose-300/80 ${
+        className={`inline-flex min-h-[32px] items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-black shadow-sm bg-rose-100 text-rose-800 border border-rose-300 ${
           onClick ? 'cursor-pointer active:scale-95' : ''
         } ${className}`}
       >
-        <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+        <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
         <span className="font-mono">
           {member.damageDealt > 0 ? `-${member.damageDealt} HP` : '0 HP 貢獻'}
         </span>
@@ -76,11 +78,7 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
     );
   }
 
-  // variant === 'combined' (Default for feet chip: h=22px, <= 8 chars)
-  // Format:
-  // If worked & has damage: "✓ -451 HP" (≤ 8 chars)
-  // If worked & 0 damage: "✓ 物攻110" (≤ 8 chars)
-  // If unworked: "未運動 Zzz" (6 chars)
+  // variant === 'combined' (Default for feet chip: min-h=32px, text=12px, outer touch >=44x44)
   let text = '';
   if (worked) {
     if (member.damageDealt > 0) {
@@ -97,18 +95,22 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
       type="button"
       onClick={onClick}
       aria-label={`隊友狀態：${member.nameZh} ${text}`}
-      className={`inline-flex h-[22px] max-w-[120px] items-center gap-1 rounded-full border px-2 text-[10px] font-black shadow-sm transition-transform active:scale-95 ${
-        worked
-          ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200/80'
-          : 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200/80'
-      } ${className}`}
+      className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center p-1 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
     >
-      {worked ? (
-        <Check className="h-3 w-3 stroke-[2.5] text-emerald-700 shrink-0" />
-      ) : (
-        <span className="font-mono text-[9px] font-black text-amber-700 shrink-0">Zzz</span>
-      )}
-      <span className="truncate font-mono font-black">{text}</span>
+      <span
+        className={`inline-flex min-h-[32px] max-w-[140px] items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] shadow-sm ${
+          worked
+            ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold hover:bg-emerald-200/80'
+            : 'bg-amber-100 text-amber-950 border-amber-400 font-black hover:bg-amber-200/80'
+        }`}
+      >
+        {worked ? (
+          <Check className="h-4 w-4 stroke-[2.5] text-emerald-700 shrink-0" />
+        ) : (
+          <span className="font-mono text-[12px] font-black text-amber-950 shrink-0">Zzz</span>
+        )}
+        <span className="truncate font-mono font-black">{text}</span>
+      </span>
     </button>
   );
 };

@@ -90,8 +90,9 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
         return {
           id: m.id,
           nameZh: m.nameZh,
-          bodyStage: m.bodyStage || avatar.bodyStage,
-          equipped: m.equipped || avatar.equipped,
+          avatarStatus: avatar.status,
+          bodyStage: avatar.bodyStage,
+          equipped: avatar.equipped,
           hasWorkedOutToday: m.hasWorkedOutToday,
         };
       });

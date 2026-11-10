@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AdventureBoss, AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
-import { drawBossSprite, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawBossSprite, drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
 import { TeammatePeekCard } from '../../../components/adventure/TeammatePeekCard';
 import { useGameStore } from '../../../stores/useGameStore';
 
@@ -20,8 +20,9 @@ export interface StrikeFloat {
 export interface TeammateDrawConfig {
   id: string;
   nameZh: string;
-  bodyStage: AvatarBodyStage;
-  equipped: Record<EquipSlot, string>;
+  avatarStatus?: 'ready' | 'partial' | 'syncing';
+  bodyStage?: AvatarBodyStage;
+  equipped?: Partial<Record<EquipSlot, string>>;
   hasWorkedOutToday: boolean;
 }
 
@@ -50,28 +51,52 @@ export function getBattleTeammatePos(
   teammateScale: number,
   idx: number,
   total: number,
+  heroBaseX: number = Math.round(w * 0.42),
 ) {
-  let tx = Math.round(w * 0.16);
-  let ty = floorY - Math.round(h * 0.10);
+  let dx = -0.20 * w;
+  let dy = -0.12 * h;
 
   if (total === 1) {
-    tx = Math.round(w * 0.16);
-    ty = floorY - Math.round(h * 0.10);
+    dx = -0.20 * w;
+    dy = -0.12 * h;
   } else if (total === 2) {
-    tx = idx === 0 ? Math.max(Math.round(20 * teammateScale), Math.round(w * 0.11)) : Math.round(w * 0.22);
-    ty = floorY - Math.round(h * (idx === 0 ? 0.09 : 0.11));
+    if (idx === 0) {
+      dx = -0.24 * w;
+      dy = -0.10 * h;
+    } else {
+      dx = -0.14 * w;
+      dy = -0.16 * h;
+    }
   } else {
     if (idx === 0) {
-      tx = Math.max(Math.round(20 * teammateScale), Math.round(w * 0.095));
-      ty = floorY - Math.round(h * 0.09);
+      dx = -0.28 * w;
+      dy = -0.10 * h;
     } else if (idx === 1) {
-      tx = Math.round(w * 0.175);
-      ty = floorY - Math.round(h * 0.11);
+      dx = -0.20 * w;
+      dy = -0.17 * h;
     } else {
-      tx = Math.round(w * 0.255);
-      ty = floorY - Math.round(h * 0.09);
+      dx = -0.16 * w;
+      dy = -0.13 * h;
     }
   }
+
+  let tx = Math.round(heroBaseX + dx);
+  const ty = Math.round(floorY + dy);
+
+  // 每位隊友腳底 x ≤ heroBaseX-0.16w
+  const maxX = Math.round(heroBaseX - 0.16 * w);
+  if (tx > maxX) {
+    tx = maxX;
+  }
+
+  // 若超出左緣只把最左側隊友 clamp 到 28*teammateScale+8，不得把右側隊友往主角擠
+  if (idx === 0) {
+    const minLeft = Math.round(28 * teammateScale + 8);
+    if (tx < minLeft) {
+      tx = minLeft;
+    }
+  }
+
   return { tx, ty };
 }
 
@@ -198,7 +223,8 @@ export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
           const scale = Math.max(1.85, Math.min(w / 165, h / 210, 2.5));
           const teammateScale = scale * 0.65;
           const total = Math.min(3, drawProps.teammates!.length);
-          const { tx, ty } = getBattleTeammatePos(w, h, floorY, teammateScale, idx, total);
+          const heroBaseX = Math.round(w * 0.42);
+          const { tx, ty } = getBattleTeammatePos(w, h, floorY, teammateScale, idx, total, heroBaseX);
           const hitW = 56 * teammateScale + 16;
           const hitH = 65 * teammateScale + 16;
           const hitX = tx - 28 * teammateScale - 8;
@@ -320,21 +346,30 @@ export function paintArena(
   }
 
   const scale = Math.max(1.85, Math.min(w / 165, h / 210, 2.5));
-  const heroBaseX = Math.round(w * 0.33);
+  const heroBaseX = Math.round(w * 0.42);
 
-  // 1. Draw Teammates FIRST (scale 0.65, in back-left and direct-rear, floor higher by ~8-12% h)
+  // 1. Draw Teammates FIRST (scale 0.65, in back-left and direct-rear, sorted by ty ascending)
   if (teammates && teammates.length > 0) {
     const activeTeammates = teammates.slice(0, 3);
     const teammateScale = scale * 0.65;
-    activeTeammates.forEach((teammate, idx) => {
-      const { tx, ty } = getBattleTeammatePos(
+    const positionedTeammates = activeTeammates.map((teammate, originalIdx) => {
+      const pos = getBattleTeammatePos(
         w,
         h,
         floorY,
         teammateScale,
-        idx,
+        originalIdx,
         activeTeammates.length,
+        heroBaseX,
       );
+      return { teammate, originalIdx, pos };
+    });
+
+    // Draw in order of ty ascending (smaller ty = higher up / farther away drawn first)
+    const sortedTeammates = [...positionedTeammates].sort((a, b) => a.pos.ty - b.pos.ty);
+
+    sortedTeammates.forEach(({ teammate, originalIdx, pos }) => {
+      const { tx, ty } = pos;
 
       // Selected Teammate primary 2px aura ring (mockup 09)
       if (state.peekMemberId === teammate.id) {
@@ -357,35 +392,45 @@ export function paintArena(
       ctx.scale(teammateScale, teammateScale);
 
       if (!teammate.hasWorkedOutToday) {
-        ctx.filter = 'grayscale(0.40)';
+        ctx.filter = 'grayscale(1)';
+        ctx.globalAlpha = 0.72;
       }
 
-      drawMapleChibiAvatar(ctx, {
-        x: -28,
-        y: -60,
-        bodyStage: teammate.bodyStage,
-        equipped: teammate.equipped,
-        state: state.phase === 'hit' ? 'CHEER' : 'IDLE',
-        facingRight: true,
-        frameTick: Math.floor(now / 16),
-      });
+      if (teammate.avatarStatus === 'syncing' || !teammate.bodyStage) {
+        drawCreamChibiSilhouette(ctx, {
+          x: 0,
+          y: 0,
+          facingRight: true,
+          nameZh: teammate.nameZh,
+        });
+      } else {
+        drawMapleChibiAvatar(ctx, {
+          x: -28,
+          y: -60,
+          bodyStage: teammate.bodyStage,
+          equipped: teammate.equipped || {},
+          state: state.phase === 'hit' ? 'CHEER' : 'IDLE',
+          facingRight: true,
+          frameTick: Math.floor(now / 16),
+        });
+      }
 
       ctx.restore();
 
-      // Unattended teammate: draw bold and crisp Zzz above head
+      // Unattended teammate: draw bold and crisp Zzz 18-20px font-weight 900, white 4px stroke, fill #B45309
       if (!teammate.hasWorkedOutToday) {
         ctx.save();
-        const headTopY = ty - 56 * teammateScale;
-        const zOff = state.reducedMotion ? 0 : Math.sin(now / 300 + idx * 1.5) * 3;
-        const zX = tx + 4;
-        const zY = headTopY - 4 + zOff;
-        ctx.font = '900 13px "Noto Sans TC", sans-serif';
+        const headTopY = ty - 60 * teammateScale;
+        const zOff = state.reducedMotion ? 0 : Math.sin(now / 300 + originalIdx * 1.5) * 3;
+        const zX = tx + 10;
+        const zY = headTopY - 8 + zOff;
+        ctx.font = '900 18px "Noto Sans TC", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 4;
         ctx.strokeStyle = '#ffffff';
         ctx.strokeText('Zzz', zX, zY);
-        ctx.fillStyle = '#4f46e5';
+        ctx.fillStyle = '#B45309';
         ctx.fillText('Zzz', zX, zY);
         ctx.restore();
       }

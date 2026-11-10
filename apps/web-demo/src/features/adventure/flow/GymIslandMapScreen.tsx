@@ -8,7 +8,7 @@ import {
   Coins,
 } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
 import { GYM_VENUES, getFloorForStage } from './venueConfig';
 import { ADVENTURE_BOSS_CATALOG } from '../../../config/catalogConfig';
 
@@ -38,35 +38,204 @@ export function getAvatarStandPercent(venueIdx: number): { x: number; y: number 
   }
 }
 
+export interface IslandTeammatesClusterResult {
+  positions: Array<{ tx: number; ty: number }>;
+  clusterHitRect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+}
+
+export function getIslandTeammatesCluster(
+  standX: number,
+  standY: number,
+  facingRight: boolean,
+  total: number,
+  w: number = 390,
+  h: number = 600,
+  teammateScale: number = 0.68,
+  heroScale: number = 1.05,
+): IslandTeammatesClusterResult {
+  if (total <= 0) {
+    return {
+      positions: [],
+      clusterHitRect: { left: 0, top: 0, width: 0, height: 0 },
+    };
+  }
+
+  const safeW = w > 0 ? w : 390;
+  const safeH = h > 0 ? h : 600;
+
+  // 舞台寬高 = 島上主角繪製高度 ÷ 戰鬥中主角高度占戰鬥畫布高的比例（簡化為 stageW = stageH = 主角繪製高度 × 2.4）
+  const heroDrawHeight = 60 * heroScale;
+  const stageW = heroDrawHeight * 2.4;
+  const stageH = heroDrawHeight * 2.4;
+
+  const offsets =
+    total === 1
+      ? [{ dx: -0.20, dy: -0.12 }]
+      : total === 2
+      ? [
+          { dx: -0.24, dy: -0.10 },
+          { dx: -0.14, dy: -0.16 },
+        ]
+      : [
+          { dx: -0.28, dy: -0.10 },
+          { dx: -0.20, dy: -0.17 },
+          { dx: -0.16, dy: -0.13 },
+        ];
+
+  const sign = facingRight ? 1 : -1;
+  const rawPos = offsets.slice(0, total).map((off, idx) => {
+    let tx = Math.round(standX + off.dx * stageW * sign);
+    const ty = Math.round(standY + off.dy * stageH);
+
+    // 隊友腳底 x ≤ 主角腳底-0.16 單位（朝主角後方）
+    if (facingRight) {
+      const maxX = Math.round(standX - 0.16 * stageW);
+      if (tx > maxX) tx = maxX;
+      // 只 clamp 最左側
+      if (idx === 0) {
+        const minLeft = Math.round(28 * teammateScale + 8);
+        if (tx < minLeft) tx = minLeft;
+      }
+    } else {
+      const minX = Math.round(standX + 0.16 * stageW);
+      if (tx < minX) tx = minX;
+      // 只 clamp 最右側（向左看時，後方最外側為最右側）
+      if (idx === 0) {
+        const maxRight = Math.round(safeW - (28 * teammateScale + 8));
+        if (tx > maxRight) tx = maxRight;
+      }
+    }
+
+    return { tx, ty };
+  });
+
+  // 紙娃娃與 Zzz 邊界（Zzz 浮動約在頭頂上方 30px）
+  const boxes = rawPos.map(({ tx, ty }) => ({
+    left: tx - 28 * teammateScale,
+    right: tx + Math.max(28 * teammateScale, 26),
+    top: ty - 60 * teammateScale - 30,
+    bottom: ty,
+  }));
+
+  const clusterLeft = Math.min(...boxes.map((b) => b.left));
+  const clusterRight = Math.max(...boxes.map((b) => b.right));
+  const clusterTop = Math.min(...boxes.map((b) => b.top));
+  const clusterBottom = Math.max(...boxes.map((b) => b.bottom));
+
+  let shiftX = 0;
+  let shiftY = 0;
+  const pad = 8;
+
+  // 1. 確保所有紙娃娃與 Zzz 完整在島畫布內（超出時整個叢集一起平移進來）
+  if (clusterLeft + shiftX < pad) {
+    shiftX = pad - clusterLeft;
+  }
+  if (clusterRight + shiftX > safeW - pad) {
+    shiftX = safeW - pad - clusterRight;
+  }
+  if (clusterTop + shiftY < pad) {
+    shiftY = pad - clusterTop;
+  }
+  if (clusterBottom + shiftY > safeH - pad) {
+    shiftY = safeH - pad - clusterBottom;
+  }
+
+  // 2. 不壓到『你在這裡』pin 以外的節點標籤（GYM_VENUES 節點標籤）
+  const nodePad = 4;
+  for (const v of GYM_VENUES) {
+    const vx = (v.mapCoords.x / 100) * safeW;
+    const vy = (v.mapCoords.y / 100) * safeH;
+    const nLeft = vx - 40;
+    const nRight = vx + 40;
+    const nTop = vy - 30;
+    const nBottom = vy + 30;
+
+    const curL = clusterLeft + shiftX;
+    const curR = clusterRight + shiftX;
+    const curT = clusterTop + shiftY;
+    const curB = clusterBottom + shiftY;
+
+    const overlapX = Math.min(curR, nRight) - Math.max(curL, nLeft);
+    const overlapY = Math.min(curB, nBottom) - Math.max(curT, nTop);
+
+    if (overlapX > 0 && overlapY > 0) {
+      if (vx < standX) {
+        shiftX += nRight - curL + nodePad;
+      } else {
+        shiftX -= curR - nLeft + nodePad;
+      }
+    }
+  }
+
+  // 節點避讓後再次 clamp 至畫布邊緣
+  if (clusterLeft + shiftX < pad) {
+    shiftX = pad - clusterLeft;
+  }
+  if (clusterRight + shiftX > safeW - pad) {
+    shiftX = safeW - pad - clusterRight;
+  }
+  if (clusterTop + shiftY < pad) {
+    shiftY = pad - clusterTop;
+  }
+  if (clusterBottom + shiftY > safeH - pad) {
+    shiftY = safeH - pad - clusterBottom;
+  }
+
+  const positions = rawPos.map(({ tx, ty }) => ({
+    tx: Math.round(tx + shiftX),
+    ty: Math.round(ty + shiftY),
+  }));
+
+  const finalBoxes = positions.map(({ tx, ty }) => ({
+    left: tx - 28 * teammateScale - 8,
+    top: ty - 60 * teammateScale - 8,
+    width: 56 * teammateScale + 16,
+    height: 65 * teammateScale + 16,
+  }));
+
+  const hitMinX = Math.min(...finalBoxes.map((b) => b.left));
+  const hitMinY = Math.min(...finalBoxes.map((b) => b.top));
+  const hitMaxX = Math.max(...finalBoxes.map((b) => b.left + b.width));
+  const hitMaxY = Math.max(...finalBoxes.map((b) => b.top + b.height));
+
+  return {
+    positions,
+    clusterHitRect: {
+      left: Math.round(hitMinX),
+      top: Math.round(hitMinY),
+      width: Math.round(hitMaxX - hitMinX),
+      height: Math.round(hitMaxY - hitMinY),
+    },
+  };
+}
+
 export function getIslandTeammatePos(
   standX: number,
   standY: number,
   facingRight: boolean,
   idx: number,
   total: number,
+  w: number = 390,
+  h: number = 600,
+  teammateScale: number = 0.68,
+  heroScale: number = 1.05,
 ) {
-  let tx = standX - 24;
-  let ty = standY - 8;
-
-  if (total === 1) {
-    tx = facingRight ? standX - 24 : standX + 24;
-    ty = standY - 8;
-  } else if (total === 2) {
-    tx = idx === 0 ? standX - 24 : standX + 24;
-    ty = standY - 8;
-  } else {
-    if (idx === 0) {
-      tx = standX - 24;
-      ty = standY - 8;
-    } else if (idx === 1) {
-      tx = standX + 24;
-      ty = standY - 8;
-    } else {
-      tx = facingRight ? standX - 44 : standX + 44;
-      ty = standY - 6;
-    }
-  }
-  return { tx, ty };
+  const cluster = getIslandTeammatesCluster(
+    standX,
+    standY,
+    facingRight,
+    total,
+    w,
+    h,
+    teammateScale,
+    heroScale,
+  );
+  return cluster.positions[idx] || { tx: standX, ty: standY };
 }
 
 export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
@@ -93,16 +262,7 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
   // Teammates data
   const teammates = isSolo
     ? []
-    : store.squadMembers.slice(0, 3).map((m) => {
-        const avatar = resolveSquadMemberAvatar(m);
-        return {
-          id: m.id,
-          nameZh: m.nameZh,
-          bodyStage: m.bodyStage || avatar.bodyStage,
-          equipped: m.equipped || avatar.equipped,
-          hasWorkedOutToday: m.hasWorkedOutToday,
-        };
-      });
+    : store.squadMembers.slice(0, 3);
 
   // Calculate status for each venue
   const getNodeStatus = (venueIdx: number): 'cleared' | 'current' | 'locked' => {
@@ -152,11 +312,13 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, w, h);
 
-      // 1. Tropical Ocean Water Background
+      // 1. Cream Sky Band + Warm Soft Ocean Background (PR #2 QA Spec)
       const oceanGrad = ctx.createLinearGradient(0, 0, 0, h);
-      oceanGrad.addColorStop(0, '#bae6fd');
-      oceanGrad.addColorStop(0.5, '#7dd3fc');
-      oceanGrad.addColorStop(1, '#38bdf8');
+      oceanGrad.addColorStop(0, '#FAF6F0');
+      oceanGrad.addColorStop(0.12, '#F5E6C8');
+      oceanGrad.addColorStop(0.24, '#D9E8DF');
+      oceanGrad.addColorStop(0.60, '#A8C9C0');
+      oceanGrad.addColorStop(1.0, '#7FA8A0');
       ctx.fillStyle = oceanGrad;
       ctx.fillRect(0, 0, w, h);
 
@@ -183,16 +345,16 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       ctx.restore();
 
       // Layer A: Rocky Cliff Edge
-      ctx.fillStyle = '#92400e';
-      ctx.strokeStyle = '#78350f';
+      ctx.fillStyle = '#7a6042';
+      ctx.strokeStyle = '#5a422a';
       ctx.lineWidth = 4;
       drawOrganicIslandPath(ctx, w, h, 0);
       ctx.fill();
       ctx.stroke();
 
-      // Layer B: Coastal Sand Beach
-      ctx.fillStyle = '#fde68a';
-      ctx.strokeStyle = '#fcd34d';
+      // Layer B: Coastal Sand Beach (#E8D4A8 per PR #2 spec)
+      ctx.fillStyle = '#E8D4A8';
+      ctx.strokeStyle = '#d6be8e';
       ctx.lineWidth = 2;
       drawOrganicIslandPath(ctx, w, h, 7);
       ctx.fill();
@@ -204,19 +366,19 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       drawOrganicIslandPath(ctx, w, h, 3.5);
       ctx.stroke();
 
-      // Layer C: Lush Green Interior
+      // Layer C: Warm Olive Interior (#C5C07A -> #9E9A56 per PR #2 spec)
       const grassGrad = ctx.createLinearGradient(0, 0, 0, h);
-      grassGrad.addColorStop(0, '#84cc16');
-      grassGrad.addColorStop(1, '#65a30d');
+      grassGrad.addColorStop(0, '#C5C07A');
+      grassGrad.addColorStop(1, '#9E9A56');
       ctx.fillStyle = grassGrad;
-      ctx.strokeStyle = '#3f6212';
+      ctx.strokeStyle = '#6e6c38';
       ctx.lineWidth = 3;
       drawOrganicIslandPath(ctx, w, h, 15);
       ctx.fill();
       ctx.stroke();
 
       // Layer D: Topographic Sunny Plateau
-      ctx.fillStyle = 'rgba(163, 230, 53, 0.35)';
+      ctx.fillStyle = 'rgba(215, 210, 145, 0.35)';
       drawOrganicIslandPath(ctx, w, h, 26);
       ctx.fill();
 
@@ -234,7 +396,7 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
 
       // Main Winding Sandy Trail
       ctx.save();
-      ctx.strokeStyle = '#fef08a';
+      ctx.strokeStyle = '#E8D4A8';
       ctx.lineWidth = 9;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -249,7 +411,7 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       ctx.stroke();
 
       // Wooden Plank / Trail Dashes
-      ctx.strokeStyle = '#ca8a04';
+      ctx.strokeStyle = '#8d754b';
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 6]);
       ctx.stroke();
@@ -291,8 +453,8 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
 
       // Wooden staging deck & pulsing amber halo
       ctx.save();
-      ctx.fillStyle = '#fef08a';
-      ctx.strokeStyle = '#ca8a04';
+      ctx.fillStyle = '#E8D4A8';
+      ctx.strokeStyle = '#b59e74';
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.ellipse(standX, standY + 2, 40, 15, 0, 0, Math.PI * 2);
@@ -314,54 +476,78 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       ctx.restore();
 
       // 6. Draw Paper-Doll Chibi Avatars in the Clearing
-      // Hero scale 1.05 in front, Teammates scale 0.65 in rear-left & rear-right
+      // Hero scale 1.05 in front, Teammates scale 0.65 in rear, sorted by ty ascending
       const heroScale = 1.05;
       const teammateScale = heroScale * 0.65;
       const facingRight = currentVenueIdx % 2 === 1;
 
       if (!isSolo && teammates.length > 0) {
-        teammates.forEach((tm, idx) => {
-          const { tx, ty } = getIslandTeammatePos(
-            standX,
-            standY,
-            facingRight,
-            idx,
-            teammates.length,
-          );
+        const cluster = getIslandTeammatesCluster(
+          standX,
+          standY,
+          facingRight,
+          teammates.length,
+          w,
+          h,
+          teammateScale,
+          heroScale,
+        );
+        const positioned = teammates.map((tm, idx) => {
+          const avatar = resolveSquadMemberAvatar(tm);
+          const pos = cluster.positions[idx] || { tx: standX, ty: standY };
+          return { tm, avatar, idx, pos };
+        });
+
+        // Draw in order of ty ascending (higher up on screen drawn first)
+        const sorted = [...positioned].sort((a, b) => a.pos.ty - b.pos.ty);
+
+        sorted.forEach(({ tm, avatar, idx, pos }) => {
+          const { tx, ty } = pos;
 
           ctx.save();
           ctx.translate(tx, ty);
           ctx.scale(teammateScale, teammateScale);
 
           if (!tm.hasWorkedOutToday) {
-            ctx.filter = 'grayscale(0.40)';
+            ctx.filter = 'grayscale(1)';
+            ctx.globalAlpha = 0.72;
           }
 
-          drawMapleChibiAvatar(ctx, {
-            x: -28,
-            y: -60,
-            bodyStage: tm.bodyStage,
-            equipped: tm.equipped,
-            state: 'IDLE',
-            facingRight,
-            frameTick: Math.floor(now / 16),
-          });
+          if (avatar.status === 'syncing' || !avatar.bodyStage) {
+            drawCreamChibiSilhouette(ctx, {
+              x: 0,
+              y: 0,
+              facingRight,
+              nameZh: tm.nameZh,
+            });
+          } else {
+            drawMapleChibiAvatar(ctx, {
+              x: -28,
+              y: -60,
+              bodyStage: avatar.bodyStage,
+              equipped: avatar.equipped || {},
+              state: 'IDLE',
+              facingRight,
+              frameTick: Math.floor(now / 16),
+            });
+          }
+
           ctx.restore();
 
-          // Unworked teammate: crisp bold floating Zzz above head
+          // Unworked teammate: crisp bold floating Zzz 18-20px font-weight 900, white 4px stroke, fill #B45309
           if (!tm.hasWorkedOutToday) {
             ctx.save();
-            const headTopY = ty - 56 * teammateScale;
-            const zOff = Math.sin(now / 300 + idx * 1.5) * 2.5;
-            const zX = tx + 3;
-            const zY = headTopY - 3 + zOff;
-            ctx.font = '900 11px "Noto Sans TC", sans-serif';
+            const headTopY = ty - 60 * teammateScale;
+            const zOff = Math.sin(now / 300 + idx * 1.5) * 3;
+            const zX = tx + 10;
+            const zY = headTopY - 8 + zOff;
+            ctx.font = '900 18px "Noto Sans TC", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4;
             ctx.strokeStyle = '#ffffff';
             ctx.strokeText('Zzz', zX, zY);
-            ctx.fillStyle = '#6366f1';
+            ctx.fillStyle = '#B45309';
             ctx.fillText('Zzz', zX, zY);
             ctx.restore();
           }
@@ -432,7 +618,7 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       </header>
 
       {/* Main Map Interactive Canvas & Overlay Nodes */}
-      <div ref={wrapRef} className="relative min-h-0 flex-1 overflow-hidden bg-[#7dd3fc]">
+      <div ref={wrapRef} className="relative min-h-0 flex-1 overflow-hidden bg-[#A8C9C0]">
         <canvas
           ref={canvasRef}
           className="absolute inset-0 block h-full w-full"
@@ -455,62 +641,71 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
         </div>
 
         {/* Teammates Paper Dolls & Cluster Hit Areas (8px outer expanded) */}
-        {!isSolo && teammates.length > 0 && wrapSize.w > 0 && (
-          <>
-            {/* Team Cluster Bounding Area (opens first teammate in cluster) */}
-            <button
-              type="button"
-              onClick={() => store.setInspectMemberId(teammates[0].id)}
-              aria-label="檢視隊伍小隊成員"
-              style={{
-                left: `${(currentStandPercent.x / 100) * wrapSize.w - 56}px`,
-                top: `${(currentStandPercent.y / 100) * wrapSize.h - 52}px`,
-                width: '112px',
-                height: '62px',
-              }}
-              className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95"
-            />
+        {!isSolo && teammates.length > 0 && wrapSize.w > 0 && (() => {
+          const standX = (currentStandPercent.x / 100) * wrapSize.w;
+          const standY = (currentStandPercent.y / 100) * wrapSize.h;
+          const heroScale = 1.05;
+          const teammateScale = heroScale * 0.65;
+          const facingRight = currentVenueIdx % 2 === 1;
+          const cluster = getIslandTeammatesCluster(
+            standX,
+            standY,
+            facingRight,
+            teammates.length,
+            wrapSize.w,
+            wrapSize.h,
+            teammateScale,
+            heroScale,
+          );
 
-            {/* Individual Teammates Hit Rects (opens that specific teammate) */}
-            {teammates.map((tm, idx) => {
-              const standX = (currentStandPercent.x / 100) * wrapSize.w;
-              const standY = (currentStandPercent.y / 100) * wrapSize.h;
-              const heroScale = 1.05;
-              const teammateScale = heroScale * 0.65;
-              const facingRight = currentVenueIdx % 2 === 1;
-              const { tx, ty } = getIslandTeammatePos(
-                standX,
-                standY,
-                facingRight,
-                idx,
-                teammates.length,
-              );
-              const hitW = 56 * teammateScale + 16;
-              const hitH = 65 * teammateScale + 16;
-              const hitX = tx - 28 * teammateScale - 8;
-              const hitY = ty - 60 * teammateScale - 8;
+          return (
+            <>
+              {/* Team Cluster Bounding Area (opens first teammate in cluster) */}
+              <button
+                type="button"
+                onClick={() => store.setInspectMemberId(teammates[0].id)}
+                aria-label="檢視隊伍小隊成員"
+                style={{
+                  left: `${cluster.clusterHitRect.left}px`,
+                  top: `${cluster.clusterHitRect.top}px`,
+                  width: `${cluster.clusterHitRect.width}px`,
+                  height: `${cluster.clusterHitRect.height}px`,
+                }}
+                className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95"
+              />
 
-              return (
-                <button
-                  key={tm.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    store.setInspectMemberId(tm.id);
-                  }}
-                  aria-label={`檢視隊友 ${tm.nameZh}`}
-                  style={{
-                    left: `${hitX}px`,
-                    top: `${hitY}px`,
-                    width: `${hitW}px`,
-                    height: `${hitH}px`,
-                  }}
-                  className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95 hover:border-amber-400/40"
-                />
-              );
-            })}
-          </>
-        )}
+              {/* Individual Teammates Hit Rects (opens that specific teammate) */}
+              {teammates.map((tm, idx) => {
+                const pos = cluster.positions[idx];
+                if (!pos) return null;
+                const { tx, ty } = pos;
+                const hitW = 56 * teammateScale + 16;
+                const hitH = 65 * teammateScale + 16;
+                const hitX = tx - 28 * teammateScale - 8;
+                const hitY = ty - 60 * teammateScale - 8;
+
+                return (
+                  <button
+                    key={tm.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      store.setInspectMemberId(tm.id);
+                    }}
+                    aria-label={`檢視隊友 ${tm.nameZh}`}
+                    style={{
+                      left: `${hitX}px`,
+                      top: `${hitY}px`,
+                      width: `${hitW}px`,
+                      height: `${hitH}px`,
+                    }}
+                    className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95 hover:border-amber-400/40"
+                  />
+                );
+              })}
+            </>
+          );
+        })()}
 
         {/* 6 Interactive Venue Nodes Overlay */}
         {GYM_VENUES.map((venue) => {

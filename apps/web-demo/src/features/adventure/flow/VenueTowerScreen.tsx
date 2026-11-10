@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawMapleChibiAvatar, bossSpriteUrl } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar, bossSpriteUrl } from '../../../game/pixelSpriteDrawer';
 import {
   GYM_VENUES,
   GymVenueInfo,
@@ -35,6 +35,112 @@ const WEAKNESS = {
   mag: { label: '魔攻', Icon: Flame, color: 'text-rose-600 bg-rose-50 border-rose-200' },
   balanced: { label: '協同', Icon: Zap, color: 'text-purple-600 bg-purple-50 border-purple-200' },
 } as const;
+
+export interface TowerTeammatesClusterResult {
+  positions: Array<{ tx: number; ty: number }>;
+  clusterHitRect: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+}
+
+export function getTowerTeammatesCluster(
+  heroX: number,
+  heroY: number,
+  total: number,
+  w: number = 112,
+  h: number = 80,
+  heroScale: number = 1.05,
+): TowerTeammatesClusterResult {
+  if (total <= 0) {
+    return {
+      positions: [],
+      clusterHitRect: { left: 0, top: 0, width: 0, height: 0 },
+    };
+  }
+
+  const tmScale = heroScale * 0.65;
+  const heroDrawHeight = 60 * heroScale;
+  const stageW = heroDrawHeight * 2.4;
+  const stageH = heroDrawHeight * 2.4;
+
+  const offsets =
+    total === 1
+      ? [{ dx: -0.20, dy: -0.12 }]
+      : total === 2
+      ? [
+          { dx: -0.24, dy: -0.10 },
+          { dx: -0.14, dy: -0.16 },
+        ]
+      : [
+          { dx: -0.28, dy: -0.10 },
+          { dx: -0.20, dy: -0.17 },
+          { dx: -0.16, dy: -0.13 },
+        ];
+
+  const rawPos = offsets.slice(0, total).map((off, idx) => {
+    let tx = Math.round(heroX + off.dx * stageW);
+    const ty = Math.round(heroY + off.dy * stageH);
+
+    const maxX = Math.round(heroX - 0.16 * stageW);
+    if (tx > maxX) tx = maxX;
+    if (idx === 0) {
+      const minLeft = Math.round(28 * tmScale + 4);
+      if (tx < minLeft) tx = minLeft;
+    }
+    return { tx, ty };
+  });
+
+  const boxes = rawPos.map(({ tx, ty }) => ({
+    left: tx - 28 * tmScale,
+    right: tx + 28 * tmScale,
+    top: ty - 56 * tmScale - 20,
+    bottom: ty,
+  }));
+
+  const clusterLeft = Math.min(...boxes.map((b) => b.left));
+  const clusterRight = Math.max(...boxes.map((b) => b.right));
+  const clusterTop = Math.min(...boxes.map((b) => b.top));
+  const clusterBottom = Math.max(...boxes.map((b) => b.bottom));
+
+  let shiftX = 0;
+  let shiftY = 0;
+  const pad = 2;
+
+  if (clusterLeft + shiftX < pad) shiftX = pad - clusterLeft;
+  if (clusterRight + shiftX > w - pad) shiftX = w - pad - clusterRight;
+  if (clusterTop + shiftY < pad) shiftY = pad - clusterTop;
+  if (clusterBottom + shiftY > h - pad) shiftY = h - pad - clusterBottom;
+
+  const positions = rawPos.map(({ tx, ty }) => ({
+    tx: Math.round(tx + shiftX),
+    ty: Math.round(ty + shiftY),
+  }));
+
+  const finalBoxes = positions.map(({ tx, ty }) => ({
+    left: tx - 28 * tmScale - 4,
+    top: ty - 56 * tmScale - 4,
+    width: 56 * tmScale + 8,
+    height: 60 * tmScale + 8,
+  }));
+
+  const hitMinX = Math.min(...finalBoxes.map((b) => b.left));
+  const hitMinY = Math.min(...finalBoxes.map((b) => b.top));
+  const hitMaxX = Math.max(...finalBoxes.map((b) => b.left + b.width));
+  const hitMaxY = Math.max(...finalBoxes.map((b) => b.top + b.height));
+
+  return {
+    positions,
+    clusterHitRect: {
+      left: Math.max(0, Math.round(hitMinX)),
+      top: Math.max(0, Math.round(hitMinY)),
+      width: Math.round(hitMaxX - hitMinX),
+      height: Math.round(hitMaxY - hitMinY),
+    },
+  };
+}
 
 export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
   venueIndex,
@@ -103,21 +209,23 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
 
       if (isSquadTeam) {
         // Squad mode: draw teammates (scale 0.65 of hero, back row first)
-        const heroScale = 1.25;
+        const heroScale = 1.05;
         const tmScale = heroScale * 0.65;
         const total = teammates.length;
+        const heroX = total === 1 ? Math.round(w * 0.68) : total === 2 ? Math.round(w * 0.72) : Math.round(w * 0.76);
+        const heroY = Math.round(h * 0.88);
+        const towerCluster = getTowerTeammatesCluster(heroX, heroY, total, w, h, heroScale);
 
-        teammates.forEach((tm, idx) => {
-          let tx = w * 0.28;
-          const ty = h * 0.82;
-          if (total === 1) {
-            tx = w * 0.28;
-          } else if (total === 2) {
-            tx = idx === 0 ? w * 0.18 : w * 0.40;
-          } else {
-            tx = idx === 0 ? w * 0.14 : idx === 1 ? w * 0.34 : w * 0.50;
-          }
+        const positioned = teammates.map((tm, idx) => {
+          const pos = towerCluster.positions[idx] || { tx: heroX, ty: heroY };
+          const avatar = resolveSquadMemberAvatar(tm);
+          return { tm, avatar, idx, tx: pos.tx, ty: pos.ty };
+        });
 
+        // Draw in order of ty ascending (farthest / highest first)
+        const sorted = [...positioned].sort((a, b) => a.ty - b.ty);
+
+        sorted.forEach(({ tm, avatar, idx, tx, ty }) => {
           // Small warm pedestal
           ctx.save();
           ctx.fillStyle = 'rgba(251, 191, 36, 0.25)';
@@ -126,45 +234,51 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
           ctx.fill();
           ctx.restore();
 
-          const avatar = resolveSquadMemberAvatar(tm);
-          const bodyStage = tm.bodyStage || avatar.bodyStage;
-          const equipped = tm.equipped || avatar.equipped;
-
           ctx.save();
           ctx.translate(tx, ty);
           ctx.scale(tmScale, tmScale);
 
           if (!tm.hasWorkedOutToday) {
-            ctx.filter = 'grayscale(0.40)';
+            ctx.filter = 'grayscale(1)';
+            ctx.globalAlpha = 0.72;
           }
 
-          drawMapleChibiAvatar(ctx, {
-            x: -28,
-            y: -60,
-            bodyStage,
-            equipped,
-            state: 'IDLE',
-            facingRight: true,
-            frameTick: Math.floor(now / 16),
-          });
+          if (avatar.status === 'syncing' || !avatar.bodyStage) {
+            drawCreamChibiSilhouette(ctx, {
+              x: 0,
+              y: 0,
+              facingRight: true,
+              nameZh: tm.nameZh,
+            });
+          } else {
+            drawMapleChibiAvatar(ctx, {
+              x: -28,
+              y: -60,
+              bodyStage: avatar.bodyStage,
+              equipped: avatar.equipped || {},
+              state: 'IDLE',
+              facingRight: true,
+              frameTick: Math.floor(now / 16),
+            });
+          }
 
           ctx.restore();
 
           if (!tm.hasWorkedOutToday) {
             ctx.save();
             const headTopY = ty - 56 * tmScale;
-            ctx.font = 'bold 9px sans-serif';
+            ctx.font = '900 14px "Noto Sans TC", sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillStyle = '#6366f1';
-            ctx.fillText('Zzz', tx, headTopY);
+            ctx.lineWidth = 3.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.strokeText('Zzz', tx + 8, headTopY - 6);
+            ctx.fillStyle = '#B45309';
+            ctx.fillText('Zzz', tx + 8, headTopY - 6);
             ctx.restore();
           }
         });
 
         // Hero on front right
-        const heroX = total === 1 ? w * 0.68 : total === 2 ? w * 0.72 : w * 0.76;
-        const heroY = h * 0.85;
-
         ctx.save();
         const pulse = Math.sin(now / 350) * 2;
         ctx.fillStyle = 'rgba(251, 191, 36, 0.35)';
@@ -321,60 +435,65 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
                       className="block h-20 w-full"
                     />
 
-                    {/* In squad mode: Paper dolls hit buttons (8px expanded) */}
-                    {isSquadTeam && (
-                      <>
-                        {/* Cluster hit area */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            store.setInspectMemberId(teammates[0].id);
-                          }}
-                          aria-label="檢視小隊成員"
-                          className="absolute inset-0 z-10 cursor-pointer"
-                        />
+                    {/* In squad mode: Paper dolls hit buttons */}
+                    {isSquadTeam && (() => {
+                      const heroScale = 1.05;
+                      const tmScale = heroScale * 0.65;
+                      const total = teammates.length;
+                      const heroX = total === 1 ? Math.round(canvasW * 0.68) : total === 2 ? Math.round(canvasW * 0.72) : Math.round(canvasW * 0.76);
+                      const heroY = Math.round(canvasH * 0.88);
+                      const towerCluster = getTowerTeammatesCluster(heroX, heroY, total, canvasW, canvasH, heroScale);
 
-                        {/* Individual teammates */}
-                        {teammates.map((tm, idx) => {
-                          const heroScale = 1.25;
-                          const tmScale = heroScale * 0.65;
-                          const total = teammates.length;
-                          let tx = canvasW * 0.28;
-                          const ty = canvasH * 0.82;
-                          if (total === 1) {
-                            tx = canvasW * 0.28;
-                          } else if (total === 2) {
-                            tx = idx === 0 ? canvasW * 0.18 : canvasW * 0.40;
-                          } else {
-                            tx = idx === 0 ? canvasW * 0.14 : idx === 1 ? canvasW * 0.34 : canvasW * 0.50;
-                          }
-                          const hitW = 56 * tmScale + 16;
-                          const hitH = 65 * tmScale + 16;
-                          const hitX = tx - 28 * tmScale - 8;
-                          const hitY = ty - 60 * tmScale - 8;
+                      return (
+                        <>
+                          {/* Cluster hit area */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              store.setInspectMemberId(teammates[0].id);
+                            }}
+                            aria-label="檢視小隊成員"
+                            style={{
+                              left: `${towerCluster.clusterHitRect.left}px`,
+                              top: `${towerCluster.clusterHitRect.top}px`,
+                              width: `${towerCluster.clusterHitRect.width}px`,
+                              height: `${towerCluster.clusterHitRect.height}px`,
+                            }}
+                            className="absolute z-10 cursor-pointer rounded-xl border border-transparent transition-transform duration-120 active:scale-95"
+                          />
 
-                          return (
-                            <button
-                              key={tm.id}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                store.setInspectMemberId(tm.id);
-                              }}
-                              aria-label={`檢視隊友 ${tm.nameZh}`}
-                              style={{
-                                left: `${hitX}px`,
-                                top: `${hitY}px`,
-                                width: `${hitW}px`,
-                                height: `${hitH}px`,
-                              }}
-                              className="absolute z-20 cursor-pointer rounded-xl border border-transparent transition-transform duration-120 active:scale-95"
-                            />
-                          );
-                        })}
-                      </>
-                    )}
+                          {/* Individual teammates */}
+                          {teammates.map((tm, idx) => {
+                            const pos = towerCluster.positions[idx];
+                            if (!pos) return null;
+                            const hitW = 56 * tmScale + 8;
+                            const hitH = 60 * tmScale + 8;
+                            const hitX = pos.tx - 28 * tmScale - 4;
+                            const hitY = pos.ty - 56 * tmScale - 4;
+
+                            return (
+                              <button
+                                key={tm.id}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  store.setInspectMemberId(tm.id);
+                                }}
+                                aria-label={`檢視隊友 ${tm.nameZh}`}
+                                style={{
+                                  left: `${hitX}px`,
+                                  top: `${hitY}px`,
+                                  width: `${hitW}px`,
+                                  height: `${hitH}px`,
+                                }}
+                                className="absolute z-20 cursor-pointer rounded-xl border border-transparent transition-transform duration-120 active:scale-95"
+                              />
+                            );
+                          })}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Floor info */}
