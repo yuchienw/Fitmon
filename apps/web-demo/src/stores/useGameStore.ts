@@ -509,7 +509,6 @@ interface GameState {
   logWorkoutSet: () => void;
   finishWorkoutSession: () => void;
   discardWorkoutSession: () => void;
-  quickLogSavedRoutine: (routine: WorkoutTemplate) => void;
 
   // Social & Adventure Actions (V2.9)
   toggleFriend: (profileId: string) => void;
@@ -546,7 +545,7 @@ interface GameState {
   resetDemoState: () => void;
 }
 
-const INITIAL_QUESTS: DailyQuest[] = [
+export const INITIAL_QUESTS: DailyQuest[] = [
   {
     id: 'q_interact_pet',
     titleZh: '在房間與角色或寵物互動',
@@ -558,7 +557,7 @@ const INITIAL_QUESTS: DailyQuest[] = [
   },
   {
     id: 'q_daily_workout',
-    titleZh: '完成今日運動課表或3秒速記',
+    titleZh: '完成今日運動課表',
     rewardCoins: ECONOMY_CONFIG.dailyWorkoutQuestCoins,
     progress: 0,
     target: 1,
@@ -1944,95 +1943,6 @@ export const useGameStore = create<GameState>()(
           selectedQueueItemId: null,
         });
         get().showToast('已退出專注模式');
-      },
-
-      quickLogSavedRoutine: (routine) => {
-        const state = get();
-        const hasStamina = state.stamina >= ECONOMY_CONFIG.staminaPerQuickWorkout;
-        const nextStamina = hasStamina ? state.stamina - ECONOMY_CONFIG.staminaPerQuickWorkout : 0;
-
-        const simSets: {
-          exerciseId: string;
-          muscleGroup: 'legs' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core';
-          category: ExerciseCategory;
-          weightKg: number;
-          reps: number;
-        }[] = [];
-
-        const exerciseLogs: WorkoutSessionRecord['exerciseLogs'] = [];
-
-        routine.exercises.forEach((cfg) => {
-          const ex =
-            EXERCISE_LIBRARY.find((e) => e.id === cfg.exerciseId) || EXERCISE_LIBRARY[0];
-          const setsArr: { weightKg: number; reps: number; restSec: number; isPR: boolean }[] = [];
-          for (let i = 0; i < cfg.sets; i++) {
-            simSets.push({
-              exerciseId: ex.id,
-              muscleGroup: ex.muscleGroup,
-              category: ex.category,
-              weightKg: cfg.weightKg,
-              reps: cfg.reps,
-            });
-            setsArr.push({
-              weightKg: cfg.weightKg,
-              reps: cfg.reps,
-              restSec: cfg.restSeconds,
-              isPR: false,
-            });
-          }
-          exerciseLogs.push({
-            exerciseId: ex.id,
-            exerciseNameZh: ex.nameZh,
-            unitLabel: ex.unitLabel,
-            sets: setsArr,
-          });
-        });
-
-        const calcResult = calculateWorkoutExp(simSets, {
-          hasWheyProtein: true,
-          hasPreWorkout: state.doubleCoinActive,
-        });
-
-        const mult = state.doubleCoinActive ? 2 : 1;
-        const rewardCoins = hasStamina ? Math.max(25, calcResult.totalCoins * mult) : 0;
-        const topEx = exerciseLogs[0]?.exerciseNameZh || routine.nameZh;
-
-        const sessionRecord: WorkoutSessionRecord = {
-          id: `hist_${Date.now()}`,
-          dateLabel: '今日 速記',
-          daysAgo: 0,
-          timestamp: Date.now(),
-          routineName: routine.nameZh,
-          durationMinutes: 40,
-          totalVolume: calcResult.totalRawVolume,
-          totalSets: simSets.length,
-          coinsEarned: rewardCoins,
-          expEarned: calcResult.totalExperience,
-          topExerciseZh: topEx,
-          exerciseLogs,
-        };
-
-        soundFX.playVictory();
-
-        set({
-          stamina: nextStamina,
-          coins: state.coins + rewardCoins,
-          exp: state.exp + calcResult.totalExperience,
-          streakDays: state.streakDays + 1,
-          victoryModalData: {
-            calcResult,
-            routineName: routine.nameZh,
-            setsCount: simSets.length,
-            bonusCoins: rewardCoins,
-            newPRs: [],
-            staminaDepletedNotice: !hasStamina,
-            topExerciseName: topEx,
-          },
-          workoutHistory: [sessionRecord, ...state.workoutHistory],
-          quests: state.quests.map((q) =>
-            q.id === 'q_daily_workout' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
-          ),
-        });
       },
 
       // ================= SOCIAL ACTIONS WITH ANTI-ABUSE CAPS (V2-12, V2-16) =================
