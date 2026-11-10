@@ -656,3 +656,25 @@
 - [tech_architecture.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/wiki/tech_architecture.md)
 - [PROJECT_STATE.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/PROJECT_STATE.md)
 - [changelog.md](file:///Users/yuchien/Project/Github/fitmon/llm-wiki/logs/changelog.md)
+
+## [2026-11-10] 同步專案狀態至 main HEAD，並新增會議紀錄
+
+### 1. 觸發原因 (Trigger / Context)
+- 預設分支 `main` 已合併 [PR #1](https://github.com/yuchienw/Fitmon/pull/1)、[PR #2](https://github.com/yuchienw/Fitmon/pull/2)、[PR #3](https://github.com/yuchienw/Fitmon/pull/3)，HEAD 為 `4d42d26`（2026-11-10 13:35 Asia/Taipei），但入口文件與看板仍停留在 11/07 的 v2.9.4／`468d239`，且根目錄 README、`AGENT.md`、協作 SOP 仍寫 Phase 0 與程式碼凍結。
+- [PR #4](https://github.com/yuchienw/Fitmon/pull/4) 資安清單第一批仍為開啟、未合併。
+- 幕僚長轉述 YuChien 於 2026-11-10 親口做成的決定，需以會議紀錄入庫，並把可直接落到看板上的事項寫入 `PROJECT_STATE.md`。
+- 產品規格既有矛盾（站內動態牆存廢、PARK-002 與冒險 RPG 的關係、裝備是否影響數值）**不在本次修改範圍**，待 YuChien 確認。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+- 即時階段、版本與待辦改由 `PROJECT_STATE.md` 作為唯一來源，避免入口文件再保存會過時的快照。
+- SOP 中「🟡 待討論清單 (Backlog)」與現行看板欄位不符，改為對齊既有的進行中／已完成／擱置欄位。
+- 會議紀錄只記載來源所載、由 YuChien 親口做成的決定；待辦若無指定負責人或期限，一律寫「待指定」。
+- 本次僅改文件，不改程式；等 YuChien 同意後才合併本 PR。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [`README.md`](../../README.md)（根目錄）：移除 Phase 0／程式碼凍結狀態板，改指向 `PROJECT_STATE.md`，並加上會議紀錄連結。
+- [`AGENT.md`](../AGENT.md)、[`ops/collaboration_sop.md`](../ops/collaboration_sop.md)：開局對齊改讀看板；修正已不存在的 Backlog 欄位說明。
+- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：同步至 main HEAD `4d42d26`；記入已合併 PR #1–#3、進行中未合併的 PR #4；新增刪除「速記」、上架時程暫不排定、資安第二批與 Supabase 一併進行、測試外掛暫留至接雲端前等看板事項。
+- [`logs/changelog.md`](changelog.md)：追加本筆。
+- [`logs/meetings/README.md`](meetings/README.md)、[`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：新增會議紀錄目錄規範與第一份紀錄。
+- [`wiki/00_INDEX.md`](../wiki/00_INDEX.md)、[`README.md`](../README.md)（知識庫）：加上會議紀錄資料夾相對路徑連結。

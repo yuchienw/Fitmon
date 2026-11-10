@@ -26,3 +26,4 @@
 - **Agent 讀寫規範手冊**：[`AGENT.md`](../AGENT.md)
 - **資料庫遷移腳本**：[`supabase/migrations/20261101_init_fitmon_game_schema.sql`](../../supabase/migrations/20261101_init_fitmon_game_schema.sql)
 - **完整演進軌跡**：[`logs/changelog.md`](../logs/changelog.md)
+- **會議紀錄**：[`logs/meetings/`](../logs/meetings/)

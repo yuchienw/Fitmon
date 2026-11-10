@@ -8,11 +8,10 @@
 ## 0. 專案當前狀態快照 (Current State Snapshot) - 啟動第一時間必讀
 
 > [!IMPORTANT]
-> - **專案當前階段**：`Phase 0 - 規劃與 LLM-Wiki 知識庫深耕期`
-> - **核心行為約束**：⚠️ **現階段【嚴禁擅自啟動程式開發】**。專案尚未進入應用編碼階段，所有互動重心均為：收錄商業/技術文件、提煉主題 Wiki、論證數值模型、撰寫 ADR 與追加 Changelog。
-> - **即時狀態與待辦看板**：一律查閱並維護 [`PROJECT_STATE.md`](PROJECT_STATE.md)。
+> - **唯一即時狀態來源**：階段、版本、進行中焦點與待辦一律以 [`PROJECT_STATE.md`](PROJECT_STATE.md) 為準。本檔不保存即時狀態快照，禁止引用本節或開局範本中的過時階段／版本字樣。
+> - **即時狀態與待辦看板**：每次開局必須先讀取並視需要維護 [`PROJECT_STATE.md`](PROJECT_STATE.md)。
 > - **長效協作 SOP 依歸**：所有對話交互嚴格執行 [`ops/collaboration_sop.md`](ops/collaboration_sop.md)。
-> - **進度追溯源**：每次執行任務前，必須先查看 [`logs/changelog.md`](logs/changelog.md) 的最後一筆紀錄。
+> - **進度追溯源**：每次執行任務前，必須先查看 [`logs/changelog.md`](logs/changelog.md) 的最後一筆紀錄，以及 [`logs/meetings/`](logs/meetings/) 的近期會議紀錄（若有）。
 
 ---
 
@@ -21,10 +20,10 @@
 每次新對話開場或收到重啟指令時，Agent **必須在第一段輸出標準「狀態對齊摘要卡」**：
 ```markdown
 > 🎯 **【FitMon 狀態對齊卡】**
-> - **時間 / 版本**：`YYYY-MM-DD` ｜ `v0.1.0-planning`
-> - **當前階段**：`Phase 0 規劃期 (⚠️ 程式碼凍結)`
-> - **進行中焦點**：`[TASK-XXX] 任務名稱`
-> - **待辦下一項**：`[PLAN-XXX] 建議主題`
+> - **時間 / 版本**：以 [`PROJECT_STATE.md`](PROJECT_STATE.md) 的「最後更新時間」與「當前版本」填入
+> - **當前階段**：以 [`PROJECT_STATE.md`](PROJECT_STATE.md) 的「目前階段」填入
+> - **進行中焦點**：以 [`PROJECT_STATE.md`](PROJECT_STATE.md) 看板「進行中」填入
+> - **待辦下一項**：以 [`PROJECT_STATE.md`](PROJECT_STATE.md) 看板待辦填入
 ```
 確認人機狀態完全同步後，再開展實質內容討論。
 

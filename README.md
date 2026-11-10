@@ -7,10 +7,9 @@
 ## 📌 專案即時狀態看版 (Status Board) - AI 與團隊每次必讀
 
 > [!IMPORTANT]
-> - **當前階段**：`Phase 0 - 規劃與 LLM-Wiki 知識庫構建期`
-> - **開發狀態**：⚠️ **【凍結程式碼開發】**（現階段專注於商業模式、架構論證與日誌推演，尚未進入應用開發階段）
-> - **Git 狀態**：Monorepo 初始化完畢，分支 `main`，第一筆創世 Commit `62e6c3c` 已固化
+> - **唯一即時狀態來源**：階段、版本、進行中焦點與待辦請一律查閱並維護 [`llm-wiki/PROJECT_STATE.md`](llm-wiki/PROJECT_STATE.md)。本 README 不保存狀態快照，以免過時。
 > - **最新演進**：請查閱 [`llm-wiki/logs/changelog.md`](llm-wiki/logs/changelog.md)
+> - **會議紀錄**：請查閱 [`llm-wiki/logs/meetings/`](llm-wiki/logs/meetings/)
 > - **AI 協作守則**：請先閱讀 [`AGENT.md`](AGENT.md) 與 [`llm-wiki/wiki/00_INDEX.md`](llm-wiki/wiki/00_INDEX.md)
 
 ---
@@ -47,3 +46,4 @@ fitmon/
 2. **LLM 協作與維護規範**：請查閱 [`llm-wiki/ops/wiki_protocol.md`](llm-wiki/ops/wiki_protocol.md)
 3. **歷史演進與推演脈絡**：請查閱 [`llm-wiki/logs/changelog.md`](llm-wiki/logs/changelog.md)
 4. **技術選型決策記錄 (ADR-0001)**：請查閱 [`llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md`](llm-wiki/adr/0001-web-first-demo-to-mobile-cross-platform-architecture.md)
+5. **會議紀錄**：請查閱 [`llm-wiki/logs/meetings/`](llm-wiki/logs/meetings/)
