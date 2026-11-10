@@ -10,8 +10,8 @@ import {
   ShieldAlert,
   Zap,
 } from 'lucide-react';
-import { useGameStore, SquadMemberState, SQUAD_CANDIDATE_POOL } from '../../stores/useGameStore';
-import { drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
+import { useGameStore, SquadMemberState, SQUAD_CANDIDATE_POOL, resolveSquadMemberAvatar } from '../../stores/useGameStore';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
 import {
   calculateMemberStats,
@@ -97,6 +97,8 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
       ctx.stroke();
       ctx.restore();
 
+      const avatar = resolveSquadMemberAvatar(member);
+
       // Draw Avatar (scale 0.8 display scale = 1.6 relative to standard canvas)
       const scale = 1.65;
       ctx.save();
@@ -104,34 +106,44 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
       ctx.scale(scale, scale);
 
       if (!member.hasWorkedOutToday) {
-        ctx.filter = 'grayscale(0.40)';
+        ctx.filter = 'grayscale(1)';
+        ctx.globalAlpha = 0.72;
       }
 
-      drawMapleChibiAvatar(ctx, {
-        x: -28,
-        y: -60,
-        bodyStage: member.bodyStage || 'aesthetic',
-        equipped: member.equipped || { hair: '', face: '', top: '', bottom: '', accessory: '' },
-        state: 'IDLE',
-        facingRight: true,
-        frameTick: Math.floor(now / 16),
-      });
+      if (avatar.status === 'syncing' || !avatar.bodyStage) {
+        drawCreamChibiSilhouette(ctx, {
+          x: 0,
+          y: 0,
+          facingRight: true,
+          nameZh: member.nameZh,
+        });
+      } else {
+        drawMapleChibiAvatar(ctx, {
+          x: -28,
+          y: -60,
+          bodyStage: avatar.bodyStage,
+          equipped: avatar.equipped || {},
+          state: 'IDLE',
+          facingRight: true,
+          frameTick: Math.floor(now / 16),
+        });
+      }
 
       ctx.restore();
 
-      // Unworked teammate: crisp floating Zzz above head
+      // Unworked teammate: crisp floating Zzz (18-20px font-weight 900, white 4px stroke, fill #B45309, 8px above head, 10px right)
       if (!member.hasWorkedOutToday) {
         ctx.save();
-        const headTopY = cy - 64 * scale;
+        const headTopY = cy - 60 * scale;
         const zOff = reducedMotion ? 0 : Math.sin(now / 320) * 3;
-        ctx.font = '900 13px "Noto Sans TC", sans-serif';
+        ctx.font = '900 18px "Noto Sans TC", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         ctx.strokeStyle = '#ffffff';
-        ctx.strokeText('Zzz', cx + 18, headTopY + zOff);
-        ctx.fillStyle = '#6366f1';
-        ctx.fillText('Zzz', cx + 18, headTopY + zOff);
+        ctx.strokeText('Zzz', cx + 10, headTopY - 8 + zOff);
+        ctx.fillStyle = '#B45309';
+        ctx.fillText('Zzz', cx + 10, headTopY - 8 + zOff);
         ctx.restore();
       }
 
@@ -182,15 +194,28 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
     onSelectMember?.(nextCandidate.id);
   };
 
+  // Refresh Teammate Avatar cache from id-exact sources (PR #2 QA Spec)
+  const handleRefresh = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const success = store.refreshSquadMemberAvatar(member.id);
+    if (success) {
+      store.showToast('✅ 已成功更新隊友造型快取！');
+    } else {
+      store.showToast('⏳ 仍在同步最新造型資料，請稍候重試');
+    }
+  };
+
+  const resolvedAvatar = resolveSquadMemberAvatar(member);
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`隊友檢視：${member.nameZh}`}
       onClick={onClose}
-      className="absolute inset-0 z-20 flex flex-col justify-end bg-[#29221E]/35 backdrop-blur-[2px] transition-opacity duration-180"
+      className="absolute inset-0 z-40 flex flex-col justify-end bg-[#29221E]/35 backdrop-blur-[2px] transition-opacity duration-180"
     >
-      {/* Sheet Container: Max 72vh, rounded-t-[20px], card background */}
+      {/* Sheet Container: Max 72vh, rounded-t-[20px], card background, z-index above BottomNav */}
       <div
         onClick={(e) => e.stopPropagation()}
         onTouchStart={handleTouchStart}
@@ -199,6 +224,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
         style={{
           transform: touchDeltaY > 0 ? `translateY(${touchDeltaY}px)` : undefined,
           transition: touchDeltaY > 0 ? 'none' : 'transform 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+          paddingBottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
         }}
         className={`retro-box max-h-[72vh] w-full overflow-y-auto rounded-t-[20px] border-t-2 border-[#e5dccb] bg-[#ffffff] p-4 text-[#29221e] shadow-2xl ${
           reducedMotion ? 'animate-fade-in' : 'animate-slide-up'
@@ -264,6 +290,24 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
             />
           </div>
 
+          {/* Syncing indicator & Refresh CTA */}
+          {resolvedAvatar.status === 'syncing' && (
+            <div className="mt-1.5 flex items-center justify-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-900 shadow-xs">
+                <RefreshCw className="h-3 w-3 animate-spin text-amber-700" />
+                <span>資料同步中</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                className="inline-flex items-center gap-1 rounded-full border border-amber-400 bg-amber-100 px-3 py-1 text-[11px] font-black text-amber-950 shadow-xs active:scale-95 hover:bg-amber-200"
+              >
+                <RefreshCw className="h-3 w-3 text-amber-800" />
+                <span>重新整理</span>
+              </button>
+            </div>
+          )}
+
           {/* 3. Status Bar: Today workout chip + Damage contribution chip */}
           <div className="mt-1 flex items-center justify-center gap-2">
             <TeammateStatusChip member={member} variant="attendance" />
@@ -277,7 +321,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
             </div>
             <div className="grid grid-cols-5 gap-1.5 text-center">
               {EQUIP_SLOTS_ORDER.map(({ slot, labelZh }) => {
-                const itemId = member.equipped?.[slot];
+                const itemId = member.equipped?.[slot] || resolvedAvatar.equipped?.[slot];
                 const item = getCosmeticItem(itemId);
                 return (
                   <div

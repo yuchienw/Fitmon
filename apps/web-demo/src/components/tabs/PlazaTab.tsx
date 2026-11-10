@@ -1074,7 +1074,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TeammateInspectSheet (組隊確認／島／爬塔／我的隊伍清單 共用)          */}
       {/* ================================================================= */}
-      {store.inspectMemberId && (
+      {store.inspectMemberId && !(mainSubTab === 'raid' && adventureStep === 'battle') && (
         <TeammateInspectSheet
           memberId={store.inspectMemberId}
           context={

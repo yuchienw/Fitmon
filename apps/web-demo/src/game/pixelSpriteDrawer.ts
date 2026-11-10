@@ -391,6 +391,79 @@ function drawRoomDecorItemAt(
 }
 
 /**
+ * Cream Silhouette for Syncing Squad Member Avatars (PR #2 QA Spec)
+ * Fill #E5DCCB, Stroke #D8CCB8, matching 0.65 teammate chibi proportions
+ */
+export function drawCreamChibiSilhouette(
+  ctx: CanvasRenderingContext2D,
+  options: {
+    x?: number;
+    y?: number;
+    facingRight?: boolean;
+    nameZh?: string;
+  } = {}
+) {
+  const { x = 0, y = 0, facingRight = true, nameZh } = options;
+  ctx.save();
+  ctx.translate(x, y);
+  if (!facingRight) {
+    ctx.scale(-1, 1);
+  }
+
+  ctx.fillStyle = '#E5DCCB';
+  ctx.strokeStyle = '#D8CCB8';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  // 1. Chibi Head (big rounded head, r=20 at (0, -38))
+  ctx.beginPath();
+  ctx.ellipse(0, -38, 20, 19, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // 2. Chibi Torso
+  ctx.beginPath();
+  ctx.roundRect(-10, -22, 20, 18, 5);
+  ctx.fill();
+  ctx.stroke();
+
+  // 3. Legs
+  ctx.beginPath();
+  ctx.roundRect(-9, -6, 7, 10, 3);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.roundRect(2, -6, 7, 10, 3);
+  ctx.fill();
+  ctx.stroke();
+
+  // 4. Arms
+  ctx.beginPath();
+  ctx.ellipse(-13, -14, 4, 7, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(13, -14, 4, 7, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+
+  if (nameZh) {
+    ctx.save();
+    ctx.font = 'bold 9px "Noto Sans TC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#786b63';
+    ctx.fillText(nameZh.slice(0, 6), x, y + 4);
+    ctx.restore();
+  }
+}
+
+/**
  * ============================================================================
  * 2. MAPLESTORY-STYLE HD 2D CHIBI PAPER-DOLL AVATAR RENDERER
  *    (Big Cute Head, Glossy Anime Eyes, Cel-Shaded Hair & Gear, Zero Blocky Pixels!)
@@ -402,7 +475,7 @@ export function drawMapleChibiAvatar(
     x: number;
     y: number;
     bodyStage: AvatarBodyStage;
-    equipped: Record<EquipSlot, string>;
+    equipped: Partial<Record<EquipSlot, string>>;
     state: 'IDLE' | 'WALK' | 'SQUAT' | 'CURL' | 'CHEER';
     expressionOverride?: AvatarExpression;
     facingRight: boolean;

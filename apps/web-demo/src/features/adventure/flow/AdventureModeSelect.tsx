@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Sparkles, Users, User, ChevronRight, Trophy, Gift, Wrench } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
 import { getVenueForStage } from './venueConfig';
 import { AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
 
@@ -12,8 +12,9 @@ interface ModeIslandCanvasProps {
   };
   teammates?: {
     id: string;
-    bodyStage: AvatarBodyStage;
-    equipped: Record<EquipSlot, string>;
+    avatarStatus?: 'ready' | 'partial' | 'syncing';
+    bodyStage?: AvatarBodyStage;
+    equipped?: Partial<Record<EquipSlot, string>>;
     hasWorkedOutToday: boolean;
   }[];
 }
@@ -135,26 +136,38 @@ const ModeIslandCanvas: React.FC<ModeIslandCanvasProps> = ({ hero, teammates }) 
           ctx.scale(1.3, 1.3);
 
           if (!tm.hasWorkedOutToday) {
-            ctx.filter = 'grayscale(0.40)';
+            ctx.filter = 'grayscale(1)';
+            ctx.globalAlpha = 0.72;
           }
 
-          drawMapleChibiAvatar(ctx, {
-            x: -28,
-            y: -60,
-            bodyStage: tm.bodyStage,
-            equipped: tm.equipped,
-            state: 'IDLE',
-            facingRight: idx === 0,
-            frameTick: Math.floor(now / 16),
-          });
+          if (tm.avatarStatus === 'syncing' || !tm.bodyStage) {
+            drawCreamChibiSilhouette(ctx, {
+              x: 0,
+              y: 0,
+              facingRight: idx === 0,
+            });
+          } else {
+            drawMapleChibiAvatar(ctx, {
+              x: -28,
+              y: -60,
+              bodyStage: tm.bodyStage,
+              equipped: tm.equipped || {},
+              state: 'IDLE',
+              facingRight: idx === 0,
+              frameTick: Math.floor(now / 16),
+            });
+          }
           ctx.restore();
 
           if (!tm.hasWorkedOutToday) {
             ctx.save();
-            ctx.fillStyle = '#64748b';
-            ctx.font = 'bold 10px sans-serif';
+            ctx.font = '900 13px "Noto Sans TC", sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('Zzz', tx, ty - 70);
+            ctx.lineWidth = 3.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.strokeText('Zzz', tx + 6, ty - 70);
+            ctx.fillStyle = '#B45309';
+            ctx.fillText('Zzz', tx + 6, ty - 70);
             ctx.restore();
           }
         });
@@ -261,8 +274,9 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
     const avatar = resolveSquadMemberAvatar(m);
     return {
       id: m.id,
-      bodyStage: m.bodyStage || avatar.bodyStage,
-      equipped: m.equipped || avatar.equipped,
+      avatarStatus: avatar.status,
+      bodyStage: avatar.bodyStage,
+      equipped: avatar.equipped,
       hasWorkedOutToday: m.hasWorkedOutToday,
     };
   });

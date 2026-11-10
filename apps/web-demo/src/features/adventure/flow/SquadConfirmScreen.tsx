@@ -9,7 +9,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
 import { TeammateStatusChip } from '../../../components/adventure/TeammateStatusChip';
 import { TeammateHitRect } from '../../../components/adventure/memberStats';
 
@@ -45,8 +45,8 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
   const totalSlots = 3; // Max 3 teammates + 1 hero = 4 members
 
   // Slot x coordinates (canvas 360 x 210)
-  // Slot 0: left rear, Slot 1: right rear, Slot 2: far right rear
-  const slotXPositions = [360 * 0.16, 360 * 0.68, 360 * 0.84];
+  // Slot 0: left rear (0.14), Slot 1: mid-right rear (0.58), Slot 2: far right rear (0.86)
+  const slotXPositions = [360 * 0.14, 360 * 0.58, 360 * 0.86];
   const deckY = 210 * 0.76;
   const tmDeckY = deckY - 10;
   const baseScale = Math.min(360 / 140, 2.5);
@@ -151,42 +151,50 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
           ctx.restore();
 
           const avatar = resolveSquadMemberAvatar(tm);
-          const bodyStage = tm.bodyStage || avatar.bodyStage;
-          const equipped = tm.equipped || avatar.equipped;
 
           ctx.save();
           ctx.translate(tx, tmDeckY);
           ctx.scale(tmScale, tmScale);
 
           if (!tm.hasWorkedOutToday) {
-            ctx.filter = 'grayscale(0.40)';
+            ctx.filter = 'grayscale(1)';
+            ctx.globalAlpha = 0.72;
           }
 
-          drawMapleChibiAvatar(ctx, {
-            x: -28,
-            y: -60,
-            bodyStage,
-            equipped,
-            state: 'IDLE',
-            facingRight: tx < w * 0.5,
-            frameTick: Math.floor(now / 16),
-          });
+          if (avatar.status === 'syncing' || !avatar.bodyStage) {
+            drawCreamChibiSilhouette(ctx, {
+              x: 0,
+              y: 0,
+              facingRight: tx < w * 0.5,
+              nameZh: tm.nameZh,
+            });
+          } else {
+            drawMapleChibiAvatar(ctx, {
+              x: -28,
+              y: -60,
+              bodyStage: avatar.bodyStage,
+              equipped: avatar.equipped || {},
+              state: 'IDLE',
+              facingRight: tx < w * 0.5,
+              frameTick: Math.floor(now / 16),
+            });
+          }
 
           ctx.restore();
 
-          // Unworked teammate: crisp floating Zzz
+          // Unworked teammate: crisp floating Zzz (18-20px font-weight 900, white 4px stroke, fill #B45309, 8px above head, 10px right)
           if (!tm.hasWorkedOutToday) {
             ctx.save();
-            const headTopY = tmDeckY - 64 * tmScale;
+            const headTopY = tmDeckY - 60 * tmScale;
             const zOff = Math.sin(now / 320 + i) * 3;
-            ctx.font = '900 12px "Noto Sans TC", sans-serif';
+            ctx.font = '900 18px "Noto Sans TC", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4;
             ctx.strokeStyle = '#ffffff';
-            ctx.strokeText('Zzz', tx, headTopY + zOff);
-            ctx.fillStyle = '#6366f1';
-            ctx.fillText('Zzz', tx, headTopY + zOff);
+            ctx.strokeText('Zzz', tx + 10, headTopY - 8 + zOff);
+            ctx.fillStyle = '#B45309';
+            ctx.fillText('Zzz', tx + 10, headTopY - 8 + zOff);
             ctx.restore();
           }
         } else {

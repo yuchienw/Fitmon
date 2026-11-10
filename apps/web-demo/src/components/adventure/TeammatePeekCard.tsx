@@ -1,5 +1,5 @@
 import React from 'react';
-import { SquadMemberState } from '../../stores/useGameStore';
+import { SquadMemberState, resolveSquadMemberAvatar, useGameStore } from '../../stores/useGameStore';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
 import { calculateMemberStats, EQUIP_SLOTS_ORDER, getCosmeticItem } from './memberStats';
@@ -16,13 +16,15 @@ export const TeammatePeekCard: React.FC<TeammatePeekCardProps> = ({
   onClose,
   className = '',
 }) => {
+  const store = useGameStore();
   const reducedMotion = usePrefersReducedMotion();
   const stats = calculateMemberStats(member);
   const worked = member.hasWorkedOutToday;
+  const avatar = resolveSquadMemberAvatar(member);
 
   // Equipment icons (up to 5 items, each 24px)
   const equippedItems = EQUIP_SLOTS_ORDER.map(({ slot }) => {
-    const itemId = member.equipped?.[slot];
+    const itemId = member.equipped?.[slot] || avatar.equipped?.[slot];
     return itemId ? getCosmeticItem(itemId) : null;
   }).filter((item): item is NonNullable<typeof item> => Boolean(item));
 
@@ -45,8 +47,9 @@ export const TeammatePeekCard: React.FC<TeammatePeekCardProps> = ({
       <div className="flex items-center gap-2">
         <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-amber-300 bg-amber-50 shadow-sm">
           <AvatarPortraitCanvas
-            bodyStage={member.bodyStage || 'aesthetic'}
-            equipped={member.equipped || { hair: '', face: '', top: '', bottom: '', accessory: '' }}
+            bodyStage={avatar.bodyStage}
+            equipped={avatar.equipped}
+            status={avatar.status}
             size={56}
           />
           <span className="absolute left-1 top-0.5 text-[10px]" aria-hidden="true">
@@ -57,8 +60,24 @@ export const TeammatePeekCard: React.FC<TeammatePeekCardProps> = ({
           <div className="truncate text-xs font-black text-[#29221e]">
             {member.nameZh.split('·')[1]?.trim() || member.nameZh}
           </div>
-          <div className="mt-0.5 inline-block rounded bg-amber-100 px-1 py-0.2 text-[9px] font-black text-amber-800">
-            {member.roleBadgeZh || '隊友'}
+          <div className="mt-0.5 flex items-center gap-1">
+            <span className="inline-block rounded bg-amber-100 px-1 py-0.2 text-[9px] font-black text-amber-800">
+              {member.roleBadgeZh || '隊友'}
+            </span>
+            {avatar.status === 'syncing' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const success = store.refreshSquadMemberAvatar(member.id);
+                  if (success) store.showToast('✅ 已更新造型快取！');
+                  else store.showToast('⏳ 仍在同步最新造型資料');
+                }}
+                className="rounded border border-amber-400 bg-amber-100 px-1 py-0.2 text-[9px] font-black text-amber-950 active:scale-95"
+              >
+                同步重整
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -96,7 +115,7 @@ export const TeammatePeekCard: React.FC<TeammatePeekCardProps> = ({
               ✓ 今日已運動
             </span>
           ) : (
-            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-black text-amber-800">
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-black text-amber-950 border border-amber-400">
               Zzz 未運動
             </span>
           )}
