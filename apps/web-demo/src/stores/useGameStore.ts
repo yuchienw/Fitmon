@@ -345,6 +345,7 @@ export interface VictorySettlementData {
   newPRs: string[];
   staminaDepletedNotice: boolean;
   topExerciseName: string;
+  workoutStatus?: TodayWorkoutStatus;
 }
 
 interface GameState {
@@ -1898,6 +1899,7 @@ export const useGameStore = create<GameState>()(
         const detectedSport: AdventureSportSkillType = firstEx?.sportType || 'strength';
         // If user spent at least 30s in focus mode, count as legit rest timer workout; otherwise suspected fast spam
         const isLegitRest = state.workoutElapsedSeconds >= 30;
+        const evaluatedWorkoutStatus: TodayWorkoutStatus = isLegitRest ? 'legit_rest' : 'cheated_fast';
 
         set({
           coins: state.coins + settlementCoins,
@@ -1908,7 +1910,7 @@ export const useGameStore = create<GameState>()(
           workoutElapsedSeconds: 0,
           isRestRunning: false,
           restSecondsLeft: 0,
-          todayWorkoutStatus: isLegitRest ? 'legit_rest' : 'cheated_fast',
+          todayWorkoutStatus: evaluatedWorkoutStatus,
           todaySportType: detectedSport,
           victoryModalData: {
             calcResult,
@@ -1918,6 +1920,7 @@ export const useGameStore = create<GameState>()(
             newPRs,
             staminaDepletedNotice: !hasStaminaForBonus,
             topExerciseName: topEx,
+            workoutStatus: evaluatedWorkoutStatus,
           },
           workoutHistory: [sessionRecord, ...state.workoutHistory],
           quests: state.quests.map((q) =>
