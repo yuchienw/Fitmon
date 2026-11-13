@@ -9,24 +9,27 @@
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、雙情境拍貼、開源科學動作庫、Tap Titans 冒險推圖 |
-| **目前階段** | **Phase 1：Web Demo & Native iOS/Android 實機測試與打磨期** | 已合併冒險 PR #1–#3 與資安第一批 PR #4；上架時程暫不排定（等 App 做到 YuChien 滿意再談） |
-| **當前版本** | `v2.9.4-analytics-queue-polish` | 文件不擅自升版。11/10 已在此版本之上合併暖日光戰場、健身房島爬塔與組隊檢視 |
-| **最後更新時間** | `2026-11-10 16:03 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `c82b17b` | 本次文件同步時的 main HEAD（[PR #4](https://github.com/yuchienw/Fitmon/pull/4) 合併 commit） |
-| **當前焦點 (Current Focus)** | 專注好用、好玩、修 bug（一輪約一週）；上架時程暫不排定 |
+| **目前階段** | **Phase 1：Web Demo & Native iOS/Android 實機測試與打磨期** | 已合併冒險 PR #1–#3、資安第一批 PR #4、移除速記 [PR #5](https://github.com/yuchienw/Fitmon/pull/5)，以及 wiki 同步 [PR #6](https://github.com/yuchienw/Fitmon/pull/6)；上架時程暫不排定（等 App 做到 YuChien 滿意再談） |
+| **當前版本** | `v2.9.4-analytics-queue-polish` | 文件不擅自升版。11/10 已在此版本之上合併暖日光戰場、健身房島爬塔與組隊檢視；11/13 再合併移除「速記」功能 |
+| **最後更新時間** | `2026-11-13 09:47 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `e5198c8` | 本次文件同步時的 main HEAD（[PR #5](https://github.com/yuchienw/Fitmon/pull/5) 合併 commit）。[PR #6](https://github.com/yuchienw/Fitmon/pull/6) 已於 2026-11-10 16:18（Asia/Taipei）合併（merge commit `de73747`） |
+| **當前焦點 (Current Focus)** | 專注好用、好玩、修 bug（一輪約一週）；T1 第 1 階段（只改 Demo）已放行給工程；上架時程暫不排定 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
-- [ ] **TASK-DELETE-QUICK-LOG**：刪除「速記」功能。
 - [ ] **TASK-NEW-PLAYER-LV1**：新玩家從 Lv.1 開始。
 - [ ] **TASK-FLOOR-REPLAY-NO-FIRST-CLEAR**：已通關的樓層可以重打，但不給首通獎勵和掉落。
 - [ ] **TASK-REMOVE-PAID-COOLDOWN-SKIP**：拿掉付費跳過冷卻。
 - [ ] **TASK-D3-DAILY-CHECKIN-FIXED-XP**：D-3 運動規則採方案 B：每天打卡一次，固定給 XP（提案值 100 XP）；不指定項目、不處罰，保留每天打一次 Boss，也保留「我不舒服」按鈕和免責聲明。詳見 [`ADR-0003`](adr/0003-daily-checkin-fixed-xp.md)。
-- [ ] **TASK-MIN-AGE-13-MINOR-PROTECTION**：最低使用年齡 13 歲以上，並加上未成年保護：不能加陌生人、不能聊天、內購要家長同意或設上限、轉蛋要限制、要有檢舉和封鎖。詳見 [`ADR-0004`](adr/0004-minimum-age-13-minor-protection.md)。
-- [ ] **TASK-DOUBLE-COUPON-EARN-ONLY**：兩倍券只能在遊戲裡賺，不能用真錢買；收入改靠真錢買斷外觀。詳見 [`ADR-0005`](adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。
+- [ ] **TASK-MIN-AGE-13-MINOR-PROTECTION**：最低使用年齡 13 歲以上，並加上未成年保護：不能加陌生人、不能聊天、內購要家長同意或設上限、轉蛋要限制、要有檢舉和封鎖。未成年「關閉付費轉蛋」不用另作決定，因為本來就沒有付費轉蛋（產品經理確認）。詳見 [`ADR-0004`](adr/0004-minimum-age-13-minor-protection.md)。
+- [ ] **TASK-DOUBLE-COUPON-EARN-ONLY**：兩倍券只能在遊戲裡賺，不能用真錢買；除「本週動滿 N 天」寶箱掉落外，也能用金幣買。收入改靠真錢買斷外觀。詳見 [`ADR-0005`](adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。
+- [ ] **TASK-NO-REAL-MONEY-CURRENCY-OR-TICKETS**：遊戲幣不開放用真錢買；轉蛋券不用真錢賣；BCAA 只能在遊戲內取得或用金幣買，不用真錢賣。詳見 [`ADR-0005`](adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。
+- [ ] **TASK-KEEP-STAMINA-REMOVE-COMBO-FREEZE**：保留體力值和 BCAA；移除連擊冰凍卡。
+- [ ] **TASK-COSMETIC-BUYOUT-CATALOG**：外觀買斷目錄照提案採用，價格 NT$30 到 90，含 NT$90 的季節組合；真錢買的外觀和金幣買的時裝分開。詳見 [`ADR-0005`](adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。
+- [ ] **TASK-T1-STAGE1-DEMO**：T1 第 1 階段（只改 Demo）已放行給工程。遊戲幣先用產品經理提的起始數字做進 Demo 試玩（打卡 70 幣、每日上限 90、兩倍券 40 幣、BCAA 10 幣、Boss 賞金 100 到 250）；這些數字仍是提案，YuChien 玩過後再調。
 - [ ] **SEC-BATCH-2**：資安第二批修正與 Supabase（MILESTONE-2）一起做；測試外掛暫時保留，接雲端前再移除。
 - [ ] **MVP-V2.9-ADVENTURE-PLAYTEST**：實機安裝至 iPhone（Xcode 執行安裝）與朋友測試新版 `[⚔️ 冒險]`、我的紀錄月/週切換與雙情境拍貼工坊分享至 IG/LINE
 
@@ -110,6 +113,8 @@
 - [ ] **MILESTONE-2**：串接 Supabase 雲端資料庫與 OAuth 漸進式綁定。資安第二批修正與此一併進行；測試外掛暫時保留，接雲端前再移除。
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261113-35**：合併 [PR #5](https://github.com/yuchienw/Fitmon/pull/5) `feat(workout): 移除「速記」功能`（來源：幕僚長轉述 YuChien 於 2026-11-13 09:38 Asia/Taipei 指示合併；GitHub 核實已由 yuchienw 合併於 2026-11-13 09:38 Asia/Taipei，merge commit `e5198c8`）。速記功能已從程式移除，main HEAD 更新至該 commit。
+- [x] **DONE-20261110-34**：合併 [PR #6](https://github.com/yuchienw/Fitmon/pull/6) `docs(wiki): 同步專案狀態至 11/10 並新增會議紀錄`（合併於 2026-11-10 16:18 Asia/Taipei，merge commit `de73747`）
 - [x] **DONE-20261110-33**：合併 [PR #4](https://github.com/yuchienw/Fitmon/pull/4) `chore(security): 資安清單第一批（防作弊標記、機密忽略與 gitleaks、Actions 釘 SHA、CSP、Vite 6）`（合併於 2026-11-10 15:08 Asia/Taipei，merge commit `c82b17b`）
 - [x] **DONE-20261110-32**：合併 [PR #3](https://github.com/yuchienw/Fitmon/pull/3) `fix(adventure): PR #2 設計驗收修正（站位、缺資料剪影、狀態膠囊、Sheet 層級、島色溫）`（合併於 2026-11-10 13:35 Asia/Taipei，merge commit `4d42d26`）
 - [x] **DONE-20261110-31**：合併 [PR #2](https://github.com/yuchienw/Fitmon/pull/2) `feat(adventure): 冒險模式選單、健身房島爬塔與組隊檢視`（合併於 2026-11-10 12:12 Asia/Taipei，merge commit `a743494`）
