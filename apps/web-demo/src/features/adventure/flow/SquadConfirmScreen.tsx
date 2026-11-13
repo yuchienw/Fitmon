@@ -117,29 +117,31 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
       }
 
       // Wooden Signpost "Fitmon GYM ISLAND" on right
-      // QA-08 (5): When slot 3 (index 2, ~0.86w) has a teammate, move sign to ~0.95w and draw behind teammates, never overlapping standing slots (including silhouettes)
-      const hasSlot3 = Boolean(teammates[2]);
-      const signX = hasSlot3 ? Math.round(w * 0.95) : Math.round(w * 0.88);
-      ctx.save();
-      ctx.translate(signX, deckY - 42);
-      ctx.fillStyle = '#a07246';
-      ctx.fillRect(-2, 0, 5, 42);
-      ctx.fillStyle = '#fff9ed';
-      ctx.strokeStyle = '#6e4420';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      const boardW = hasSlot3 ? 36 : 52;
-      const boardLeft = hasSlot3 ? -18 : -26;
-      ctx.roundRect(boardLeft, -26, boardW, 26, 4);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#4a2810';
-      ctx.font = 'bold 8px "Noto Sans TC", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Fitmon', boardLeft + boardW / 2, -14);
-      ctx.font = 'bold 7px sans-serif';
-      ctx.fillText('GYM ISLAND', boardLeft + boardW / 2, -5);
-      ctx.restore();
+      // Only draw when all three teammate slots are empty (0 teammates) at x = 0.95w.
+      // Do not draw if 1, 2, or 3 teammates are present (Slot 3 has teammate or slot 3 empty with 1-2 teammates).
+      if (teammates.length === 0) {
+        const signX = Math.round(w * 0.95);
+        ctx.save();
+        ctx.translate(signX, deckY - 42);
+        ctx.fillStyle = '#a07246';
+        ctx.fillRect(-2, 0, 5, 42);
+        ctx.fillStyle = '#fff9ed';
+        ctx.strokeStyle = '#6e4420';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const boardW = 36;
+        const boardLeft = -18;
+        ctx.roundRect(boardLeft, -26, boardW, 26, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#4a2810';
+        ctx.font = 'bold 8px "Noto Sans TC", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Fitmon', boardLeft + boardW / 2, -14);
+        ctx.font = 'bold 7px sans-serif';
+        ctx.fillText('GYM ISLAND', boardLeft + boardW / 2, -5);
+        ctx.restore();
+      }
 
       // 2. Draw Teammates & Empty Dashed Pedestals
       for (let i = 0; i < totalSlots; i++) {
@@ -300,6 +302,7 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
                   member={tm}
                   variant="combined"
                   onClick={() => handleInspect(tm.id)}
+                  className="max-w-[96px]"
                 />
               </div>
             );
@@ -314,7 +317,7 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
               }}
               className="absolute z-10"
             >
-              <TeammateStatusChip variant="empty" onClick={copyInviteCode} />
+              <TeammateStatusChip variant="empty" onClick={copyInviteCode} className="max-w-[96px]" />
             </div>
           );
         })}
@@ -323,13 +326,23 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
       {/* Attendance & Name Capsules Row (Secondary Accessibility Touch Targets) */}
       <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
         {/* Hero Card (Click does NOT open teammate sheet) */}
-        <div className="retro-box rounded-xl bg-card p-1.5">
+        <div className="retro-box min-w-0 overflow-hidden rounded-xl bg-card p-1.5">
           <div className="truncate text-[11px] font-black text-foreground">
             {store.nickname || '你'}
           </div>
-          <div className="mt-1 inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-800">
-            <CheckCircle2 className="h-3 w-3" />
-            <span>隊長</span>
+          <div className="mt-1 flex justify-center min-w-0 overflow-hidden">
+            <div
+              style={{
+                maxWidth: '100%',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+              className="inline-flex max-w-full items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-800 whitespace-nowrap overflow-hidden text-ellipsis"
+            >
+              <CheckCircle2 className="h-3 w-3 shrink-0" />
+              <span className="truncate min-w-0">隊長</span>
+            </div>
           </div>
         </div>
 
@@ -340,16 +353,17 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
             onClick={() => handleInspect(tm.id)}
             role="button"
             tabIndex={0}
-            className="retro-box cursor-pointer rounded-xl bg-card p-1.5 transition-transform active:scale-95 hover:border-amber-400"
+            className="retro-box min-w-0 overflow-hidden cursor-pointer rounded-xl bg-card p-1.5 transition-transform active:scale-95 hover:border-amber-400"
           >
             <div className="truncate text-[11px] font-black text-foreground">
               {tm.nameZh.split('·')[1]?.trim() || tm.nameZh}
             </div>
-            <div className="mt-1">
+            <div className="mt-1 flex justify-center min-w-0 overflow-hidden">
               <TeammateStatusChip
                 member={tm}
                 variant="combined"
                 onClick={() => handleInspect(tm.id)}
+                className="max-w-full"
               />
             </div>
           </div>
@@ -362,10 +376,10 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
             onClick={copyInviteCode}
             role="button"
             tabIndex={0}
-            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 p-1.5 text-muted-foreground hover:bg-muted active:scale-95"
+            className="flex min-w-0 overflow-hidden cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 p-1.5 text-muted-foreground hover:bg-muted active:scale-95"
           >
-            <UserPlus className="h-3.5 w-3.5 opacity-60 text-amber-700" />
-            <span className="mt-1 text-[10px] font-bold text-amber-800">＋邀請</span>
+            <UserPlus className="h-3.5 w-3.5 opacity-60 text-amber-700 shrink-0" />
+            <span className="mt-1 truncate text-[10px] font-bold text-amber-800">＋邀請</span>
           </div>
         ))}
       </div>

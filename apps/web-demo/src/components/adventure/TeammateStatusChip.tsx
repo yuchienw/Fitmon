@@ -24,11 +24,19 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
         type="button"
         onClick={onClick}
         aria-label="邀請新隊友"
-        className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center p-1 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
+        className={`inline-flex min-h-[44px] min-w-[44px] max-w-full items-center justify-center p-0.5 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
       >
-        <span className="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-dashed border-amber-500/50 bg-amber-50/90 px-2.5 py-1 text-[12px] font-black text-amber-900 shadow-sm hover:bg-amber-100">
-          <UserPlus className="h-4 w-4 text-amber-700" />
-          <span className="whitespace-nowrap">{emptyLabel}</span>
+        <span
+          style={{
+            maxWidth: '100%',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+          className="inline-flex min-h-[32px] max-w-full items-center gap-1.5 rounded-full border border-dashed border-amber-500/50 bg-amber-50/90 px-2 py-0.5 text-[12px] font-black text-amber-900 shadow-sm hover:bg-amber-100 whitespace-nowrap overflow-hidden text-ellipsis"
+        >
+          <UserPlus className="h-4 w-4 text-amber-700 shrink-0" />
+          <span className="truncate min-w-0 whitespace-nowrap">{emptyLabel}</span>
         </span>
       </button>
     );
@@ -87,29 +95,37 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
       text = stats.mainAtkLabel.replace(' ', '');
     }
   } else {
-    text = '未運動 Zzz';
+    text = '還沒動';
   }
 
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={`隊友狀態：${member.nameZh} ${text}`}
-      className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center p-1 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
+      aria-label={`隊友狀態：${member.nameZh} ${worked ? text : '💤 還沒動'}`}
+      className={`inline-flex min-h-[44px] min-w-[44px] max-w-full items-center justify-center p-0.5 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
     >
       <span
-        className={`inline-flex min-h-[32px] max-w-[140px] items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] shadow-sm ${
+        style={{
+          maxWidth: '100%',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+        className={`inline-flex min-h-[32px] max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] shadow-sm whitespace-nowrap overflow-hidden text-ellipsis ${
           worked
             ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold hover:bg-emerald-200/80'
             : 'bg-amber-100 text-amber-950 border-amber-400 font-black hover:bg-amber-200/80'
         }`}
       >
         {worked ? (
-          <Check className="h-4 w-4 stroke-[2.5] text-emerald-700 shrink-0" />
+          <Check className="h-3.5 w-3.5 stroke-[2.5] text-emerald-700 shrink-0" />
         ) : (
-          <span className="font-mono text-[12px] font-black text-amber-950 shrink-0">Zzz</span>
+          <span className="text-[12px] leading-none shrink-0" aria-hidden="true">
+            💤
+          </span>
         )}
-        <span className="truncate font-mono font-black">{text}</span>
+        <span className={`truncate min-w-0 font-black ${worked ? 'font-mono' : ''}`}>{text}</span>
       </span>
     </button>
   );
