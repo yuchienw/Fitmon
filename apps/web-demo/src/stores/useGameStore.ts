@@ -548,6 +548,7 @@ interface GameState {
   reportCheatingMember: (memberId: string) => void;
   setSquadName: (name: string) => void;
   recruitSquadMember: (candidate: SquadMemberState) => void;
+  replaceSquadMember: (oldMemberId: string, candidate: SquadMemberState) => void;
   kickSquadMember: (memberId: string) => void;
   refreshSquadMemberAvatar: (memberId: string) => boolean;
   setTodayWorkoutStatus: (status: TodayWorkoutStatus) => void;
@@ -2481,6 +2482,26 @@ export const useGameStore = create<GameState>()(
           squadMembers: [...state.squadMembers, { ...candidate }],
         });
         state.showToast(`🎉 成功招募【${candidate.nameZh}】加入戰隊！`);
+      },
+
+      replaceSquadMember: (oldMemberId, candidate) => {
+        const state = get();
+        const candResolved = resolveFriendProfileId(candidate.id) || candidate.id;
+        if (state.squadMembers.some((m) => (resolveFriendProfileId(m.id) || m.id) === candResolved)) {
+          state.showToast(`⚠️ 【${candidate.nameZh}】已經在你的戰隊中囉！`);
+          return;
+        }
+        const oldIndex = state.squadMembers.findIndex((m) => m.id === oldMemberId);
+        if (oldIndex === -1) {
+          state.showToast(`⚠️ 找不到要替換的隊員！`);
+          return;
+        }
+        const old = state.squadMembers[oldIndex];
+        soundFX.playSetComplete();
+        const nextMembers = [...state.squadMembers];
+        nextMembers[oldIndex] = { ...candidate };
+        set({ squadMembers: nextMembers });
+        state.showToast(`🤝 已換上【${candidate.nameZh}】（換下 ${old.nameZh}）！`);
       },
 
       kickSquadMember: (memberId) => {
