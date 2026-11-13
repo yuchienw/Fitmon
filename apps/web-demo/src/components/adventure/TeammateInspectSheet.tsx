@@ -10,7 +10,13 @@ import {
   ShieldAlert,
   Zap,
 } from 'lucide-react';
-import { useGameStore, SquadMemberState, SQUAD_CANDIDATE_POOL, resolveSquadMemberAvatar } from '../../stores/useGameStore';
+import {
+  useGameStore,
+  SquadMemberState,
+  SQUAD_CANDIDATE_POOL,
+  resolveSquadMemberAvatar,
+  resolveFriendProfileId,
+} from '../../stores/useGameStore';
 import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
 import {
@@ -183,7 +189,10 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
   // Replace Teammate action (cycles to candidate from pool)
   const handleReplace = () => {
     const candidates = SQUAD_CANDIDATE_POOL.filter(
-      (c) => !store.squadMembers.some((m) => m.id === c.id)
+      (c) =>
+        !store.squadMembers.some(
+          (m) => (resolveFriendProfileId(m.id) || m.id) === c.id
+        )
     );
     if (candidates.length === 0) {
       store.showToast('ℹ️ 目前候選池中沒有其他隊友可替換！');

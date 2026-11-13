@@ -12,7 +12,12 @@ import {
   Check,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
-import { FRIEND_PROFILES, EXERCISE_LIBRARY } from '../../config/catalogConfig';
+import {
+  FRIEND_PROFILES,
+  EXERCISE_LIBRARY,
+  getFriendProfile,
+  resolveFriendProfileId,
+} from '../../config/catalogConfig';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
 
@@ -22,13 +27,17 @@ export const UserProfileModal: React.FC = () => {
 
   if (!profileId) return null;
 
-  const profile =
-    FRIEND_PROFILES.find((f) => f.id === profileId) || FRIEND_PROFILES[0];
+  const profile = getFriendProfile(profileId);
+  if (!profile) return null;
 
-  const isFriendNow = store.friendIds.includes(profile.id);
+  const isFriendNow = store.friendIds.some(
+    (id) => (resolveFriendProfileId(id) || id) === profile.id
+  );
 
   const userPosts = store.posts.filter(
-    (p) => p.authorId === profile.id || p.authorName === profile.nameZh
+    (p) =>
+      (resolveFriendProfileId(p.authorId) || p.authorId) === profile.id ||
+      p.authorName === profile.nameZh
   );
 
   return (

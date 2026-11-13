@@ -1292,6 +1292,50 @@ export const FRIEND_PROFILES: FriendProfile[] = [
 
 export const CELEBRITY_SHOWCASES = FRIEND_PROFILES.filter((p) => p.isVerified);
 
+/**
+ * QA-15: 集中解析假好友／隊友 profile id
+ * 支援舊存檔中的 friend_* 與 user_* 相容對應（例如 friend_leo <-> user_leo）
+ * 僅當對應的 FRIEND_PROFILES id 存在時才解析成功
+ */
+export function resolveFriendProfileId(rawId: string | null | undefined): string | null {
+  if (!rawId) return null;
+  // 1. 直配既有 profile id
+  if (FRIEND_PROFILES.some((f) => f.id === rawId)) {
+    return rawId;
+  }
+  // 2. friend_* -> user_*（僅當對應的 FRIEND_PROFILES 存在）
+  if (rawId.startsWith('friend_')) {
+    const candidate = rawId.replace(/^friend_/, 'user_');
+    if (FRIEND_PROFILES.some((f) => f.id === candidate)) {
+      return candidate;
+    }
+  }
+  // 3. user_* -> friend_*（僅當對應的 FRIEND_PROFILES 存在）
+  if (rawId.startsWith('user_')) {
+    const candidate = rawId.replace(/^user_/, 'friend_');
+    if (FRIEND_PROFILES.some((f) => f.id === candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * 集中判斷此 id（包含舊存檔 id）是否有對應的 FriendProfile
+ */
+export function hasFriendProfile(rawId: string | null | undefined): boolean {
+  return resolveFriendProfileId(rawId) !== null;
+}
+
+/**
+ * 集中查找 FriendProfile（包含舊存檔 id 的對應）
+ */
+export function getFriendProfile(rawId: string | null | undefined): FriendProfile | undefined {
+  const resolvedId = resolveFriendProfileId(rawId);
+  if (!resolvedId) return undefined;
+  return FRIEND_PROFILES.find((f) => f.id === resolvedId);
+}
+
 export const DAILY_SCIENCE_QUIZZES = [
   {
     id: 'quiz_sweat_fat',

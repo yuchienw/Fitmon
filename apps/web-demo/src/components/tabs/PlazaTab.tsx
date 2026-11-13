@@ -28,6 +28,8 @@ import {
   ADVENTURE_BOSS_CATALOG,
   AVATAR_ITEMS,
   FRIEND_PROFILES,
+  hasFriendProfile,
+  resolveFriendProfileId,
 } from '../../config/catalogConfig';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { bossSpriteUrl } from '../../game/pixelSpriteDrawer';
@@ -692,7 +694,10 @@ export const PlazaTab: React.FC = () => {
                     }
                     const nextFriend =
                       SQUAD_CANDIDATE_POOL.find(
-                        (c) => !store.squadMembers.some((m) => m.id === c.id)
+                        (c) =>
+                          !store.squadMembers.some(
+                            (m) => (resolveFriendProfileId(m.id) || m.id) === c.id
+                          )
                       ) || SQUAD_CANDIDATE_POOL[3];
                     store.recruitSquadMember(nextFriend);
                     setInviteCodeInput('');
@@ -797,12 +802,14 @@ export const PlazaTab: React.FC = () => {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
                             onClick={(e) => {
-                              e.stopPropagation();
-                              if (FRIEND_PROFILES.some((f) => f.id === member.id)) {
+                              if (hasFriendProfile(member.id)) {
+                                e.stopPropagation();
                                 store.setSelectedProfileId(member.id);
                               }
                             }}
-                            className="text-xs font-black text-white break-words hover:underline cursor-pointer"
+                            className={`text-xs font-black text-white break-words ${
+                              hasFriendProfile(member.id) ? 'hover:underline cursor-pointer' : ''
+                            }`}
                           >
                             {member.nameZh}
                           </span>
