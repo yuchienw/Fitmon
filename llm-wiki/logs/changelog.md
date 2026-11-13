@@ -730,3 +730,22 @@
 - [`adr/0002-app-shell-with-embedded-pixel-canvas.md`](../adr/0002-app-shell-with-embedded-pixel-canvas.md)：為 Tab 4 動態瀑布流補後續更正，不推翻 App Shell 決策。
 - [`PROJECT_STATE.md`](../PROJECT_STATE.md)：PARK-002 標為已被取代；速記、動態牆、打賞、付費跳過冷卻等歷史項標註已廢止或已廢除；TASK-027 標為是否保留未確認。
 - [`logs/changelog.md`](changelog.md)：追加本筆。
+
+---
+
+## [2026-11-13] 補註遊戲幣起始數字決定時間，並記錄 PR #7 合併
+
+### 1. 觸發原因 (Trigger / Context)
+- 幕僚長轉達：遊戲幣起始數字是 YuChien 在確認卡上回答「先用這套經濟數字，玩過再調」，T1 第 1 階段放行也是同一批。時間在產品經理於 2026-11-10 約 16:29（Asia/Taipei）送出數字之後、幕僚長 2026-11-13 轉達之前，確切時間未記錄。文件原先寫「確切時間待補」或僅寫「11/13 轉達」，需改為「2026-11-10 16:29 之後，確切時間未記錄」，不推測確切時間。
+- 幕僚長轉述：YuChien 於 2026-11-13 10:47（Asia/Taipei）指示合併 [PR #7](https://github.com/yuchienw/Fitmon/pull/7)。GitHub 核實該 PR 已由 yuchienw 合併，時間為 2026-11-13 10:47（Asia/Taipei），merge commit `f28d928`。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+- 只補註已有來源的時間範圍與確認卡原話，不把 16:29 寫成拍板時刻（那是產品經理送出數字的約略時間）。
+- `PROJECT_STATE.md` 與本日誌一併記入「2026-11-13 10:47 PR #7 合併（幕僚長轉述 YuChien 指示）」及實際 merge sha。
+- 本日誌只追加本筆，不改寫既有歷史條目。只改 `llm-wiki/` 文件，不改程式；等 YuChien 同意後才合併本 PR。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：決策 29–30 的時間改為「2026-11-10 16:29 之後，確切時間未記錄」；來源改為確認卡原話與幕僚長 2026-11-13 轉達。
+- [`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)：Demo 暫定提案值補上同一時間與來源。
+- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：T1 第 1 階段／遊戲幣起始數字補上同一時間與來源；記錄 2026-11-13 10:47 PR #7 合併（幕僚長轉述 YuChien 指示；merge commit `f28d928`）；main HEAD 同步為 `f28d928`。
+- [`logs/changelog.md`](changelog.md)：追加本筆。
