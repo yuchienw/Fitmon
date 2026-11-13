@@ -61,6 +61,8 @@ flowchart LR
 ### 3.3 外觀買斷 IAP 目錄（已採用）
 規格是真錢直購、永久解鎖、沒有數值，屬於非消耗型商品。這批外觀和金幣商城的時裝分開，只能用真錢取得。
 
+外觀買斷不得附贈金幣、券、XP——資安提出的必修規則，經產品經理轉達，待 YuChien 確認。
+
 售價依據：
 - 都在 Apple 台灣官方價格點上：https://www.apple.com/newsroom/pdfs/App-Store-Pricing-Update.pdf
 - 都在 Google Play 台灣允許的 TWD 2–33,000 範圍內：https://play.google.com/supported-locations?hl=zh-TW
