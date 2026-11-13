@@ -1,5 +1,5 @@
 import { ExerciseCategory } from '@fitmon/engine';
-import { BCAA_COIN_PRICE, DOUBLE_COIN_COUPON_COIN_PRICE } from './economy';
+import { BCAA_COIN_PRICE, DOUBLE_COIN_COUPON_COIN_PRICE, GACHA_TICKET_COIN_PRICE } from './economy';
 
 export type AvatarBodyStage = 'beginner' | 'powerlifter' | 'aesthetic' | 'titan';
 export type AvatarExpression = 'smile' | 'strain' | 'cool' | 'cry';
@@ -728,7 +728,7 @@ export const CONSUMABLE_ITEMS: ConsumableItem[] = [
     nameZh: '黃金像素扭蛋代幣',
     nameEn: 'Gacha Token',
     effectBadge: '隨機抽獎 🎰',
-    priceCoins: 120,
+    priceCoins: GACHA_TICKET_COIN_PRICE,
     iconEmoji: '🎟️',
     colorClass: 'from-purple-500/20 to-pink-500/10 border-purple-500/50',
   },

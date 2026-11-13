@@ -18,6 +18,8 @@ import {
   Flame,
 } from 'lucide-react';
 import { useGameStore, INITIAL_QUESTS } from '../../stores/useGameStore';
+import { previewCappedReward } from '../../game/economyRules';
+
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { TodayHeroCard } from '../home/TodayHeroCard';
 import { DAILY_SCIENCE_QUIZZES, AvatarBodyStage } from '../../config/catalogConfig';
@@ -178,8 +180,9 @@ export const HomeTab: React.FC = () => {
                 <div className="flex items-center gap-2 min-w-0 flex-wrap">
                   <span className="text-xs font-black text-white break-words leading-snug">{displayTitle}</span>
                   <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono text-[10px] font-black shrink-0">
-                    +{q.rewardCoins * (store.doubleCoinUntil > Date.now() ? 2 : 1)}🪙
+                    +{previewCappedReward(store, q.rewardCoins)}🪙
                   </span>
+
                 </div>
 
                 {q.claimed ? (

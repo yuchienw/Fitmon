@@ -1,9 +1,10 @@
 import React from 'react';
 import { Trophy, Coins, Camera, Sparkles, Check, Swords } from 'lucide-react';
-import { useGameStore } from '../../stores/useGameStore';
+import { useGameStore, selectStreakDays } from '../../stores/useGameStore';
 
 export const VictoryModal: React.FC = () => {
   const store = useGameStore();
+  const streakDays = useGameStore(selectStreakDays);
   const data = store.victoryModalData;
   if (!data) return null;
 
@@ -20,9 +21,10 @@ export const VictoryModal: React.FC = () => {
             VICTORY!
           </h2>
           <p className="text-xs text-slate-300 font-bold">
-            🔥 連續運動推進至 <span className="text-orange-400">{store.streakDays} 天</span>！
+            🔥 連續運動推進至 <span className="text-orange-400">{streakDays} 天</span>！
           </p>
         </div>
+
 
         {/* New PR Badges */}
         {data.newPRs.length > 0 && (

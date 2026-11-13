@@ -24,8 +24,9 @@ import {
   Gift,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
-import { DAILY_COIN_CAP } from '../../config/economy';
+import { DAILY_COIN_CAP, DOUBLE_COIN_MULTIPLIER } from '../../config/economy';
 import { getLocalDayKey, getWeekKey } from '../../game/day';
+
 import {
   AVATAR_ITEMS,
   ROOM_ITEMS,
@@ -146,22 +147,29 @@ export const ShopTab: React.FC = () => {
         </div>
 
         {/* Wallet & Daily Coin Cap Row (Requirement 10) */}
-        <div className="flex items-center justify-between px-1 text-xs">
-          <div className="flex items-center gap-1.5">
-            <Coins className="w-4 h-4 text-amber-500" />
-            <span className="font-mono font-black text-white text-sm">
-              {store.coins.toLocaleString()}
-            </span>
-            <span className="text-[11px] text-amber-400 font-bold ml-1">
-              今日 {store.coinsEarnedToday} / {DAILY_COIN_CAP}
-            </span>
-          </div>
-          {store.coinsEarnedToday >= DAILY_COIN_CAP && (
-            <span className="text-[10.5px] font-black text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2 py-0.5 rounded-full">
-              今天的遊戲幣拿滿了
-            </span>
-          )}
-        </div>
+        {(() => {
+          const isDouble = store.doubleCoinUntil > Date.now();
+          const effectiveCap = isDouble ? DAILY_COIN_CAP * DOUBLE_COIN_MULTIPLIER : DAILY_COIN_CAP;
+          return (
+            <div className="flex items-center justify-between px-1 text-xs">
+              <div className="flex items-center gap-1.5">
+                <Coins className="w-4 h-4 text-amber-500" />
+                <span className="font-mono font-black text-white text-sm">
+                  {store.coins.toLocaleString()}
+                </span>
+                <span className="text-[11px] text-amber-400 font-bold ml-1">
+                  今日 {store.coinsEarnedToday} / {effectiveCap}
+                </span>
+              </div>
+              {store.coinsEarnedToday >= effectiveCap && (
+                <span className="text-[10.5px] font-black text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2 py-0.5 rounded-full">
+                  今天的遊戲幣拿滿了
+                </span>
+              )}
+            </div>
+          );
+        })()}
+
 
         {/* Main 4 Shop Category Tabs (造型 / 傢俱 / 道具 / 💎外觀買斷) */}
         <div className="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
@@ -581,22 +589,16 @@ export const ShopTab: React.FC = () => {
                           使用
                         </button>
                       )}
-                      {c.id === 'double_coin_card' ? (
-                        <button
-                          disabled
-                          className="px-2.5 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-black cursor-not-allowed border border-slate-700"
-                        >
-                          價格待定
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => store.buyWithCoins(c.id)}
-                          className="px-2.5 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1"
-                        >
-                          <Coins className="w-3.5 h-3.5" />
-                          {c.priceCoins}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => store.buyWithCoins(c.id)}
+                        className="px-2.5 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1"
+                      >
+                        <Coins className="w-3.5 h-3.5" />
+                        <span>{c.priceCoins}</span>
+                        {c.id === 'gacha_ticket' && (
+                          <span className="text-[10px] font-bold text-amber-950/70">（待定）</span>
+                        )}
+                      </button>
                     </div>
                   </div>
                 );

@@ -3,6 +3,8 @@
  * 未來調整商品定價、體力消耗、金幣產出或更換品牌名稱時，僅需修改此檔案。
  */
 
+import { GACHA_TICKET_COIN_PRICE } from './economy';
+
 export const BRAND_CONFIG = {
   appName: 'FitMon',
   appSubtitleZh: '像素健身養成 × 運動科學社群',
@@ -17,10 +19,8 @@ export const ECONOMY_CONFIG = {
   // 基礎打卡與任務獎勵
   coinsPerValidSet: 5,        // 每完成一組即時掉落基礎金幣
   dailyWorkoutQuestCoins: 50, // 完成一次運動打卡任務
-  dailyPetInteractCoins: 15,  // 與訓練室小人/柴犬互動任務
   dailyTipQuestCoins: 20,     // 廣場打賞或送水任務
   dailyMemeQuestCoins: 30,    // 製作或分享一張 Meme 拍貼任務
-  dailyQuizRewardCoins: 15,   // 每日運動科學破除迷思問答獎勵
 
   // 社群互動消費
   tipSingleCoinCost: 10,      // 單次打賞好友貼文
@@ -31,7 +31,7 @@ export const ECONOMY_CONFIG = {
   streak7DayBonus: 200,
 
   // 扭蛋機價格
-  gachaSingleCoinCost: 120,
+  gachaSingleCoinCost: GACHA_TICKET_COIN_PRICE,
 };
 
 export type Locale = 'zh-TW' | 'en';

@@ -12,7 +12,8 @@ import {
   Activity,
   CalendarDays,
 } from 'lucide-react';
-import { useGameStore, WorkoutSessionRecord } from '../../stores/useGameStore';
+import { useGameStore, WorkoutSessionRecord, selectStreakDays } from '../../stores/useGameStore';
+
 import { EXERCISE_LIBRARY } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
 
@@ -22,6 +23,8 @@ type ChartMetricType = 'volume' | 'strength_pr' | 'muscle_split';
 
 export const AnalyticsTab: React.FC = () => {
   const store = useGameStore();
+  const streakDays = useGameStore(selectStreakDays);
+
   const [subTab, setSubTab] = useState<MeSubTab>('history');
   const [historyMode, setHistoryMode] = useState<HistoryViewMode>('calendar');
   const [calYear, setCalYear] = useState<number>(() => new Date().getFullYear());
@@ -235,8 +238,9 @@ export const AnalyticsTab: React.FC = () => {
               Lv.{store.level}
             </span>
             <span className="text-xs font-mono text-amber-300 font-bold">
-              🔥 連勝 {store.streakDays} 天
+              🔥 連勝 {streakDays} 天
             </span>
+
           </div>
           <h2 className="text-base font-black text-white mt-1">{store.nickname}</h2>
           <p className="text-[11px] text-slate-400">

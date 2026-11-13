@@ -9,6 +9,9 @@
 
 import {
   CHECKIN_XP,
+  CHECKIN_COINS,
+  ROOM_INTERACT_COINS,
+  QUIZ_COINS,
   xpToNext,
   DAMAGE_MULTIPLIER_BY_DAYS,
   ROOKIE_FIRST_WEEK_FLOOR,
@@ -17,18 +20,26 @@ import {
   BCAA_COIN_PRICE,
   BCAA_STAMINA_RESTORE,
   DAILY_COIN_CAP,
+  WEEKLY_CHEST_COINS,
   WEEKLY_CHEST_DAYS_REQUIRED,
   WEEKLY_CHEST_REWARD,
+  BOSS_CLEAR_BOUNTY_BY_STAGE,
+  getBossClearBounty,
   DOUBLE_COIN_MULTIPLIER,
   DOUBLE_COIN_DURATION_MS,
   DOUBLE_COIN_COUPON_COIN_PRICE,
+  GACHA_TICKET_COIN_PRICE,
+  MAX_SINGLE_GRANT,
 } from '../config/economy';
 import {
   getLocalDayKey,
   getWeekKey,
   getWeekDayKeys,
   getNextResetAt,
+  getCheckinStreak,
 } from './day';
+export { getCheckinStreak } from './day';
+
 import {
   ADVENTURE_BOSS_CATALOG,
   AVATAR_ITEMS,
@@ -66,6 +77,8 @@ export interface CheckinResultData {
   daysThisWeek: number;
   damageMultiplier: number;
   isRookieFloor: boolean;
+  coinsGranted: number;
+  capReached: boolean;
 }
 
 export interface CheckinStateSnapshot {
@@ -75,6 +88,10 @@ export interface CheckinStateSnapshot {
   exp: number;
   joinDayKey: string;
   checkinLogs?: CheckinLogEntry[];
+  coins: number;
+  coinsEarnedToday: number;
+  coinsEarnedDayKey: string | null;
+  doubleCoinUntil: number;
 }
 
 export interface CheckinRuleResult {
@@ -86,6 +103,9 @@ export interface CheckinRuleResult {
     level: number;
     exp: number;
     checkinLogs: CheckinLogEntry[];
+    coins: number;
+    coinsEarnedToday: number;
+    coinsEarnedDayKey: string;
   };
   result?: CheckinResultData;
 }
@@ -98,6 +118,8 @@ export interface DamageInfoResult {
 }
 
 export const COIN_SOURCE_WHITELIST = [
+  'checkin',
+  'room',
   'quest',
   'quiz',
   'boss',
@@ -128,6 +150,21 @@ export interface GrantCoinsRuleResult {
     coinsEarnedDayKey: string;
   };
   result: GrantCoinsResult;
+}
+
+export interface GrantUncappedCoinsStateSnapshot {
+  coins: number;
+}
+
+export interface GrantUncappedCoinsRuleResult {
+  ok: boolean;
+  patch: {
+    coins: number;
+  };
+  result: {
+    granted: number;
+    capReached: false;
+  };
 }
 
 export interface BossAttackResult {
@@ -181,8 +218,8 @@ export type BossAttackPatch = {
   collectedBossLoots: string[];
   devForceNextLootDrop: boolean;
   coins: number;
-  coinsEarnedToday: number;
-  coinsEarnedDayKey: string;
+  coinsEarnedToday?: number;
+  coinsEarnedDayKey?: string;
   soloStage?: number;
   soloBossHp?: number;
   personalMaxStage?: number;
@@ -208,7 +245,7 @@ export interface ReplayFloorStateSnapshot {
 
 export interface ReplayFloorRuleResult {
   ok: boolean;
-  reason?: 'not_cleared' | 'insufficient_stamina';
+  reason?: 'not_cleared' | 'insufficient_stamina' | 'invalid_floor';
   stamina?: number;
   required?: number;
   patch?: {
@@ -218,6 +255,13 @@ export interface ReplayFloorRuleResult {
     cosmeticDamage: number;
   };
 }
+
+export interface PreviewCappedRewardStateSnapshot {
+  coinsEarnedToday: number;
+  coinsEarnedDayKey: string | null;
+  doubleCoinUntil: number;
+}
+
 
 // ================= FUNCTIONS =================
 
@@ -322,12 +366,27 @@ export function checkin(
   };
   const nextCheckinLogs = [newLog, ...(state.checkinLogs || [])].slice(0, 30);
 
+  // Grant check-in coins via capped grant
+  const coinGrantRes = grantCoins(
+    {
+      coins: state.coins,
+      coinsEarnedToday: state.coinsEarnedToday,
+      coinsEarnedDayKey: state.coinsEarnedDayKey,
+      doubleCoinUntil: state.doubleCoinUntil,
+    },
+    { amount: CHECKIN_COINS, source: 'checkin' },
+    now
+  );
+
   const patch = {
     lastCheckinDate: today,
     checkinDayKeys: nextCheckinDayKeys,
     level: levelAfter,
     exp: expAfter,
     checkinLogs: nextCheckinLogs,
+    coins: coinGrantRes.patch.coins,
+    coinsEarnedToday: coinGrantRes.patch.coinsEarnedToday,
+    coinsEarnedDayKey: coinGrantRes.patch.coinsEarnedDayKey,
   };
 
   const result: CheckinResultData = {
@@ -342,6 +401,8 @@ export function checkin(
     daysThisWeek: damageInfo.daysThisWeek,
     damageMultiplier: damageInfo.damageMultiplier,
     isRookieFloor: damageInfo.isRookieFloor,
+    coinsGranted: coinGrantRes.result.granted,
+    capReached: coinGrantRes.result.capReached,
   };
 
   return { ok: true, patch, result };
@@ -349,7 +410,9 @@ export function checkin(
 
 /**
  * 7. grantCoins
- * Whitelist check, 2x coupon check, daily cap clamping.
+ * Whitelist check, validation (positive finite integer <= MAX_SINGLE_GRANT),
+ * 2x coupon check, daily cap clamping.
+ * cap = DAILY_COIN_CAP, or DAILY_COIN_CAP * DOUBLE_COIN_MULTIPLIER while double coupon is active.
  */
 export function grantCoins(
   state: GrantCoinsStateSnapshot,
@@ -361,17 +424,38 @@ export function grantCoins(
   }
 
   const todayKey = getLocalDayKey(now);
-  const nowMs = typeof now === 'number' ? now : now.getTime();
-
-  // Reset earned coins if day key changed
   const earnedSoFar = state.coinsEarnedDayKey === todayKey ? state.coinsEarnedToday || 0 : 0;
+
+  // Validation: accept only positive finite integers <= MAX_SINGLE_GRANT
+  if (
+    typeof intent.amount !== 'number' ||
+    !Number.isInteger(intent.amount) ||
+    intent.amount <= 0 ||
+    intent.amount > MAX_SINGLE_GRANT
+  ) {
+    return {
+      ok: false,
+      patch: {
+        coins: state.coins,
+        coinsEarnedToday: earnedSoFar,
+        coinsEarnedDayKey: todayKey,
+      },
+      result: {
+        granted: 0,
+        capReached: false,
+      },
+    };
+  }
+
+  const nowMs = typeof now === 'number' ? now : now.getTime();
   const isDouble = state.doubleCoinUntil > nowMs;
+  const currentCap = isDouble ? DAILY_COIN_CAP * DOUBLE_COIN_MULTIPLIER : DAILY_COIN_CAP;
   const effectiveAmount = isDouble ? intent.amount * DOUBLE_COIN_MULTIPLIER : intent.amount;
 
-  const capacityLeft = Math.max(0, DAILY_COIN_CAP - earnedSoFar);
+  const capacityLeft = Math.max(0, currentCap - earnedSoFar);
   const granted = Math.min(effectiveAmount, capacityLeft);
   const newEarnedToday = earnedSoFar + granted;
-  const capReached = newEarnedToday >= DAILY_COIN_CAP;
+  const capReached = newEarnedToday >= currentCap;
 
   return {
     ok: true,
@@ -385,6 +469,102 @@ export function grantCoins(
       capReached,
     },
   };
+}
+
+/**
+ * Pure uncapped grant helper used ONLY for the weekly chest and the Boss bounty:
+ * adds coins directly, does not touch coinsEarnedToday, never doubled.
+ * Validates that amount is a positive finite integer <= MAX_SINGLE_GRANT.
+ */
+export function grantUncappedCoins(
+  state: GrantUncappedCoinsStateSnapshot,
+  amount: number
+): GrantUncappedCoinsRuleResult {
+  if (
+    typeof amount !== 'number' ||
+    !Number.isInteger(amount) ||
+    amount <= 0 ||
+    amount > MAX_SINGLE_GRANT
+  ) {
+    return {
+      ok: false,
+      patch: {
+        coins: state.coins,
+      },
+      result: {
+        granted: 0,
+        capReached: false,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    patch: {
+      coins: state.coins + amount,
+    },
+    result: {
+      granted: amount,
+      capReached: false,
+    },
+  };
+}
+
+/**
+ * Pure rule function to preview capped rewards (e.g. quests, check-in, room):
+ * returns what would actually be granted given the 2× coupon and remaining daily cap.
+ */
+export function previewCappedReward(
+  state: PreviewCappedRewardStateSnapshot,
+  amount: number,
+  now: Date | number = Date.now()
+): number {
+  if (
+    typeof amount !== 'number' ||
+    !Number.isInteger(amount) ||
+    amount <= 0 ||
+    amount > MAX_SINGLE_GRANT
+  ) {
+    return 0;
+  }
+  const todayKey = getLocalDayKey(now);
+  const nowMs = typeof now === 'number' ? now : now.getTime();
+  const earnedSoFar = state.coinsEarnedDayKey === todayKey ? state.coinsEarnedToday || 0 : 0;
+  const isDouble = state.doubleCoinUntil > nowMs;
+  const currentCap = isDouble ? DAILY_COIN_CAP * DOUBLE_COIN_MULTIPLIER : DAILY_COIN_CAP;
+  const effectiveAmount = isDouble ? amount * DOUBLE_COIN_MULTIPLIER : amount;
+  const capacityLeft = Math.max(0, currentCap - earnedSoFar);
+  return Math.min(effectiveAmount, capacityLeft);
+}
+
+/**
+ * Pure rule function to preview uncapped Boss clear bounty for the given stage.
+ */
+export function previewBossBounty(stage: number): number {
+  return getBossClearBounty(stage);
+}
+
+
+/**
+ * Room interaction reward pure rule:
+ * grants ROOM_INTERACT_COINS through capped grant (source: 'room')
+ */
+export function roomInteractReward(
+  state: GrantCoinsStateSnapshot,
+  now: Date | number = Date.now()
+): GrantCoinsRuleResult {
+  return grantCoins(state, { amount: ROOM_INTERACT_COINS, source: 'room' }, now);
+}
+
+/**
+ * Daily quiz reward pure rule:
+ * grants QUIZ_COINS through capped grant (source: 'quiz')
+ */
+export function quizReward(
+  state: GrantCoinsStateSnapshot,
+  now: Date | number = Date.now()
+): GrantCoinsRuleResult {
+  return grantCoins(state, { amount: QUIZ_COINS, source: 'quiz' }, now);
 }
 
 /**
@@ -423,9 +603,10 @@ export function bossAttack(
     }
   });
 
-  // Base attack from quests and streak
+  // Base attack from quests (streakDays removed per security review)
   const completedQuests = (state.quests || []).filter((q) => q.progress >= q.target).length;
-  const baseDmg = 340 + completedQuests * 60 + (state.streakDays || 0) * 25;
+  const baseDmg = 340 + completedQuests * 60;
+
 
   let isWeaknessHit = false;
   let attackTypeLabel = '🥊 物理重擊';
@@ -497,27 +678,13 @@ export function bossAttack(
   const defeated = remaining <= 0;
 
   let coinsGranted = 0;
-  let capReached = false;
-  let coinsPatch: { coins: number; coinsEarnedToday: number; coinsEarnedDayKey: string } = {
-    coins: state.coins,
-    coinsEarnedToday: state.coinsEarnedToday,
-    coinsEarnedDayKey: state.coinsEarnedDayKey || today,
-  };
+  let nextCoins = state.coins;
 
   if (defeated) {
-    const coinRes = grantCoins(
-      {
-        coins: state.coins,
-        coinsEarnedToday: state.coinsEarnedToday,
-        coinsEarnedDayKey: state.coinsEarnedDayKey,
-        doubleCoinUntil: state.doubleCoinUntil,
-      },
-      { amount: boss.rewardCoins, source: 'boss' },
-      now
-    );
-    coinsGranted = coinRes.result.granted;
-    capReached = coinRes.result.capReached;
-    coinsPatch = coinRes.patch;
+    const bounty = getBossClearBounty(stageNum);
+    const uncappedRes = grantUncappedCoins({ coins: state.coins }, bounty);
+    coinsGranted = uncappedRes.result.granted;
+    nextCoins = uncappedRes.patch.coins;
   }
 
   const patch: BossAttackPatch = {
@@ -528,7 +695,7 @@ export function bossAttack(
     activeTeamComboBuff: nextComboBuff,
     collectedBossLoots: updatedLoots,
     devForceNextLootDrop: false,
-    ...coinsPatch,
+    coins: nextCoins,
   };
 
   if (mode === 'solo') {
@@ -567,7 +734,7 @@ export function bossAttack(
     droppedLootName,
     damageMultiplier: damageInfo.damageMultiplier,
     coinsGranted,
-    capReached,
+    capReached: false,
     nextResetAt: getNextResetAt(now),
   };
 
@@ -582,6 +749,14 @@ export function replayFloor(
   state: ReplayFloorStateSnapshot,
   intent: { mode: 'solo' | 'squad'; floor: number }
 ): ReplayFloorRuleResult {
+  if (
+    typeof intent.floor !== 'number' ||
+    !Number.isInteger(intent.floor) ||
+    intent.floor < 1
+  ) {
+    return { ok: false, reason: 'invalid_floor' };
+  }
+
   const currentStage = intent.mode === 'solo' ? state.soloStage : state.squadStage;
   if (intent.floor >= currentStage) {
     return { ok: false, reason: 'not_cleared' };
@@ -606,6 +781,7 @@ export function replayFloor(
     },
   };
 }
+
 
 /**
  * 5. useBcaa
@@ -657,22 +833,12 @@ export function buyWithCoins(
     consumables: Record<string, number>;
   };
 } {
-  let price = 0;
-  if (intent.itemId === 'bcaa_water') {
-    price = BCAA_COIN_PRICE;
-  } else if (intent.itemId === 'double_coin_card') {
-    price = DOUBLE_COIN_COUPON_COIN_PRICE;
-  } else if (intent.itemId === 'gacha_ticket') {
-    price = 120;
-  } else {
-    const item = CONSUMABLE_ITEMS.find((c) => c.id === intent.itemId);
-    if (item) {
-      price = item.priceCoins;
-    } else {
-      return { ok: false, reason: 'unknown_item' };
-    }
+  const item = CONSUMABLE_ITEMS.find((c) => c.id === intent.itemId);
+  if (!item) {
+    return { ok: false, reason: 'unknown_item' };
   }
 
+  const price = item.priceCoins;
   if (state.coins < price) {
     return { ok: false, reason: 'insufficient_coins' };
   }
@@ -689,26 +855,38 @@ export function buyWithCoins(
   };
 }
 
-/**
- * 8. claimWeeklyChest
- * When daysThisWeek >= 3 and not claimed this week: grants one 2x coupon.
- */
-export function claimWeeklyChest(
-  state: {
-    checkinDayKeys: string[];
-    joinDayKey: string;
-    chestClaimedWeekKey: string | null;
-    consumables: Record<string, number>;
-  },
-  now: Date | number = Date.now()
-): {
+
+export interface ClaimWeeklyChestStateSnapshot {
+  checkinDayKeys: string[];
+  joinDayKey: string;
+  chestClaimedWeekKey: string | null;
+  consumables: Record<string, number>;
+  coins: number;
+}
+
+export interface ClaimWeeklyChestRuleResult {
   ok: boolean;
   reason?: 'not_eligible' | 'already_claimed';
   patch?: {
     chestClaimedWeekKey: string;
+    coins: number;
     consumables: Record<string, number>;
   };
-} {
+  result?: {
+    coinsGranted: number;
+    reward: typeof WEEKLY_CHEST_REWARD;
+  };
+}
+
+/**
+ * 8. claimWeeklyChest
+ * When daysThisWeek >= 3 and not claimed this week: grants +WEEKLY_CHEST_COINS uncapped (never doubled)
+ * plus one 2x coupon.
+ */
+export function claimWeeklyChest(
+  state: ClaimWeeklyChestStateSnapshot,
+  now: Date | number = Date.now()
+): ClaimWeeklyChestRuleResult {
   const todayKey = getLocalDayKey(now);
   const currentWeekKey = getWeekKey(todayKey);
   const damageInfo = getDamageInfo(state, now);
@@ -720,14 +898,21 @@ export function claimWeeklyChest(
     return { ok: false, reason: 'already_claimed' };
   }
 
+  const coinRes = grantUncappedCoins({ coins: state.coins }, WEEKLY_CHEST_COINS);
+
   return {
     ok: true,
     patch: {
       chestClaimedWeekKey: currentWeekKey,
+      coins: coinRes.patch.coins,
       consumables: {
         ...state.consumables,
         [WEEKLY_CHEST_REWARD]: (state.consumables[WEEKLY_CHEST_REWARD] || 0) + 1,
       },
+    },
+    result: {
+      coinsGranted: coinRes.result.granted,
+      reward: WEEKLY_CHEST_REWARD,
     },
   };
 }

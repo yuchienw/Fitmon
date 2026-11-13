@@ -59,3 +59,44 @@ export function formatResetCountdown(nextResetAt: number, now: Date | number = D
   return `還有 ${hours} 小時 ${mins} 分`;
 }
 
+/**
+ * Calculates the current check-in streak:
+ * Consecutive local days ending today or yesterday.
+ * - If user checked in today, counts consecutive days backwards from today.
+ * - If user hasn't checked in today but checked in yesterday, counts backwards from yesterday.
+ * - Otherwise returns 0.
+ */
+export function getCheckinStreak(
+  checkinDayKeys: readonly string[] | string[] | undefined | null,
+  now: Date | number = Date.now()
+): number {
+  if (!checkinDayKeys || checkinDayKeys.length === 0) return 0;
+  const daySet = new Set(checkinDayKeys);
+  const todayKey = getLocalDayKey(now);
+  const todayDate = parseDayKey(todayKey);
+
+  let startOffset = 0;
+  if (daySet.has(todayKey)) {
+    startOffset = 0;
+  } else {
+    const yesterdayDate = new Date(todayDate);
+    yesterdayDate.setDate(todayDate.getDate() - 1);
+    const yesterdayKey = getLocalDayKey(yesterdayDate);
+    if (daySet.has(yesterdayKey)) {
+      startOffset = 1;
+    } else {
+      return 0;
+    }
+  }
+
+  let streak = 0;
+  const cur = new Date(todayDate);
+  cur.setDate(todayDate.getDate() - startOffset);
+  while (daySet.has(getLocalDayKey(cur))) {
+    streak += 1;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return streak;
+}
+
+

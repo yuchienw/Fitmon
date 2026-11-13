@@ -22,7 +22,9 @@ import {
   SquadMemberState,
   SQUAD_CANDIDATE_POOL,
   getSquadInviteCode,
+  selectStreakDays,
 } from '../../stores/useGameStore';
+
 import {
   ADVENTURE_BOSS_CATALOG,
   AVATAR_ITEMS,
@@ -46,7 +48,9 @@ type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
 
 export const PlazaTab: React.FC = () => {
   const store = useGameStore();
+  const streakDays = useGameStore(selectStreakDays);
   const [mainSubTab, setMainSubTab] = useState<AdventureMainSubTab>('raid');
+
   const [adventureMode, setAdventureMode] = useState<'solo' | 'squad'>('solo');
   const [adventureStep, setAdventureStep] = useState<
     'mode_select' | 'squad_confirm' | 'map' | 'tower' | 'battle'
@@ -98,8 +102,9 @@ export const PlazaTab: React.FC = () => {
   const mySupportAtk = 10 + supportBonus;
 
   const completedQuestsCount = store.quests.filter((q) => q.progress >= q.target).length;
-  const baseWorkoutAtk = 340 + completedQuestsCount * 60 + store.streakDays * 25;
+  const baseWorkoutAtk = 340 + completedQuestsCount * 60;
   const phyNormalDmg = baseWorkoutAtk + phyBonus * 7 + magBonus * 4;
+
   const magNormalDmg = baseWorkoutAtk + phyBonus * 4 + magBonus * 7;
   const coreNormalDmg = Math.round((baseWorkoutAtk + phyBonus * 4 + magBonus * 4) * 1.4);
   const minAttackDamage = Math.min(phyNormalDmg, magNormalDmg, coreNormalDmg);
@@ -375,8 +380,9 @@ export const PlazaTab: React.FC = () => {
                       Lv.{store.level} · 戰鬥角色
                     </span>
                     <span className="text-[10px] font-mono text-amber-300 font-bold">
-                      🔥 連勝 {store.streakDays} 天加成
+                      🔥 連勝 {streakDays} 天
                     </span>
+
                   </div>
                   <h2 className="text-base font-black text-white mt-1">
                     {store.nickname} 的個人戰鬥素質
@@ -879,8 +885,9 @@ export const PlazaTab: React.FC = () => {
                 {ladderCat === 'squad_stage' &&
                   `${store.squadName}：共同推進至 Stage ${store.squadMaxStage}`}
                 {ladderCat === 'solo_stage' &&
-                  `個人最高闖關：Stage ${store.personalMaxStage}（連勝 ${store.streakDays} 天）`}
+                  `個人最高闖關：Stage ${store.personalMaxStage}（連勝 ${streakDays} 天）`}
                 {ladderCat === 'max_damage' &&
+
                   `單次最高爆發傷害：${store.personalMaxDamage.toLocaleString()} HP`}
               </div>
             </div>
@@ -913,11 +920,12 @@ export const PlazaTab: React.FC = () => {
                 },
                 {
                   name: `${store.nickname} (我)`,
-                  title: `🔥 連續打卡 ${store.streakDays} 天`,
+                  title: `🔥 連續打卡 ${streakDays} 天`,
                   score: `Stage ${store.personalMaxStage}`,
                   badge: `🥊 ${myPhyAtk} / 🪄 ${myMagAtk}`,
                   isMe: true,
                 },
+
                 {
                   name: '街頭健體 · Leo',
                   title: '🤥 作弊被抓包懲處中',

@@ -22,7 +22,9 @@ import {
 } from './venueConfig';
 import { ADVENTURE_BOSS_CATALOG, AdventureBoss } from '../../../config/catalogConfig';
 import { REPLAY_STAMINA_COST } from '../../../config/economy';
+import { previewBossBounty } from '../../../game/economyRules';
 import { formatResetCountdown } from '../../../game/day';
+
 import { StaminaPill } from '../../../components/adventure/StaminaPill';
 
 interface VenueTowerScreenProps {
@@ -707,9 +709,10 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
             </div>
             {selectedStatus !== 'cleared' && (
               <div className="text-[10px] text-muted-foreground">
-                通關獎勵：+{selectedBoss.rewardCoins} 🪙 · 有機會打落【{selectedBoss.hiddenLoot.nameZh}】
+                通關獎勵：+{previewBossBounty(selectedStage)} 🪙 · 有機會打落【{selectedBoss.hiddenLoot.nameZh}】
               </div>
             )}
+
           </div>
         </div>
 

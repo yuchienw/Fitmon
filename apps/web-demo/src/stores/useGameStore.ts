@@ -4,6 +4,9 @@ import { calculateWorkoutExp, CalculationResult, ExerciseCategory } from '@fitmo
 import { ECONOMY_CONFIG, Locale } from '../config/economyConfig';
 import {
   CHECKIN_XP,
+  CHECKIN_COINS,
+  ROOM_INTERACT_COINS,
+  QUIZ_COINS,
   xpToNext,
   NEW_PLAYER_START_LEVEL,
   STAMINA_MAX,
@@ -12,18 +15,24 @@ import {
   BCAA_STAMINA_RESTORE,
   DAILY_COIN_CAP,
   COIN_CAP_REACHED_COPY,
+  WEEKLY_CHEST_COINS,
   WEEKLY_CHEST_DAYS_REQUIRED,
   WEEKLY_CHEST_REWARD,
+  BOSS_CLEAR_BOUNTY_BY_STAGE,
+  getBossClearBounty,
   DOUBLE_COIN_MULTIPLIER,
   DOUBLE_COIN_DURATION_MS,
   DOUBLE_COIN_COUPON_COIN_PRICE,
+  GACHA_TICKET_COIN_PRICE,
 } from '../config/economy';
 import {
   getLocalDayKey,
   getWeekKey,
   getWeekDayKeys,
   getNextResetAt,
+  getCheckinStreak,
 } from '../game/day';
+
 import {
   checkin as checkinRule,
   getDamageInfo as getDamageInfoRule,
@@ -34,6 +43,9 @@ import {
   grantCoins as grantCoinsRule,
   claimWeeklyChest as claimWeeklyChestRule,
   activateDoubleCoin as activateDoubleCoinRule,
+  roomInteractReward as roomInteractRewardRule,
+  quizReward as quizRewardRule,
+  grantUncappedCoins as grantUncappedCoinsRule,
   CheckinAnnotation,
   CheckinLogEntry,
   CheckinResultData,
@@ -604,8 +616,12 @@ interface GameState {
   replayFloor: (mode: 'solo' | 'squad', floor: number) => { ok: boolean; damage?: number } | null;
   checkin: (annotation?: CheckinAnnotation) => CheckinResultData | null;
   grantCoins: (amount: number, source: CoinSource) => { granted: number; capReached: boolean };
+  roomInteractReward: () => { granted: number; capReached: boolean };
+  quizReward: () => { granted: number; capReached: boolean };
   getDamageInfo: (now?: number) => DamageInfoResult;
+  getStreakDays: (now?: number) => number;
   isCheckedInToday: (now?: number) => boolean;
+
   isBossDoneToday: (now?: number) => boolean;
   getNextResetAt: (now?: number) => number;
   nudgeSquadMember: (memberId: string) => void;
@@ -633,7 +649,7 @@ export const INITIAL_QUESTS: DailyQuest[] = [
   {
     id: 'q_interact_pet',
     titleZh: '在房間與角色或寵物互動',
-    rewardCoins: ECONOMY_CONFIG.dailyPetInteractCoins,
+    rewardCoins: ROOM_INTERACT_COINS,
     progress: 0,
     target: 1,
     claimed: false,
@@ -1310,9 +1326,9 @@ export const useGameStore = create<GameState>()(
         if (state.answeredQuizIds.includes(quizId)) return;
         if (isCorrect) {
           soundFX.playCoin();
-          const grant = state.grantCoins(ECONOMY_CONFIG.dailyQuizRewardCoins, 'quiz');
+          const grant = state.quizReward();
           set({
-            answeredQuizIds: [...state.answeredQuizIds, quizId],
+            answeredQuizIds: [...get().answeredQuizIds, quizId],
           });
           state.showToast(`🧠 答對科普問答！獲得 +${grant.granted} 🪙`);
         } else {
@@ -1325,11 +1341,18 @@ export const useGameStore = create<GameState>()(
         const quest = state.quests.find((q) => q.id === questId);
         if (!quest || quest.claimed || quest.progress < quest.target) return;
         soundFX.playCoin();
-        const grant = state.grantCoins(quest.rewardCoins, 'quest');
+        let grantedCoins = 0;
+        if (questId === 'q_interact_pet') {
+          const grant = state.roomInteractReward();
+          grantedCoins = grant.granted;
+        } else {
+          const grant = state.grantCoins(quest.rewardCoins, 'quest');
+          grantedCoins = grant.granted;
+        }
         set({
-          quests: state.quests.map((q) => (q.id === questId ? { ...q, claimed: true } : q)),
+          quests: get().quests.map((q) => (q.id === questId ? { ...q, claimed: true } : q)),
         });
-        state.showToast(`🎉 領取任務獎勵 +${grant.granted} 🪙！`);
+        state.showToast(`🎉 領取任務獎勵 +${grantedCoins} 🪙！`);
       },
 
       // ================= SHOP TRY-ON & CART ACTIONS (V2-05) =================
@@ -1462,6 +1485,29 @@ export const useGameStore = create<GameState>()(
       grantCoins: (amount, source) => {
         const state = get();
         const res = grantCoinsRule(state, { amount, source });
+        if (res.ok) {
+          set(res.patch);
+          if (res.result.capReached) {
+            state.showToast(COIN_CAP_REACHED_COPY);
+          }
+        }
+        return res.result;
+      },
+
+
+      roomInteractReward: () => {
+        const state = get();
+        const res = roomInteractRewardRule(state);
+        set(res.patch);
+        if (res.result.capReached) {
+          state.showToast(COIN_CAP_REACHED_COPY);
+        }
+        return res.result;
+      },
+
+      quizReward: () => {
+        const state = get();
+        const res = quizRewardRule(state);
         set(res.patch);
         if (res.result.capReached) {
           state.showToast(COIN_CAP_REACHED_COPY);
@@ -1534,13 +1580,14 @@ export const useGameStore = create<GameState>()(
           if (res.reason === 'already_claimed') {
             state.showToast('本週寶箱已經領取過了！');
           } else {
-            state.showToast('本週運動天數尚未達標（需動滿 3 天）！');
+            state.showToast(`本週運動天數尚未達標（需動滿 ${WEEKLY_CHEST_DAYS_REQUIRED} 天）！`);
           }
           return;
         }
         soundFX.playVictory();
         set(res.patch!);
-        state.showToast('🎁 成功領取每週寶箱！獲得 24H 雙倍金幣卡 ×1！');
+        const coinsAwarded = res.result?.coinsGranted ?? WEEKLY_CHEST_COINS;
+        state.showToast(`🎁 領取每週寶箱：+${coinsAwarded} 🪙、雙倍金幣卡 ×1`);
       },
 
       acceptDisclaimer: () => {
@@ -2030,9 +2077,9 @@ export const useGameStore = create<GameState>()(
         const detectedSport: AdventureSportSkillType = firstEx?.sportType || 'strength';
 
         set({
-          streakDays: state.streakDays + 1,
           isWorkoutFocusActive: false,
           workoutElapsedSeconds: 0,
+
           isRestRunning: false,
           restSecondsLeft: 0,
           todaySportType: detectedSport,
@@ -2180,8 +2227,9 @@ export const useGameStore = create<GameState>()(
             ? `${latestHist.routineName} · ${latestHist.totalSets}組`
             : '自主訓練打卡',
           totalVolumeKg: latestHist ? latestHist.totalVolume : 3600,
-          streakDays: state.streakDays,
+          streakDays: getCheckinStreak(state.checkinDayKeys),
           caption: caption || '今日份的鋼鐵修煉完成！💪',
+
           stickerText,
           tipsCount: 1,
           waterCount: 1,
@@ -2233,11 +2281,9 @@ export const useGameStore = create<GameState>()(
         if (result.defeated) {
           soundFX.playVictory();
           const defeatMsg = result.droppedLootName
-            ? `🎁 擊破【${boss.nameZh}】並爆出隱藏神裝【${result.droppedLootName}】！`
-            : `🎉 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關 (+${result.coinsGranted} 🪙)`;
-          state.showToast(
-            result.capReached ? `${defeatMsg} ${COIN_CAP_REACHED_COPY}` : defeatMsg
-          );
+            ? `🎁 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關（賞金 +${result.coinsGranted} 🪙）並爆出隱藏神裝【${result.droppedLootName}】！`
+            : `🎉 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關（賞金 +${result.coinsGranted} 🪙）`;
+          state.showToast(defeatMsg);
         } else {
           soundFX.playPRFanfare();
           state.showToast(
@@ -2256,6 +2302,8 @@ export const useGameStore = create<GameState>()(
           if (res.reason === 'insufficient_stamina') {
             set({ lowStaminaSheet: { stamina: res.stamina!, required: res.required! } });
             state.showToast('⚡ 體力不足！');
+          } else if (res.reason === 'invalid_floor') {
+            state.showToast('⚠️ 無效的關卡樓層！');
           } else {
             state.showToast('🔒 該樓層尚未通關，無法重打！');
           }
@@ -2266,6 +2314,7 @@ export const useGameStore = create<GameState>()(
         state.showToast(`造成 ${res.result?.cosmeticDamage} 點傷害（重打完成・無獎勵）`);
         return { ok: true, damage: res.result?.cosmeticDamage };
       },
+
 
       checkin: (annotation) => {
         const state = get();
@@ -2291,7 +2340,12 @@ export const useGameStore = create<GameState>()(
         return getDamageInfoRule(get(), now);
       },
 
+      getStreakDays: (now = Date.now()) => {
+        return getCheckinStreak(get().checkinDayKeys, now);
+      },
+
       isCheckedInToday: (now = Date.now()) => {
+
         return get().lastCheckinDate === getLocalDayKey(now);
       },
 
@@ -2597,6 +2651,11 @@ export const useGameStore = create<GameState>()(
         if (!Array.isArray(state.ownedCosmeticBuyoutIds)) state.ownedCosmeticBuyoutIds = [];
         if (typeof state.stamina !== 'number') state.stamina = STAMINA_MAX;
         else state.stamina = Math.min(STAMINA_MAX, Math.max(0, state.stamina));
+        if (Array.isArray(state.quests)) {
+          state.quests = state.quests.map((q) =>
+            q.id === 'q_interact_pet' ? { ...q, rewardCoins: ROOM_INTERACT_COINS } : q
+          );
+        }
       },
       partialize: (state) => ({
         locale: state.locale,
@@ -2653,3 +2712,13 @@ export const useGameStore = create<GameState>()(
     }
   )
 );
+
+/**
+ * Pure store selector to derive streakDays from checkinDayKeys:
+ * consecutive local days ending today or yesterday.
+ * Kept streakDays in state only as a legacy persisted field.
+ */
+export const selectStreakDays = (state: GameState): number =>
+  getCheckinStreak(state.checkinDayKeys);
+export const selectCheckinStreak = selectStreakDays;
+
