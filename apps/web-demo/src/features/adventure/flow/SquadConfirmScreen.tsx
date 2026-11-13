@@ -9,7 +9,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar, getSquadInviteCode } from '../../../stores/useGameStore';
-import { FRIEND_PROFILES } from '../../../config/catalogConfig';
+import { FRIEND_PROFILES, hasFriendProfile } from '../../../config/catalogConfig';
 import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { TeammateStatusChip } from '../../../components/adventure/TeammateStatusChip';
 import { TeammateHitRect } from '../../../components/adventure/memberStats';
@@ -356,12 +356,14 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
           >
             <div
               onClick={(e) => {
-                e.stopPropagation();
-                if (FRIEND_PROFILES.some((f) => f.id === tm.id)) {
+                if (hasFriendProfile(tm.id)) {
+                  e.stopPropagation();
                   store.setSelectedProfileId(tm.id);
                 }
               }}
-              className="truncate text-[11px] font-black text-foreground hover:underline cursor-pointer"
+              className={`truncate text-[11px] font-black text-foreground ${
+                hasFriendProfile(tm.id) ? 'hover:underline cursor-pointer' : ''
+              }`}
             >
               {tm.nameZh.split('·')[1]?.trim() || tm.nameZh}
             </div>
