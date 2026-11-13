@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useGameStore, INITIAL_QUESTS } from '../../stores/useGameStore';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
+import { TodayHeroCard } from '../home/TodayHeroCard';
 import { DAILY_SCIENCE_QUIZZES, AvatarBodyStage } from '../../config/catalogConfig';
 
 const STAGE_OPTIONS: {
@@ -42,7 +43,6 @@ export const HomeTab: React.FC = () => {
   const currentQuiz = DAILY_SCIENCE_QUIZZES[selectedQuizIdx % DAILY_SCIENCE_QUIZZES.length];
   const isQuizAnswered = store.answeredQuizIds.includes(currentQuiz.id);
   const isBareTop = store.equipped.top === 'top_bare_muscles';
-  const isWorkoutCharged = store.todayWorkoutStatus !== 'none';
 
   return (
     <div className="p-3 space-y-3 pb-8">
@@ -127,53 +127,8 @@ export const HomeTab: React.FC = () => {
         )}
       </div>
 
-      {/* 2. CORE GAME LOOP DOCK: WORKOUT CHARGE ➔ BOSS RAID + PHOTO STUDIO */}
-      <div className="grid grid-cols-12 gap-2">
-        <button
-          onClick={() => store.setActiveTab('workout')}
-          className="col-span-5 retro-btn py-3 px-3 rounded-2xl bg-gradient-to-b from-emerald-400 to-teal-500 text-slate-950 font-black text-xs flex flex-col items-center justify-center gap-1 shadow-lg border-2 border-emerald-200"
-        >
-          <div className="flex items-center gap-1.5 text-sm">
-            <Dumbbell className="w-4 h-4 stroke-[2.5px]" aria-hidden="true" />
-            <span>開始運動</span>
-          </div>
-          <span className="text-[10px] opacity-85 font-bold flex items-center gap-1">
-            {isWorkoutCharged ? (
-              <>
-                <CheckCircle2 className="w-3 h-3 shrink-0" aria-hidden="true" />
-                <span>今日已充能</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-3 h-3 shrink-0 fill-current" aria-hidden="true" />
-                <span>累積出拳能量</span>
-              </>
-            )}
-          </span>
-        </button>
-
-        <button
-          onClick={() => store.setActiveTab('plaza')}
-          className="col-span-5 retro-btn py-3 px-3 rounded-2xl bg-gradient-to-b from-amber-400 via-orange-400 to-rose-500 text-slate-950 font-black text-xs flex flex-col items-center justify-center gap-1 shadow-lg border-2 border-amber-200"
-        >
-          <div className="flex items-center gap-1.5 text-sm">
-            <Swords className="w-4 h-4 stroke-[2.5px]" aria-hidden="true" />
-            <span>討伐 Boss</span>
-          </div>
-          <span className="text-[10px] opacity-90 font-bold font-mono">
-            STAGE {store.soloStage} 單人 · STAGE {store.squadStage} 組隊
-          </span>
-        </button>
-
-        <button
-          onClick={() => store.setMemeStudioOpen(true, 'workout_photo')}
-          title="與我的娃合照（照片合成）"
-          className="col-span-2 retro-btn py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-black text-[11px] flex flex-col items-center justify-center gap-1"
-        >
-          <Camera className="w-4 h-4 text-amber-400" aria-hidden="true" />
-          <span>合照</span>
-        </button>
-      </div>
+      {/* 2. TODAY HERO CARD (Directly below PixelRoomCanvas) */}
+      <TodayHeroCard />
 
       {/* 3. COMPACT RPG DAILY BOUNTY BOARD (今日懸賞) */}
       <div className="retro-box rounded-2xl p-3 space-y-2">
@@ -182,17 +137,27 @@ export const HomeTab: React.FC = () => {
             <ScrollText className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
             <h3 className="text-xs font-black text-white tracking-wide">今日懸賞任務</h3>
           </div>
-          <button
-            onClick={() => setQuizOpen(true)}
-            className="px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 hover:bg-cyan-500/25 transition"
-          >
-            <Brain className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span>科普問答</span>
-            <span className="font-mono flex items-center gap-0.5 text-amber-300">
-              +15
-              <Coins className="w-3 h-3 text-amber-400" aria-hidden="true" />
-            </span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => store.setMemeStudioOpen(true, 'workout_photo')}
+              title="與我的娃合照"
+              className="px-2 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-black flex items-center gap-1 hover:text-white transition"
+            >
+              <Camera className="w-3.5 h-3.5 text-amber-400" />
+              <span>合照</span>
+            </button>
+            <button
+              onClick={() => setQuizOpen(true)}
+              className="px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 hover:bg-cyan-500/25 transition"
+            >
+              <Brain className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>科普問答</span>
+              <span className="font-mono flex items-center gap-0.5 text-amber-300">
+                +15
+                <Coins className="w-3 h-3 text-amber-400" aria-hidden="true" />
+              </span>
+            </button>
+          </div>
         </div>
 
         <div className="space-y-1.5">
@@ -213,7 +178,7 @@ export const HomeTab: React.FC = () => {
                 <div className="flex items-center gap-2 min-w-0 flex-wrap">
                   <span className="text-xs font-black text-white break-words leading-snug">{displayTitle}</span>
                   <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono text-[10px] font-black shrink-0">
-                    +{q.rewardCoins * (store.doubleCoinActive ? 2 : 1)}🪙
+                    +{q.rewardCoins * (store.doubleCoinUntil > Date.now() ? 2 : 1)}🪙
                   </span>
                 </div>
 

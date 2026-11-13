@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import {
   useGameStore,
-  TodayWorkoutStatus,
   SquadMemberState,
   SQUAD_CANDIDATE_POOL,
 } from '../../stores/useGameStore';
@@ -123,7 +122,7 @@ export const PlazaTab: React.FC = () => {
 
   // Squad attendance
   const legitSquadCount =
-    (store.todayWorkoutStatus === 'legit_rest' ? 1 : 0) +
+    (store.isCheckedInToday() ? 1 : 0) +
     store.squadMembers.filter((m) => m.hasWorkedOutToday && !m.isSuspectedCheater).length;
   const totalSquadSize = 1 + store.squadMembers.length;
   const missingMember = store.squadMembers.find((m) => !m.hasWorkedOutToday);
@@ -212,44 +211,45 @@ export const PlazaTab: React.FC = () => {
             </button>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
-            {(
-              [
-                {
-                  id: 'legit_rest',
-                  label: '✅ 完整休息',
-                  sub: '100%威力+掉寶',
-                  cls: 'border-emerald-400 bg-emerald-950/60 text-emerald-300',
-                },
-                {
-                  id: 'cheated_fast',
-                  label: '🤥 3秒作弊',
-                  sub: '-95%刮痧懲罰',
-                  cls: 'border-rose-400 bg-rose-950/60 text-rose-300',
-                },
-                {
-                  id: 'none',
-                  label: '🔒 尚未運動',
-                  sub: '鎖定出拳',
-                  cls: 'border-slate-500 bg-slate-800 text-slate-200',
-                },
-              ] as { id: TodayWorkoutStatus; label: string; sub: string; cls: string }[]
-            ).map((st) => {
-              const active = store.todayWorkoutStatus === st.id;
-              return (
-                <button
-                  key={st.id}
-                  onClick={() => store.setTodayWorkoutStatus(st.id)}
-                  className={`p-1.5 rounded-xl border text-center transition ${
-                    active
-                      ? st.cls + ' ring-1 ring-white/40 font-black'
-                      : 'bg-slate-900 border-slate-800 text-slate-400'
-                  }`}
-                >
-                  <div className="text-[11px] font-black">{st.label}</div>
-                  <div className="text-[9px] opacity-80">{st.sub}</div>
-                </button>
-              );
-            })}
+            {[
+              {
+                id: 'checked_in',
+                label: '✅ 今天已打卡',
+                sub: '解鎖出擊',
+                active: store.isCheckedInToday(),
+                cls: 'border-emerald-400 bg-emerald-950/60 text-emerald-300',
+                onClick: () => store.setDevCheckinToday(true),
+              },
+              {
+                id: 'not_checked_in',
+                label: '🔒 尚未打卡',
+                sub: '鎖定出擊',
+                active: !store.isCheckedInToday(),
+                cls: 'border-slate-500 bg-slate-800 text-slate-200',
+                onClick: () => store.setDevCheckinToday(false),
+              },
+              {
+                id: 'reset_boss',
+                label: '🔄 重置今日 Boss',
+                sub: store.isBossDoneToday() ? '已出擊' : '可出擊',
+                active: !store.isBossDoneToday(),
+                cls: 'border-cyan-400 bg-cyan-950/60 text-cyan-300',
+                onClick: () => store.setDevResetBoss(),
+              },
+            ].map((st) => (
+              <button
+                key={st.id}
+                onClick={st.onClick}
+                className={`p-1.5 rounded-xl border text-center transition ${
+                  st.active
+                    ? st.cls + ' ring-1 ring-white/40 font-black'
+                    : 'bg-slate-900 border-slate-800 text-slate-400'
+                }`}
+              >
+                <div className="text-[11px] font-black">{st.label}</div>
+                <div className="text-[9px] opacity-80">{st.sub}</div>
+              </button>
+            ))}
           </div>
 
           <div className="pt-1 border-t border-slate-800 grid grid-cols-1 gap-1.5">
@@ -734,10 +734,8 @@ export const PlazaTab: React.FC = () => {
                       </span>
                     </div>
                     <div className="text-[11px] text-emerald-300 font-bold break-words">
-                      {store.todayWorkoutStatus === 'legit_rest'
-                        ? '✅ 今日已完成運動充能（可對 Boss 揮拳削血）'
-                        : store.todayWorkoutStatus === 'cheated_fast'
-                        ? '🤥 今日疑似 3 秒快速打卡（傷害 -95% 刮痧懲罰中）'
+                      {store.isCheckedInToday()
+                        ? '✅ 今日已完成運動打卡（可出擊討伐 Boss）'
                         : '🔒 今日尚未完成運動打卡'}
                     </div>
                   </div>
@@ -1038,7 +1036,7 @@ export const PlazaTab: React.FC = () => {
                 },
                 {
                   name: '街頭健體 · Leo',
-                  sub: '🤥 3秒亂按作弊刮痧懲罰',
+                  sub: '有氧飛輪破盾',
                   dmg: 15,
                   isMe: false,
                 },

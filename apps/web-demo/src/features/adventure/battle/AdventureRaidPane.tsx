@@ -78,10 +78,6 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
   const boss = bossForStage(stage);
   const maxHp = displayedBossMaxHp(boss, stage, adventureMode);
   const currentHp = Math.min(maxHp, isSolo ? store.soloBossHp : store.squadBossHp);
-  const cooldownSec = Math.max(0, Math.floor((store.adventureCooldownUntil - nowMs) / 1000));
-  const today = new Date().toISOString().slice(0, 10);
-  const iapUsedToday =
-    store.dailyIapCooldownResetDate === today && (store.dailyIapCooldownResetCount || 0) >= 1;
 
   const teammates: TeammateDrawConfig[] = isSolo
     ? []
@@ -99,16 +95,14 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
 
   const strike = () => {
     if (phase !== 'idle') return;
-    if (store.todayWorkoutStatus === 'none') {
-      store.setActiveTab('workout');
-      store.showToast(
-        isSolo
-          ? '請先完成今日運動並跑完組間休息，即可回來單人出拳'
-          : '請先完成今日運動並跑完組間休息，即可回來與隊友一起出拳',
-      );
+    if (!store.isCheckedInToday()) {
+      store.setCheckinSheetOpen(true);
       return;
     }
-    if (cooldownSec > 0) return;
+    if (store.isBossDoneToday()) {
+      store.showToast('今天已出擊，明天 00:00 再來');
+      return;
+    }
 
     const stageBefore = stage;
     const bossBefore = boss;
@@ -116,7 +110,7 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
     setPhase('lunge');
     setLungeAt(performance.now());
     later(() => {
-      const result = store.attackAdventureBoss(adventureMode);
+      const result = store.bossAttack(adventureMode);
       setPhase('hit');
       setHitAt(performance.now());
       later(() => setPhase('idle'), BOSS_HIT_MS);
@@ -125,7 +119,6 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
         id: Date.now(),
         damage: result.damage,
         isCrit: result.isCrit,
-        isCheatPenalty: result.isCheatPenalty,
         droppedLootName: result.droppedLootName,
       });
       later(() => setFloatHit(null), FLOAT_MS);
@@ -180,15 +173,12 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
       />
       <SkillDeck
         sport={store.todaySportType}
-        workoutStatus={store.todayWorkoutStatus}
-        cooldownSec={cooldownSec}
-        raidTickets={store.raidTickets}
-        iapUsedToday={iapUsedToday}
+        checkedIn={store.isCheckedInToday()}
+        bossDone={store.isBossDoneToday()}
+        nextResetAt={store.getNextResetAt()}
         busy={phase !== 'idle'}
         onSport={store.setTodaySportType}
         onStrike={strike}
-        onResetTicket={() => store.resetAdventureCooldown('ticket')}
-        onResetIap={() => store.resetAdventureCooldown('iap')}
       />
       {victory && <VictoryShareModal report={victory} onClose={() => setVictory(null)} />}
       {loot && <RareLootShareModal report={loot} onClose={() => setLoot(null)} />}

@@ -13,13 +13,9 @@ export const BRAND_CONFIG = {
 export const ECONOMY_CONFIG = {
   // 新手初始資源
   ftueStarterCoins: 350,
-  maxStamina: 100,
-  staminaPerSet: 5,           // 每完成一組消耗 5 點體力（20 組耗盡 100 點；耗盡後仍可免費無限記錄！）
-  staminaPerQuickWorkout: 50, // 3秒極速補登一次消耗 50 點體力
-  staminaRegenPerHour: 10,    // 每小時自然恢復 10 點
 
   // 基礎打卡與任務獎勵
-  coinsPerValidSet: 5,        // 有體力時，每完成一組即時掉落基礎金幣
+  coinsPerValidSet: 5,        // 每完成一組即時掉落基礎金幣
   dailyWorkoutQuestCoins: 50, // 完成一次運動打卡任務
   dailyPetInteractCoins: 15,  // 與訓練室小人/柴犬互動任務
   dailyTipQuestCoins: 20,     // 廣場打賞或送水任務
@@ -33,7 +29,6 @@ export const ECONOMY_CONFIG = {
   // 連續運動暴擊
   streak3DayBonus: 50,
   streak7DayBonus: 200,
-  maxStreakFreezeStack: 3,
 
   // 扭蛋機價格
   gachaSingleCoinCost: 120,

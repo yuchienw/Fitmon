@@ -13,7 +13,6 @@ export interface StrikeFloat {
   id: number;
   damage: number;
   isCrit: boolean;
-  isCheatPenalty?: boolean;
   droppedLootName?: string;
 }
 
@@ -196,9 +195,7 @@ export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
             className={`block text-center font-mono font-black ${
               floatHit.isCrit && !reducedMotion ? 'adv-crit' : ''
             } ${
-              floatHit.isCheatPenalty
-                ? 'text-lg text-muted-foreground'
-                : floatHit.isCrit
+              floatHit.isCrit
                 ? 'text-3xl text-secondary'
                 : 'text-2xl text-destructive'
             }`}

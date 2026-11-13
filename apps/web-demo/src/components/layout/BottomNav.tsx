@@ -8,6 +8,7 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' }) => {
+  const store = useGameStore();
   const {
     activeTab,
     setActiveTab,
@@ -16,15 +17,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
     isRestRunning,
     restSecondsLeft,
     quests,
-    todayWorkoutStatus,
-    adventureCooldownUntil,
-  } = useGameStore();
+  } = store;
   const t = I18N[locale];
 
   const claimableQuests = quests.filter((q) => !q.claimed && q.progress >= q.target).length;
-  const canStrikeBoss =
-    todayWorkoutStatus !== 'none' &&
-    (!adventureCooldownUntil || Date.now() >= adventureCooldownUntil);
+  const canStrikeBoss = store.isCheckedInToday() && !store.isBossDoneToday();
 
   // Core Gameplay Flow: 🏠小屋 ➔ 🏋️運動 ➔ 【⚔️冒險 (Center Hero)】 ➔ 🛍️商城 ➔ 📊紀錄
   const tabs: {

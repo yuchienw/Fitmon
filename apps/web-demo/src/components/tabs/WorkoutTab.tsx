@@ -611,9 +611,6 @@ export const WorkoutTab: React.FC = () => {
             <Dumbbell className="w-4 h-4 text-emerald-400" />
             運動課表
           </h2>
-          <span className="px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] font-bold">
-            ⚡ 體力 {store.stamina}/{store.maxStamina}
-          </span>
         </div>
 
         <div className="grid grid-cols-2 gap-2">

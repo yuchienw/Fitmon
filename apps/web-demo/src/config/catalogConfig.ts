@@ -1,4 +1,5 @@
 import { ExerciseCategory } from '@fitmon/engine';
+import { BCAA_COIN_PRICE, DOUBLE_COIN_COUPON_COIN_PRICE } from './economy';
 
 export type AvatarBodyStage = 'beginner' | 'powerlifter' | 'aesthetic' | 'titan';
 export type AvatarExpression = 'smile' | 'strain' | 'cool' | 'cry';
@@ -206,12 +207,11 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
 ];
 
 export interface ConsumableItem {
-  id: 'bcaa_water' | 'double_coin_card' | 'streak_freeze' | 'gacha_ticket';
+  id: 'bcaa_water' | 'double_coin_card' | 'gacha_ticket';
   nameZh: string;
   nameEn: string;
   effectBadge: string;
   priceCoins: number;
-  iapPriceUsd: string;
   iconEmoji: string;
   colorClass: string;
 }
@@ -710,8 +710,7 @@ export const CONSUMABLE_ITEMS: ConsumableItem[] = [
     nameZh: 'BCAA 超能活力水',
     nameEn: 'BCAA Stamina Drink',
     effectBadge: '體力 +50 ⚡',
-    priceCoins: 60,
-    iapPriceUsd: 'NT$ 30',
+    priceCoins: BCAA_COIN_PRICE,
     iconEmoji: '🧪',
     colorClass: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/50',
   },
@@ -720,20 +719,9 @@ export const CONSUMABLE_ITEMS: ConsumableItem[] = [
     nameZh: '24H 雙倍金幣卡',
     nameEn: '2x Coin Booster',
     effectBadge: '金幣 ×2.0 🪙',
-    priceCoins: 100,
-    iapPriceUsd: 'NT$ 45',
+    priceCoins: DOUBLE_COIN_COUPON_COIN_PRICE,
     iconEmoji: '⚡',
     colorClass: 'from-amber-500/20 to-yellow-500/10 border-amber-500/50',
-  },
-  {
-    id: 'streak_freeze',
-    nameZh: '連勝保命冰凍卡',
-    nameEn: 'Streak Freeze',
-    effectBadge: '連勝保護 🛡️',
-    priceCoins: 120,
-    iapPriceUsd: 'NT$ 45',
-    iconEmoji: '🧊',
-    colorClass: 'from-cyan-500/20 to-blue-500/10 border-cyan-500/50',
   },
   {
     id: 'gacha_ticket',
@@ -741,7 +729,6 @@ export const CONSUMABLE_ITEMS: ConsumableItem[] = [
     nameEn: 'Gacha Token',
     effectBadge: '隨機抽獎 🎰',
     priceCoins: 120,
-    iapPriceUsd: 'NT$ 35',
     iconEmoji: '🎟️',
     colorClass: 'from-purple-500/20 to-pink-500/10 border-purple-500/50',
   },
@@ -1335,56 +1322,62 @@ export const MEME_STICKERS = [
 ];
 
 
-export interface IapPackageItem {
+export interface CosmeticBuyoutItem {
   id: string;
   nameZh: string;
   descZh: string;
   priceNtd: string;
-  rewardCoins: number;
-  bonusStamina?: number;
-  bonusFreezes?: number;
   iconEmoji: string;
   tagZh?: string;
 }
 
-export const IAP_PACKAGES: IapPackageItem[] = [
+export type IapPackageItem = CosmeticBuyoutItem;
+
+export const COSMETIC_BUYOUT_CATALOG: CosmeticBuyoutItem[] = [
   {
-    id: 'iap_starter_bundle',
-    nameZh: '新手破繭超值禮包',
-    descZh: '800 🪙 ＋ 體力補滿 ＋ 冰凍卡 ×2',
+    id: 'buyout_skin_pack',
+    nameZh: '限定皮膚包',
+    descZh: '1 套限定像素服裝（永久持有・無數值加成）',
     priceNtd: 'NT$ 30',
-    rewardCoins: 800,
-    bonusStamina: 100,
-    bonusFreezes: 2,
-    iconEmoji: '🎁',
-    tagZh: '首儲激推',
+    iconEmoji: '👘',
+    tagZh: '熱銷推薦',
   },
   {
-    id: 'iap_coins_small',
-    nameZh: '輕量金幣補給袋',
-    descZh: '立即獲得 600 🪙 金幣',
-    priceNtd: 'NT$ 60',
-    rewardCoins: 600,
-    iconEmoji: '💰',
+    id: 'buyout_photo_frame',
+    nameZh: '合照／分享卡外框',
+    descZh: '2–3 款 9:16 外框，匯出到 IG／Threads',
+    priceNtd: 'NT$ 30',
+    iconEmoji: '🖼️',
   },
   {
-    id: 'iap_coins_mega',
-    nameZh: '鐵館巨巨黃金寶箱',
-    descZh: '立即獲得 2,200 🪙 金幣 ＋ 體力補滿',
-    priceNtd: 'NT$ 150',
-    rewardCoins: 2200,
-    bonusStamina: 100,
+    id: 'buyout_boss_frame',
+    nameZh: 'Boss 勝利卡框',
+    descZh: '1–2 款勝利分享卡外框',
+    priceNtd: 'NT$ 40',
     iconEmoji: '👑',
-    tagZh: '最划算',
   },
   {
-    id: 'iap_pro_pass',
-    nameZh: 'PRO 尊榮月度通行證',
-    descZh: '1,500 🪙 ＋ 雙倍金幣狀態開啟',
-    priceNtd: 'NT$ 190',
-    rewardCoins: 1500,
-    bonusStamina: 100,
-    iconEmoji: '💎',
-    tagZh: 'VIP',
+    id: 'buyout_room_decor',
+    nameZh: '房間裝潢包',
+    descZh: '2–3 件房間家具',
+    priceNtd: 'NT$ 50',
+    iconEmoji: '🛋️',
+  },
+  {
+    id: 'buyout_companion_pet',
+    nameZh: '伴隨寵物',
+    descZh: '解鎖 1 隻寵物',
+    priceNtd: 'NT$ 60',
+    iconEmoji: '🐕',
+  },
+  {
+    id: 'buyout_seasonal_bundle',
+    nameZh: '季節限定組合',
+    descZh: '當季皮膚 1 套＋外框 1 款，限時上架、買斷後永久持有',
+    priceNtd: 'NT$ 90',
+    iconEmoji: '🌸',
+    tagZh: '季節限定',
   },
 ];
+
+export const IAP_PACKAGES = COSMETIC_BUYOUT_CATALOG;

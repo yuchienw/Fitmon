@@ -21,6 +21,9 @@ import {
   getBossForStage,
 } from './venueConfig';
 import { ADVENTURE_BOSS_CATALOG, AdventureBoss } from '../../../config/catalogConfig';
+import { REPLAY_STAMINA_COST } from '../../../config/economy';
+import { formatResetCountdown } from '../../../game/day';
+import { StaminaPill } from '../../../components/adventure/StaminaPill';
 
 interface VenueTowerScreenProps {
   venueIndex: number;
@@ -342,6 +345,13 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
     return () => cancelAnimationFrame(frame);
   }, [store.bodyStage, store.equipped, isSquadTeam, teammates]);
 
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 10000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const bossDoneToday = store.isBossDoneToday(nowMs);
+
   const handleSelectFloor = (floor: number) => {
     const status = getFloorStatus(floor);
     if (status === 'locked') {
@@ -374,11 +384,32 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
           </div>
         </div>
 
-        <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-black font-mono text-foreground shadow-sm">
-          <Coins className="h-3.5 w-3.5 text-amber-500" />
-          <span>{store.coins.toLocaleString()}</span>
+        <div className="flex items-center gap-2">
+          <StaminaPill />
+          <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-black font-mono text-foreground shadow-sm">
+            <Coins className="h-3.5 w-3.5 text-amber-500" />
+            <span>{store.coins.toLocaleString()}</span>
+          </div>
         </div>
       </header>
+
+      {/* Boss Done Today Banner (Screen 6) */}
+      {bossDoneToday && (
+        <div
+          style={{
+            backgroundColor: '#FFF7ED',
+            borderColor: '#FED7AA',
+          }}
+          className="rounded-2xl border-[1.5px] p-3 mb-3 text-left shadow-xs"
+        >
+          <div className="text-sm font-black text-[#29221E]">
+            今天已出擊，明天 00:00 再來
+          </div>
+          <div className="text-xs text-[#786B63] mt-0.5 font-bold">
+            {formatResetCountdown(store.getNextResetAt(nowMs), nowMs)}
+          </div>
+        </div>
+      )}
 
       {/* Venue Banner */}
       <div className="retro-box mb-3 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-3 border-amber-200">
@@ -408,6 +439,67 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
           const isLocked = status === 'locked';
 
           if (isCurrent) {
+            if (bossDoneToday) {
+              // CURRENT FLOOR LOCKED FOR TODAY (Cream Disabled State Screen 6)
+              return (
+                <div
+                  key={floor}
+                  onClick={() => handleSelectFloor(floor)}
+                  style={{
+                    backgroundColor: '#F4EFE6',
+                    borderColor: '#E5DCCB',
+                  }}
+                  className={`retro-box relative overflow-hidden rounded-2xl p-3 transition-all duration-150 cursor-pointer ${
+                    isSelected ? 'ring-2 ring-[#8A7A6C]' : ''
+                  }`}
+                >
+                  <div className="absolute right-0 top-0 rounded-bl-xl bg-[#8A7A6C] px-3 py-0.5 text-[10px] font-black text-white shadow-sm">
+                    第 {stageNumber} 關 · 今日已出擊
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className={`relative shrink-0 overflow-hidden ${isSquadTeam ? 'h-20 w-28' : 'h-20 w-20'}`}>
+                      <canvas
+                        ref={canvasRef}
+                        width={canvasW}
+                        height={canvasH}
+                        className="block h-20 w-full opacity-60"
+                      />
+                    </div>
+
+                    <div className="flex-1 px-3">
+                      <div className="text-2xl font-black font-mono tracking-tight text-[#8A7A6C]">
+                        F{floor}
+                      </div>
+                      <div className="text-xs font-bold text-[#8A7A6C]">
+                        {selectedBoss.nameZh}
+                      </div>
+                    </div>
+
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-[#E5DCCB] bg-[#FFFDF8] p-1 shadow-sm opacity-60">
+                      <img
+                        src={bossSpriteUrl(selectedBoss.spriteKey)}
+                        alt={selectedBoss.nameZh}
+                        className="h-14 w-14 object-contain grayscale"
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      backgroundColor: '#FFFDF8',
+                      borderColor: '#E5DCCB',
+                      color: '#8A7A6C',
+                    }}
+                    className="mt-2.5 rounded-xl border p-2 flex items-center justify-center gap-1.5 text-xs font-black"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-[#8A7A6C]" />
+                    <span>今天已出擊，明天 00:00 再來（{formatResetCountdown(store.getNextResetAt(nowMs), nowMs)}）</span>
+                  </div>
+                </div>
+              );
+            }
+
             // CURRENT FLOOR (Prominent Card with Avatar & Boss Preview)
             return (
               <div
@@ -522,27 +614,49 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
           }
 
           if (isCleared) {
-            // CLEARED FLOOR (Green Checkmark, Clickable to replay)
+            // CLEARED FLOOR (tag: 已通關・無獎勵, button: 重打・體力 50（待定）)
             return (
               <div
                 key={floor}
                 onClick={() => handleSelectFloor(floor)}
                 className={`retro-box flex items-center justify-between rounded-xl p-3 transition-all cursor-pointer ${
-                  isSelected ? 'border-emerald-500 ring-2 ring-emerald-300 bg-emerald-50' : 'bg-card hover:bg-muted/40'
+                  isSelected ? 'border-amber-400 ring-2 ring-amber-200 bg-amber-50/40' : 'bg-card hover:bg-muted/40'
                 }`}
               >
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1 pr-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-lg font-black font-mono text-foreground">F{floor}</span>
-                    <span className="text-xs font-bold text-muted-foreground">
-                      第 {stageNumber} 關 · 已通關
+                    <span
+                      style={{
+                        backgroundColor: '#F4EFE6',
+                        color: '#786B63',
+                        borderColor: '#E5DCCB',
+                      }}
+                      className="px-2 py-0.5 rounded-full border text-[10px] font-black"
+                    >
+                      已通關・無獎勵
                     </span>
                   </div>
-                  <div className="text-[10px] text-muted-foreground">已通關 · 點擊查看關卡資訊</div>
+                  <div className="text-xs font-bold text-foreground mt-0.5 truncate">
+                    第 {stageNumber} 關 · {getBossForStage(stageNumber)?.nameZh || '首領'}
+                  </div>
                 </div>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
-                  <Check className="h-5 w-5 stroke-[3]" />
-                </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    store.replayFloor(mode, stageNumber);
+                  }}
+                  style={{
+                    backgroundColor: '#FFFDF8',
+                    borderColor: '#EA580C',
+                    color: '#C2410C',
+                  }}
+                  className="shrink-0 rounded-xl border-[1.5px] px-2.5 py-1.5 text-xs font-black shadow-xs active:scale-95 transition"
+                >
+                  重打・體力 {REPLAY_STAMINA_COST}（待定）
+                </button>
               </div>
             );
           }
@@ -599,30 +713,59 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
             <div className="mt-0.5 line-clamp-1 text-[11px] font-bold text-muted-foreground">
               {selectedBoss.subtitleZh}
             </div>
-            <div className="text-[10px] text-muted-foreground">
-              通關獎勵：+{selectedBoss.rewardCoins} 🪙 · 有機會打落【{selectedBoss.hiddenLoot.nameZh}】
-            </div>
+            {selectedStatus !== 'cleared' && (
+              <div className="text-[10px] text-muted-foreground">
+                通關獎勵：+{selectedBoss.rewardCoins} 🪙 · 有機會打落【{selectedBoss.hiddenLoot.nameZh}】
+              </div>
+            )}
           </div>
         </div>
 
         {/* Enter Battle CTA Button / Progression Action */}
         {selectedStatus === 'current' ? (
-          <button
-            type="button"
-            onClick={() => onEnterBattle()}
-            className="retro-btn mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3 font-black text-white shadow-lg active:translate-y-0.5 bg-gradient-to-b from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-          >
-            <span className="text-sm">進入戰鬥（挑戰第 {playerStage} 關）</span>
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          bossDoneToday ? (
+            <div
+              style={{
+                backgroundColor: '#F4EFE6',
+                borderColor: '#E5DCCB',
+                color: '#8A7A6C',
+              }}
+              className="mt-3 flex w-full flex-col items-center justify-center rounded-2xl border-[1.5px] p-2.5 text-center shadow-xs select-none"
+            >
+              <div className="flex items-center gap-1.5 text-xs font-black">
+                <Lock className="h-4 w-4 text-[#8A7A6C]" />
+                <span>今天已出擊，明天 00:00 再來</span>
+              </div>
+              <div className="text-[11px] font-bold text-[#8A7A6C] mt-0.5">
+                {formatResetCountdown(store.getNextResetAt(nowMs), nowMs)}
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onEnterBattle()}
+              className="retro-btn mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3 font-black text-white shadow-lg active:translate-y-0.5 bg-gradient-to-b from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
+            >
+              <span className="text-sm">進入戰鬥（挑戰第 {playerStage} 關）</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          )
         ) : selectedStatus === 'cleared' ? (
           <div className="mt-3 space-y-2">
             <button
               type="button"
-              disabled
-              className="flex w-full items-center justify-center rounded-2xl border-2 border-border bg-muted py-2.5 text-xs font-black text-muted-foreground opacity-80 cursor-not-allowed"
+              onClick={() => {
+                const stageNum = getStageForVenueFloor(venueIndex, selectedFloor);
+                store.replayFloor(mode, stageNum);
+              }}
+              style={{
+                backgroundColor: '#FFFDF8',
+                borderColor: '#EA580C',
+                color: '#C2410C',
+              }}
+              className="retro-btn flex w-full items-center justify-center gap-1.5 rounded-2xl border-[1.5px] py-2.5 text-xs font-black shadow-xs active:translate-y-0.5 transition"
             >
-              <span>✅ 已通關此樓層（無須重複討伐）</span>
+              <span>重打・體力 {REPLAY_STAMINA_COST}（待定）</span>
             </button>
             <button
               type="button"

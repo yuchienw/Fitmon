@@ -65,20 +65,12 @@ export const VictoryModal: React.FC = () => {
               ⚡ 觸發預釀氮泵神經暴擊！經驗與收益翻倍！
             </div>
           )}
-
-          {data.staminaDepletedNotice && (
-            <div className="text-center text-[11px] text-slate-400 bg-slate-900 rounded p-1.5">
-              🛡️ 體力雖已耗盡，但您的訓練容量與連勝已 100% 免費完整保存！
-            </div>
-          )}
         </div>
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-1">
           <button
             onClick={() => {
-              const targetStatus = data.workoutStatus ?? store.todayWorkoutStatus;
-              store.setTodayWorkoutStatus(targetStatus);
               store.closeVictoryModal();
               store.setActiveTab('plaza');
             }}

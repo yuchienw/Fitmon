@@ -11,6 +11,8 @@ import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameS
 import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
 import { GYM_VENUES, getFloorForStage } from './venueConfig';
 import { ADVENTURE_BOSS_CATALOG } from '../../../config/catalogConfig';
+import { formatResetCountdown } from '../../../game/day';
+import { StaminaPill } from '../../../components/adventure/StaminaPill';
 
 interface GymIslandMapScreenProps {
   mode: 'solo' | 'squad';
@@ -610,12 +612,31 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          <StaminaPill />
           <div className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs font-black font-mono text-foreground">
             <Coins className="h-3.5 w-3.5 text-amber-500" />
             <span>{store.coins.toLocaleString()}</span>
           </div>
         </div>
       </header>
+
+      {/* Boss Done Today Banner (Screen 6) */}
+      {store.isBossDoneToday() && (
+        <div
+          style={{
+            backgroundColor: '#FFF7ED',
+            borderColor: '#FED7AA',
+          }}
+          className="rounded-2xl border-[1.5px] p-2.5 mx-3 mb-2 text-left shadow-xs"
+        >
+          <div className="text-xs font-black text-[#29221E]">
+            今天已出擊，明天 00:00 再來
+          </div>
+          <div className="text-[11px] text-[#786B63] mt-0.5 font-bold">
+            {formatResetCountdown(store.getNextResetAt())}
+          </div>
+        </div>
+      )}
 
       {/* Main Map Interactive Canvas & Overlay Nodes */}
       <div ref={wrapRef} className="relative min-h-0 flex-1 overflow-hidden bg-[#A8C9C0]">

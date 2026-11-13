@@ -21,14 +21,17 @@ import {
   Dog,
   Layers,
   MapPin,
+  Gift,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
+import { DAILY_COIN_CAP } from '../../config/economy';
+import { getLocalDayKey, getWeekKey } from '../../game/day';
 import {
   AVATAR_ITEMS,
   ROOM_ITEMS,
   CONSUMABLE_ITEMS,
-  IAP_PACKAGES,
-  IapPackageItem,
+  COSMETIC_BUYOUT_CATALOG,
+  CosmeticBuyoutItem,
   ConsumableItem,
   CosmeticItem,
   EquipSlot,
@@ -142,7 +145,25 @@ export const ShopTab: React.FC = () => {
           </div>
         </div>
 
-        {/* Main 4 Shop Category Tabs (造型 / 傢俱 / 道具 / 💎儲值) */}
+        {/* Wallet & Daily Coin Cap Row (Requirement 10) */}
+        <div className="flex items-center justify-between px-1 text-xs">
+          <div className="flex items-center gap-1.5">
+            <Coins className="w-4 h-4 text-amber-500" />
+            <span className="font-mono font-black text-white text-sm">
+              {store.coins.toLocaleString()}
+            </span>
+            <span className="text-[11px] text-amber-400 font-bold ml-1">
+              今日 {store.coinsEarnedToday} / {DAILY_COIN_CAP}
+            </span>
+          </div>
+          {store.coinsEarnedToday >= DAILY_COIN_CAP && (
+            <span className="text-[10.5px] font-black text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2 py-0.5 rounded-full">
+              今天的遊戲幣拿滿了
+            </span>
+          )}
+        </div>
+
+        {/* Main 4 Shop Category Tabs (造型 / 傢俱 / 道具 / 💎外觀買斷) */}
         <div className="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => setCategory('avatar')}
@@ -186,7 +207,7 @@ export const ShopTab: React.FC = () => {
             }`}
           >
             <Gem className="w-3.5 h-3.5" />
-            <span>儲值</span>
+            <span>外觀買斷</span>
           </button>
         </div>
 
@@ -452,122 +473,196 @@ export const ShopTab: React.FC = () => {
             })}
           </div>
         ) : category === 'consumables' ? (
-          /* 3. CONSUMABLES LIST (Supports both Coins and Simulated NT$ IAP) */
-          <div className="space-y-2.5">
-            {CONSUMABLE_ITEMS.map((c: ConsumableItem) => {
-              const count = store.consumables[c.id] || 0;
+          /* 3. CONSUMABLES LIST & WEEKLY CHEST */
+          <div className="space-y-3">
+            {/* Weekly Chest Card (Requirement 10) */}
+            {(() => {
+              const damageInfo = store.getDamageInfo();
+              const currentWeekKey = getWeekKey(getLocalDayKey());
+              const isChestClaimedThisWeek = store.chestClaimedWeekKey === currentWeekKey;
+              const isDoubleActive = store.doubleCoinUntil > Date.now();
+              const doubleTimeLeftMs = Math.max(0, store.doubleCoinUntil - Date.now());
+              const doubleHours = Math.floor(doubleTimeLeftMs / (3600 * 1000));
+              const doubleMins = Math.floor((doubleTimeLeftMs % (3600 * 1000)) / (60 * 1000));
+              const doubleCardCount = store.consumables.double_coin_card || 0;
+
               return (
-                <div
-                  key={c.id}
-                  className="retro-box rounded-2xl p-3.5 flex items-center justify-between gap-2.5"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl shrink-0">
-                      {c.iconEmoji}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-black text-white break-words">{c.nameZh}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[10px] font-bold shrink-0">
-                          ×{count}
-                        </span>
+                <div className="retro-box rounded-2xl p-3.5 bg-gradient-to-r from-amber-500/15 via-slate-900 to-slate-900 border-amber-400/50 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-xl shrink-0">
+                        🎁
                       </div>
-                      <div className="text-[11px] font-bold text-emerald-400 mt-0.5">
-                        {c.effectBadge}
+                      <div>
+                        <div className="text-xs font-black text-white">每週寶箱</div>
+                        <div className="text-[11px] text-slate-300 font-bold mt-0.5">
+                          本週動了 {damageInfo.daysThisWeek}／3 天
+                        </div>
                       </div>
                     </div>
+
+                    {isChestClaimedThisWeek ? (
+                      <span className="px-3 py-1.5 rounded-xl bg-slate-800 text-emerald-400 text-xs font-black border border-slate-700">
+                        本週已領取
+                      </span>
+                    ) : damageInfo.daysThisWeek >= 3 ? (
+                      <button
+                        type="button"
+                        onClick={() => store.claimWeeklyChest()}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-xs font-black shadow-md animate-bounce cursor-pointer"
+                      >
+                        領取寶箱
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-xl">
+                        差 {3 - damageInfo.daysThisWeek} 天達標
+                      </span>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {count > 0 && (
+                  {/* 2X Double Coin Status & Activation */}
+                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                    <div className="text-[11px] font-bold text-slate-300">
+                      {isDoubleActive ? (
+                        <span className="text-amber-300 font-black">
+                          ⚡ 24H 雙倍金幣生效中（剩餘 {doubleHours} 小時 {doubleMins} 分）
+                        </span>
+                      ) : (
+                        <span>持有 24H 雙倍金幣卡：{doubleCardCount} 張</span>
+                      )}
+                    </div>
+
+                    {!isDoubleActive && doubleCardCount > 0 && (
                       <button
-                        onClick={() => store.useConsumableItem(c.id)}
-                        className="px-2.5 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black"
+                        type="button"
+                        onClick={() => store.activateDoubleCoin()}
+                        className="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 text-[11px] font-black hover:bg-amber-300"
                       >
-                        使用
+                        啟用 2X
                       </button>
                     )}
-                    <button
-                      onClick={() => store.buyConsumable(c.id, false)}
-                      className="px-2.5 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1"
-                    >
-                      <Coins className="w-3.5 h-3.5" />
-                      {c.priceCoins}
-                    </button>
-                    <button
-                      onClick={() =>
-                        setPendingIapSheet({
-                          title: c.nameZh,
-                          priceLabel: c.iapPriceUsd,
-                          desc: c.effectBadge,
-                          onConfirm: () => store.buyConsumable(c.id, true),
-                        })
-                      }
-                      className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 text-xs font-black"
-                    >
-                      {c.iapPriceUsd}
-                    </button>
                   </div>
                 </div>
               );
-            })}
+            })()}
+
+            {/* Consumables Items */}
+            <div className="space-y-2.5">
+              {CONSUMABLE_ITEMS.map((c: ConsumableItem) => {
+                const count = store.consumables[c.id] || 0;
+                return (
+                  <div
+                    key={c.id}
+                    className="retro-box rounded-2xl p-3.5 flex items-center justify-between gap-2.5"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl shrink-0">
+                        {c.iconEmoji}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-black text-white break-words">{c.nameZh}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[10px] font-bold shrink-0">
+                            ×{count}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-bold text-emerald-400 mt-0.5">
+                          {c.effectBadge}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {count > 0 && (
+                        <button
+                          onClick={() => store.useConsumableItem(c.id)}
+                          className="px-2.5 py-2 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black"
+                        >
+                          使用
+                        </button>
+                      )}
+                      {c.id === 'double_coin_card' ? (
+                        <button
+                          disabled
+                          className="px-2.5 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-black cursor-not-allowed border border-slate-700"
+                        >
+                          價格待定
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => store.buyWithCoins(c.id)}
+                          className="px-2.5 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1"
+                        >
+                          <Coins className="w-3.5 h-3.5" />
+                          {c.priceCoins}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
-          /* 4. SIMULATED IN-APP PURCHASE (IAP) STORE TAB (Item 4) */
+          /* 4. REAL-MONEY COSMETIC BUYOUT CATALOG (ONLY Buyout Items, No Coin Packs, No Subscriptions) */
           <div className="space-y-3">
             <div className="retro-box rounded-2xl p-3 bg-gradient-to-r from-amber-500/15 via-slate-900 to-slate-900 border-amber-400/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Gem className="w-5 h-5 text-amber-400 shrink-0" />
                 <div>
-                  <div className="text-xs font-black text-white">金幣儲值與特惠禮包</div>
-                  <div className="text-[11px] text-slate-400">
-                    沙盒模擬內購 · 免串接真實信用卡即可測試
+                  <div className="text-xs font-black text-white">外觀買斷</div>
+                  <div className="text-[11px] text-amber-300 font-bold mt-0.5">
+                    外觀買斷・永久持有・無數值加成
                   </div>
                 </div>
               </div>
-              <span className="px-2 py-1 rounded-lg bg-amber-400/20 text-amber-300 text-[10px] font-black shrink-0">
-                測試沙盒
-              </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-              {IAP_PACKAGES.map((pack: IapPackageItem) => (
-                <div
-                  key={pack.id}
-                  className="retro-box rounded-2xl p-3.5 flex flex-col justify-between relative border-amber-500/30 hover:border-amber-400 transition"
-                >
-                  {pack.tagZh && (
-                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-black">
-                      {pack.tagZh}
-                    </span>
-                  )}
-                  <div>
-                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl mb-2">
-                      {pack.iconEmoji}
-                    </div>
-                    <div className="text-xs font-black text-white">{pack.nameZh}</div>
-                    <div className="text-sm font-mono font-black text-amber-300 mt-1">
-                      +{pack.rewardCoins.toLocaleString()} 🪙
-                    </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">{pack.descZh}</div>
-                  </div>
-
-                  <button
-                    onClick={() =>
-                      setPendingIapSheet({
-                        title: pack.nameZh,
-                        priceLabel: pack.priceNtd,
-                        desc: pack.descZh,
-                        onConfirm: () => store.purchaseIapPackage(pack.id),
-                      })
-                    }
-                    className="mt-3 w-full retro-btn py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1 shadow"
+              {COSMETIC_BUYOUT_CATALOG.map((pack: CosmeticBuyoutItem) => {
+                const isOwned = store.ownedCosmeticBuyoutIds.includes(pack.id);
+                return (
+                  <div
+                    key={pack.id}
+                    className="retro-box rounded-2xl p-3.5 flex flex-col justify-between relative border-amber-500/30 hover:border-amber-400 transition"
                   >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>{pack.priceNtd}</span>
-                  </button>
-                </div>
-              ))}
+                    {pack.tagZh && (
+                      <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-black">
+                        {pack.tagZh}
+                      </span>
+                    )}
+                    <div>
+                      <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl mb-2">
+                        {pack.iconEmoji}
+                      </div>
+                      <div className="text-xs font-black text-white">{pack.nameZh}</div>
+                      <div className="text-[11px] text-slate-400 mt-1">{pack.descZh}</div>
+                    </div>
+
+                    {isOwned ? (
+                      <div className="mt-3 w-full py-2 rounded-xl bg-slate-800 text-emerald-400 text-xs font-black flex items-center justify-center gap-1">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>已擁有</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          setPendingIapSheet({
+                            title: pack.nameZh,
+                            priceLabel: pack.priceNtd,
+                            desc: pack.descZh,
+                            onConfirm: () => store.purchaseCosmeticBuyout(pack.id),
+                          })
+                        }
+                        className="mt-3 w-full retro-btn py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1 shadow"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                        <span>{pack.priceNtd}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
