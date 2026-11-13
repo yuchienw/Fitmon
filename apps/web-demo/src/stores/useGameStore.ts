@@ -2232,10 +2232,11 @@ export const useGameStore = create<GameState>()(
 
         if (result.defeated) {
           soundFX.playVictory();
+          const defeatMsg = result.droppedLootName
+            ? `🎁 擊破【${boss.nameZh}】並爆出隱藏神裝【${result.droppedLootName}】！`
+            : `🎉 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關 (+${result.coinsGranted} 🪙)`;
           state.showToast(
-            result.droppedLootName
-              ? `🎁 擊破【${boss.nameZh}】並爆出隱藏神裝【${result.droppedLootName}】！`
-              : `🎉 擊破【${boss.nameZh}】！晉升 Stage ${stageNum + 1} (+${result.coinsGranted} 🪙)`
+            result.capReached ? `${defeatMsg} ${COIN_CAP_REACHED_COPY}` : defeatMsg
           );
         } else {
           soundFX.playPRFanfare();
