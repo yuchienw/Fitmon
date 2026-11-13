@@ -323,9 +323,9 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
       </div>
 
       {/* Attendance & Name Capsules Row (Secondary Accessibility Touch Targets) */}
-      <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
+      <div className="mt-3 grid grid-cols-4 gap-1 text-center">
         {/* Hero Card (Click does NOT open teammate sheet) */}
-        <div className="retro-box min-w-0 overflow-hidden rounded-xl bg-card p-1.5">
+        <div className="retro-box min-w-0 overflow-hidden rounded-xl bg-card px-1 py-1.5">
           <div className="truncate text-[11px] font-black text-foreground">
             {store.nickname || '你'}
           </div>
@@ -352,7 +352,7 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
             onClick={() => handleInspect(tm.id)}
             role="button"
             tabIndex={0}
-            className="retro-box min-w-0 overflow-hidden cursor-pointer rounded-xl bg-card p-1.5 transition-transform active:scale-95 hover:border-amber-400"
+            className="retro-box min-w-0 overflow-hidden cursor-pointer rounded-xl bg-card px-1 py-1.5 transition-transform active:scale-95 hover:border-amber-400"
           >
             <div
               onClick={(e) => {
@@ -383,7 +383,7 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
             onClick={copyInviteCode}
             role="button"
             tabIndex={0}
-            className="flex min-w-0 overflow-hidden cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 p-1.5 text-muted-foreground hover:bg-muted active:scale-95"
+            className="flex min-w-0 overflow-hidden cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 px-1 py-1.5 text-muted-foreground hover:bg-muted active:scale-95"
           >
             <UserPlus className="h-3.5 w-3.5 opacity-60 text-amber-700 shrink-0" />
             <span className="mt-1 truncate text-[10px] font-bold text-amber-800">＋邀請</span>

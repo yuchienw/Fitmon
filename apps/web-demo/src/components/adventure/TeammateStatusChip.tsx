@@ -24,7 +24,7 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
         type="button"
         onClick={onClick}
         aria-label="邀請新隊友"
-        className={`inline-flex min-h-[44px] min-w-[44px] max-w-full items-center justify-center p-0.5 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
+        className={`inline-flex min-h-[44px] min-w-0 max-w-full items-center justify-center p-0 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
       >
         <span
           style={{
@@ -32,10 +32,11 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
+            padding: '3px 6px',
           }}
-          className="inline-flex min-h-[32px] max-w-full items-center gap-1.5 rounded-full border border-dashed border-amber-500/50 bg-amber-50/90 px-2 py-0.5 text-[12px] font-black text-amber-900 shadow-sm hover:bg-amber-100 whitespace-nowrap overflow-hidden text-ellipsis"
+          className="inline-flex max-w-full items-center gap-[2px] rounded-full border border-dashed border-amber-500/50 bg-amber-50/90 text-[11px] font-black text-amber-900 shadow-sm hover:bg-amber-100 whitespace-nowrap overflow-hidden text-ellipsis"
         >
-          <UserPlus className="h-4 w-4 text-amber-700 shrink-0" />
+          <UserPlus className="h-3 w-3 text-amber-700 shrink-0" />
           <span className="truncate min-w-0 whitespace-nowrap">{emptyLabel}</span>
         </span>
       </button>
@@ -86,7 +87,8 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
     );
   }
 
-  // variant === 'combined' (Default for feet chip: min-h=32px, text=12px, outer touch >=44x44)
+  // variant === 'combined' (Compact chip: text 11px, padding 3px 6px, icon 12px, gap 2px)
+  const hasDamage = worked && member.damageDealt > 0;
   let text = '';
   if (worked) {
     if (member.damageDealt > 0) {
@@ -103,7 +105,7 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
       type="button"
       onClick={onClick}
       aria-label={`隊友狀態：${member.nameZh} ${worked ? text : '💤 還沒動'}`}
-      className={`inline-flex min-h-[44px] min-w-[44px] max-w-full items-center justify-center p-0.5 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
+      className={`inline-flex min-h-[44px] min-w-0 max-w-full items-center justify-center p-0 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
     >
       <span
         style={{
@@ -111,19 +113,21 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
+          padding: '3px 6px',
         }}
-        className={`inline-flex min-h-[32px] max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[12px] shadow-sm whitespace-nowrap overflow-hidden text-ellipsis ${
+        className={`inline-flex max-w-full items-center gap-[2px] rounded-full border px-[6px] py-[3px] text-[11px] shadow-sm whitespace-nowrap overflow-hidden text-ellipsis ${
           worked
             ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold hover:bg-emerald-200/80'
             : 'bg-amber-100 text-amber-950 border-amber-400 font-black hover:bg-amber-200/80'
         }`}
       >
-        {worked ? (
-          <Check className="h-3.5 w-3.5 stroke-[2.5] text-emerald-700 shrink-0" />
-        ) : (
+        {!worked && (
           <span className="text-[12px] leading-none shrink-0" aria-hidden="true">
             💤
           </span>
+        )}
+        {worked && !hasDamage && (
+          <Check className="h-3 w-3 stroke-[2.5] text-emerald-700 shrink-0" />
         )}
         <span className={`truncate min-w-0 font-black ${worked ? 'font-mono' : ''}`}>{text}</span>
       </span>
