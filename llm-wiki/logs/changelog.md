@@ -682,3 +682,24 @@
 - [`logs/meetings/README.md`](meetings/README.md)、[`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：新增會議紀錄目錄規範與第一份紀錄（含 15:04、15:08、15:55、16:00 決策）。
 - [`adr/0003-daily-checkin-fixed-xp.md`](../adr/0003-daily-checkin-fixed-xp.md)、[`adr/0004-minimum-age-13-minor-protection.md`](../adr/0004-minimum-age-13-minor-protection.md)、[`adr/0005-double-coupon-earn-only-cosmetic-revenue.md`](../adr/0005-double-coupon-earn-only-cosmetic-revenue.md)：新增 D-3 每日打卡固定 XP、最低年齡 13 與未成年保護、兩倍券只在遊戲裡賺與買斷外觀收入之決策紀錄。
 - [`wiki/00_INDEX.md`](../wiki/00_INDEX.md)、[`README.md`](../README.md)（知識庫）：加上會議紀錄資料夾相對路徑連結；索引補上 ADR-0003、ADR-0004、ADR-0005。
+
+---
+
+## [2026-11-13] 補記 11/10 16:18–16:20 與 Demo 起始數字、同步看板，並記錄 PR #5／#6 合併
+
+### 1. 觸發原因 (Trigger / Context)
+- 會議紀錄 [`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md) 已補上決策 20–30（16:18、16:20，以及 11/13 轉達的遊戲幣 Demo 起始數字與 T1 第 1 階段放行），需同步更新 ADR-0005、`PROJECT_STATE.md` 與本日誌。
+- 幕僚長轉述：YuChien 於 2026-11-13 09:38（Asia/Taipei）指示合併 [PR #5](https://github.com/yuchienw/Fitmon/pull/5)（移除「速記」功能）。GitHub 核實該 PR 已由 yuchienw 合併，時間為 2026-11-13 09:38（Asia/Taipei），merge commit `e5198c8`。
+- GitHub 核實 [PR #6](https://github.com/yuchienw/Fitmon/pull/6) 已於 2026-11-10 16:18（Asia/Taipei）合併，merge commit `de73747`。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+- 只記載有來源、由 YuChien 親口做成的決定；16:18 已將「遊戲幣能否用真錢買」由待確認改為定案（不開放用真錢買）。遊戲幣 Demo 起始數字（打卡 70 幣、每日上限 90、兩倍券 40 幣、BCAA 10 幣、Boss 賞金 100 到 250）標為提案，YuChien 玩過後再調。
+- ADR-0005 補上 16:18 後續（兩倍券也可用金幣買、遊戲幣不開放真錢買、轉蛋券不賣真錢、外觀買斷 NT$30 到 90 含季節組合、真錢外觀與金幣時裝分開）與 16:20（BCAA 不賣真錢）。
+- `PROJECT_STATE.md` 將已從程式移除的「速記」功能改列已完成，main HEAD 同步為 `e5198c8`；T1 第 1 階段（只改 Demo）放行記入看板。
+- 本次僅改 `llm-wiki/` 文件，不改程式；等 YuChien 同意後才合併本 PR。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [`adr/0005-double-coupon-earn-only-cosmetic-revenue.md`](../adr/0005-double-coupon-earn-only-cosmetic-revenue.md)：補記 16:18、16:20 後續定案，遊戲幣不開放真錢買改為已定案。
+- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：同步 16:18–16:20 決策、遊戲幣 Demo 起始提案數字、T1 第 1 階段放行；記錄 PR #5（`e5198c8`，來源：幕僚長轉述）與 PR #6（2026-11-10 16:18 Asia/Taipei，`de73747`）已合併。
+- [`logs/changelog.md`](changelog.md)：追加本筆。
+- [`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：本分支稍早已補記決策 20–30（本次不另改此檔）。
