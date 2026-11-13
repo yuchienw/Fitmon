@@ -1288,6 +1288,39 @@ export const FRIEND_PROFILES: FriendProfile[] = [
     ],
     routineTemplate: INITIAL_SAVED_ROUTINES[2],
   },
+  // 測試資料：Demo 用假好友檔案（小柔 / friend_chloe），非真實使用者，上線前與其他假資料一起移除
+  {
+    id: 'friend_chloe',
+    nameZh: '核心瑜珈・小柔',
+    titleZh: '核心瑜珈與徒手訓練愛好者（測試資料）',
+    isFriend: false,
+    isVerified: false,
+    bioZh: '每天一點核心與流瑜珈，穩穩練、慢慢強！',
+    followers: '268',
+    level: 9,
+    streakDays: 7,
+    bodyStage: 'beginner',
+    equipped: {
+      hair: 'hair_ headband_red',
+      face: 'face_confident_smile',
+      top: 'top_pump_cover',
+      bottom: 'bottom_navy_shorts',
+      accessory: 'acc_protein_shaker',
+    },
+    room: {
+      wallpaper: 'wall_zen_wood',
+      floor: 'floor_turf_green',
+      slotLeft: 'prop_cardio_treadmill',
+      slotCenter: 'pet_shiba_dog',
+      slotRight: 'prop_plant_monstera',
+    },
+    bestPRs: [
+      { label: '棒式', value: '150秒' },
+      { label: '徒手深蹲', value: '50下' },
+      { label: '5K跑', value: '29:40' },
+    ],
+    routineTemplate: INITIAL_SAVED_ROUTINES[2],
+  },
 ];
 
 export const CELEBRITY_SHOWCASES = FRIEND_PROFILES.filter((p) => p.isVerified);
