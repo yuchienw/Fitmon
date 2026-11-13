@@ -9,10 +9,10 @@
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、雙情境拍貼、開源科學動作庫、Tap Titans 冒險推圖 |
-| **目前階段** | **Phase 1：Web Demo & Native iOS/Android 實機測試與打磨期** | 已合併冒險 PR #1–#3、資安第一批 PR #4、移除速記 [PR #5](https://github.com/yuchienw/Fitmon/pull/5)，以及 wiki 同步 [PR #6](https://github.com/yuchienw/Fitmon/pull/6)；上架時程暫不排定（等 App 做到 YuChien 滿意再談） |
+| **目前階段** | **Phase 1：Web Demo & Native iOS/Android 實機測試與打磨期** | 已合併冒險 PR #1–#3、資安第一批 PR #4、移除速記 [PR #5](https://github.com/yuchienw/Fitmon/pull/5)，以及 wiki 同步 [PR #6](https://github.com/yuchienw/Fitmon/pull/6)、[PR #7](https://github.com/yuchienw/Fitmon/pull/7)；上架時程暫不排定（等 App 做到 YuChien 滿意再談） |
 | **當前版本** | `v2.9.4-analytics-queue-polish` | 文件不擅自升版。11/10 已在此版本之上合併暖日光戰場、健身房島爬塔與組隊檢視；11/13 再合併移除「速記」功能 |
-| **最後更新時間** | `2026-11-13 10:20 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `e5198c8` | 本次文件同步時的 main HEAD（[PR #5](https://github.com/yuchienw/Fitmon/pull/5) 合併 commit）。[PR #6](https://github.com/yuchienw/Fitmon/pull/6) 已於 2026-11-10 16:18（Asia/Taipei）合併（merge commit `de73747`） |
+| **最後更新時間** | `2026-11-13 10:49 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `f28d928` | 本次文件同步時的 main HEAD（[PR #7](https://github.com/yuchienw/Fitmon/pull/7) 合併 commit）。2026-11-13 10:47（Asia/Taipei）PR #7 合併（幕僚長轉述 YuChien 指示；GitHub 核實 merge commit `f28d928`）。[PR #5](https://github.com/yuchienw/Fitmon/pull/5) merge `e5198c8`；[PR #6](https://github.com/yuchienw/Fitmon/pull/6) 已於 2026-11-10 16:18（Asia/Taipei）合併（merge commit `de73747`） |
 | **當前焦點 (Current Focus)** | 專注好用、好玩、修 bug（一輪約一週）；T1 第 1 階段（只改 Demo）已放行給工程；上架時程暫不排定 |
 
 ---
@@ -29,7 +29,7 @@
 - [ ] **TASK-NO-REAL-MONEY-CURRENCY-OR-TICKETS**：遊戲幣不開放用真錢買；轉蛋券不用真錢賣；BCAA 只能在遊戲內取得或用金幣買，不用真錢賣。詳見 [`ADR-0005`](adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。
 - [ ] **TASK-KEEP-STAMINA-REMOVE-COMBO-FREEZE**：保留體力值和 BCAA；移除連擊冰凍卡。
 - [ ] **TASK-COSMETIC-BUYOUT-CATALOG**：外觀買斷目錄照提案採用，價格 NT$30 到 90，含 NT$90 的季節組合；真錢買的外觀和金幣買的時裝分開。詳見 [`ADR-0005`](adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。
-- [ ] **TASK-T1-STAGE1-DEMO**：T1 第 1 階段（只改 Demo）已放行給工程。遊戲幣先用產品經理提的起始數字做進 Demo 試玩（打卡 70 幣、每日上限 90、兩倍券 40 幣、BCAA 10 幣、Boss 賞金 100 到 250）；這些數字仍是提案，YuChien 玩過後再調。
+- [ ] **TASK-T1-STAGE1-DEMO**：T1 第 1 階段（只改 Demo）已放行給工程。遊戲幣先用產品經理提的起始數字做進 Demo 試玩（打卡 70 幣、每日上限 90、兩倍券 40 幣、BCAA 10 幣、Boss 賞金 100 到 250）；這些數字仍是提案，YuChien 玩過後再調。時間：2026-11-10 16:29 之後，確切時間未記錄。來源：YuChien 在幕僚長的確認卡上回答「先用這套經濟數字，玩過再調」，T1 第 1 階段放行為同一批；幕僚長 2026-11-13 轉達。
 - [ ] **SEC-BATCH-2**：資安第二批修正與 Supabase（MILESTONE-2）一起做；測試外掛暫時保留，接雲端前再移除。
 - [ ] **MVP-V2.9-ADVENTURE-PLAYTEST**：實機安裝至 iPhone（Xcode 執行安裝）與朋友測試新版 `[⚔️ 冒險]`、我的紀錄月/週切換與雙情境拍貼工坊分享至 IG/LINE
 
@@ -113,6 +113,7 @@
 - [ ] **MILESTONE-2**：串接 Supabase 雲端資料庫與 OAuth 漸進式綁定。資安第二批修正與此一併進行；測試外掛暫時保留，接雲端前再移除。
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261113-36**：合併 [PR #7](https://github.com/yuchienw/Fitmon/pull/7) `docs(wiki): 補記 11/10 16:18–16:20 決策並修正規格頁矛盾`（來源：幕僚長轉述 YuChien 指示；2026-11-13 10:47 Asia/Taipei PR #7 合併；GitHub 核實已由 yuchienw 合併於 2026-11-13 10:47 Asia/Taipei，merge commit `f28d928`）。
 - [x] **DONE-20261113-35**：合併 [PR #5](https://github.com/yuchienw/Fitmon/pull/5) `feat(workout): 移除「速記」功能`（來源：幕僚長轉述 YuChien 於 2026-11-13 09:38 Asia/Taipei 指示合併；GitHub 核實已由 yuchienw 合併於 2026-11-13 09:38 Asia/Taipei，merge commit `e5198c8`）。速記功能已從程式移除，main HEAD 更新至該 commit。
 - [x] **DONE-20261110-34**：合併 [PR #6](https://github.com/yuchienw/Fitmon/pull/6) `docs(wiki): 同步專案狀態至 11/10 並新增會議紀錄`（合併於 2026-11-10 16:18 Asia/Taipei，merge commit `de73747`）
 - [x] **DONE-20261110-33**：合併 [PR #4](https://github.com/yuchienw/Fitmon/pull/4) `chore(security): 資安清單第一批（防作弊標記、機密忽略與 gitleaks、Actions 釘 SHA、CSP、Vite 6）`（合併於 2026-11-10 15:08 Asia/Taipei，merge commit `c82b17b`）
