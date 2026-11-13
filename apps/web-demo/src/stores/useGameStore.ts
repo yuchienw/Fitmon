@@ -184,6 +184,17 @@ export interface ResolvedSquadAvatar {
   equipped?: Partial<Record<EquipSlot, string>>;
 }
 
+/**
+ * QA-07 戰隊邀請碼單一真相來源：依 squadName 雜湊產生 FITxxx，無隊名時為 FIT732
+ */
+export function getSquadInviteCode(squadName?: string | null): string {
+  if (!squadName) return 'FIT732';
+  const hash = Math.abs(
+    squadName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 732)
+  );
+  return `FIT${(hash % 900) + 100}`;
+}
+
 export function resolveSquadMemberAvatar(member: SquadMemberState): ResolvedSquadAvatar {
   // 1. Full self data: bodyStage has a value and equipped is an object
   if (member.bodyStage && member.equipped && typeof member.equipped === 'object') {
