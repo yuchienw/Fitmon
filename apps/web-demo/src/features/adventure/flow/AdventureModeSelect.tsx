@@ -280,9 +280,6 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
       <div className="mb-2.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="text-base font-black text-foreground">冒險之島</span>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 border border-amber-300">
-            🍁 Maple Daylight
-          </span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -365,7 +362,7 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
                 <span>自己挑戰</span>
               </div>
               <div className="mt-0.5 text-[11px] font-bold text-muted-foreground">
-                進度：STAGE {store.soloStage} · {soloVenue.nameZh}
+                進度：第 {store.soloStage} 關 · {soloVenue.nameZh}
               </div>
             </div>
             <div className="flex items-center gap-1 rounded-xl bg-orange-100 px-2.5 py-1 text-xs font-black text-orange-700 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -409,7 +406,7 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
                 <span>和朋友一起打</span>
               </div>
               <div className="mt-0.5 text-[11px] font-bold text-muted-foreground">
-                進度：STAGE {store.squadStage} · {squadVenue.nameZh}（{1 + store.squadMembers.length}/4 人）
+                進度：第 {store.squadStage} 關 · {squadVenue.nameZh}（{1 + store.squadMembers.length}/4 人）
               </div>
             </div>
             <div className="flex items-center gap-1 rounded-xl bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-800 group-hover:bg-emerald-600 group-hover:text-white transition-colors">

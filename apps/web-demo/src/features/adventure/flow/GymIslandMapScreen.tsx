@@ -858,7 +858,7 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="rounded-full bg-primary px-2 py-0.2 text-[10px] font-black text-primary-foreground">
-                STAGE {stage}
+                第 {stage} 關
               </span>
               <span className="text-xs font-black text-foreground">
                 {GYM_VENUES[currentVenueIdx].nameZh}
@@ -1038,14 +1038,11 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="rounded-full bg-primary px-1.5 py-0.2 text-[10px] font-black text-primary-foreground">
-                STAGE {selectedVenue.index + 1 + (currentFloor - 1) * 6}
+                第 {selectedVenue.index + 1 + (currentFloor - 1) * 6} 關
               </span>
               <h2 className="truncate text-sm font-black text-foreground">
                 {selectedVenue.nameZh}
               </h2>
-              <span className="text-[10px] font-bold text-muted-foreground">
-                ({selectedVenue.nameEn})
-              </span>
             </div>
             <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
               {selectedVenue.descriptionZh}
