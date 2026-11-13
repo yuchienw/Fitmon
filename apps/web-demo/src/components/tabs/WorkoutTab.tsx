@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Dumbbell,
   Flame,
-  Zap,
   Timer,
   Check,
   Trophy,
@@ -41,8 +40,6 @@ export const WorkoutTab: React.FC = () => {
   const [routineTab, setRoutineTab] = useState<RoutineCategoryTab>('favorite');
   const [routineTagFilter, setRoutineTagFilter] = useState<'all' | RoutineTagZh>('all');
   const [detailRoutine, setDetailRoutine] = useState<WorkoutTemplate | null>(null);
-  const [quickEditRoutine, setQuickEditRoutine] = useState<WorkoutTemplate | null>(null);
-  const [quickEditExercises, setQuickEditExercises] = useState<RoutineExerciseConfig[]>([]);
 
   // Routine Builder Modal state
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -92,22 +89,6 @@ export const WorkoutTab: React.FC = () => {
     routineTagFilter !== 'all' && filteredRoutines.length === 0
       ? store.savedRoutines.filter((r) => r.category !== routineTab && matchesTagFilter(r))
       : [];
-
-  // Open Quick-Log / Modify-Before-Log modal
-  const handleOpenQuickLogModal = (routine: WorkoutTemplate) => {
-    setQuickEditRoutine(routine);
-    setQuickEditExercises(routine.exercises.map((e) => ({ ...e })));
-  };
-
-  const handleConfirmQuickLog = () => {
-    if (!quickEditRoutine) return;
-    const modifiedRoutine: WorkoutTemplate = {
-      ...quickEditRoutine,
-      exercises: quickEditExercises,
-    };
-    store.quickLogSavedRoutine(modifiedRoutine);
-    setQuickEditRoutine(null);
-  };
 
   const handleCreateCustomRoutine = (startImmediately: boolean) => {
     if (builderItems.length === 0) {
@@ -861,18 +842,11 @@ export const WorkoutTab: React.FC = () => {
                 })}
               </div>
 
-                  {/* Action Buttons: 3-Sec Quick Log vs Start Focus Workout */}
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <button
-                      onClick={() => handleOpenQuickLogModal(routine)}
-                      className="retro-btn py-2.5 px-3 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/50 text-amber-300 font-black text-xs flex items-center justify-center gap-1.5"
-                    >
-                      <Zap className="w-4 h-4" />
-                      <span>⚡ 3秒速記</span>
-                    </button>
+                  {/* Action Button: Start Focus Workout */}
+                  <div className="pt-1">
                     <button
                       onClick={() => store.startWorkoutFocus(routine)}
-                      className="retro-btn py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow"
+                      className="retro-btn w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
                       <span>開始訓練</span>
@@ -884,112 +858,6 @@ export const WorkoutTab: React.FC = () => {
           </>
         )}
       </div>
-
-      {/* =====================================================================
-          MODAL 1: 3-SECOND QUICK LOG / MODIFY BEFORE LOG
-         ===================================================================== */}
-      {quickEditRoutine && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md retro-box rounded-2xl p-4 space-y-3.5 border-2 border-amber-400/60 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-black text-amber-300 uppercase">
-                  ⚡ 課表速記 · 可微調數值
-                </span>
-                <h3 className="text-base font-black text-white">{quickEditRoutine.nameZh}</h3>
-              </div>
-              <button
-                onClick={() => setQuickEditRoutine(null)}
-                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2 overflow-y-auto pr-1 flex-1">
-              {quickEditExercises.map((cfg, idx) => {
-                const ex =
-                  EXERCISE_LIBRARY.find((e) => e.id === cfg.exerciseId) || EXERCISE_LIBRARY[0];
-                return (
-                  <div
-                    key={`${cfg.exerciseId}_${idx}`}
-                    className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <ExerciseThumbnail exercise={ex} size={36} />
-                      <div>
-                        <div className="text-xs font-black text-white">{ex.nameZh}</div>
-                        <div className="text-[10px] text-slate-400">{ex.muscleLabelZh}</div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div>
-                        <label className="text-[10px] text-slate-400 block mb-0.5">組數</label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={cfg.sets}
-                          onChange={(e) => {
-                            const val = Math.max(1, parseInt(e.target.value, 10) || 1);
-                            setQuickEditExercises((prev) =>
-                              prev.map((item, i) => (i === idx ? { ...item, sets: val } : item))
-                            );
-                          }}
-                          className="w-full text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-xs font-mono font-black text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-slate-400 block mb-0.5">
-                          重量 {ex.unitLabel}
-                        </label>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          step="any"
-                          value={cfg.weightKg}
-                          onChange={(e) => {
-                            const val = Math.max(0, parseFloat(e.target.value) || 0);
-                            setQuickEditExercises((prev) =>
-                              prev.map((item, i) =>
-                                i === idx ? { ...item, weightKg: val } : item
-                              )
-                            );
-                          }}
-                          className="w-full text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-xs font-mono font-black text-amber-300"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-slate-400 block mb-0.5">次數</label>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={cfg.reps}
-                          onChange={(e) => {
-                            const val = Math.max(1, parseInt(e.target.value, 10) || 1);
-                            setQuickEditExercises((prev) =>
-                              prev.map((item, i) => (i === idx ? { ...item, reps: val } : item))
-                            );
-                          }}
-                          className="w-full text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-xs font-mono font-black text-emerald-400"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={handleConfirmQuickLog}
-              className="w-full retro-btn py-3 rounded-xl bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
-            >
-              <Zap className="w-4 h-4 fill-current" />
-              <span>確認速記</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* =====================================================================
           MODAL 2: ROUTINE DETAIL VIEW
@@ -1066,7 +934,7 @@ export const WorkoutTab: React.FC = () => {
               })}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => {
                   const id = detailRoutine.id;
@@ -1077,16 +945,6 @@ export const WorkoutTab: React.FC = () => {
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>刪除課表</span>
-              </button>
-              <button
-                onClick={() => {
-                  const r = detailRoutine;
-                  setDetailRoutine(null);
-                  handleOpenQuickLogModal(r);
-                }}
-                className="py-2.5 rounded-xl bg-amber-400/20 border border-amber-400/50 text-amber-300 text-xs font-black"
-              >
-                ⚡ 3秒速記
               </button>
               <button
                 onClick={() => {

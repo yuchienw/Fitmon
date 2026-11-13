@@ -17,7 +17,7 @@ import {
   ScrollText,
   Flame,
 } from 'lucide-react';
-import { useGameStore } from '../../stores/useGameStore';
+import { useGameStore, INITIAL_QUESTS } from '../../stores/useGameStore';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { DAILY_SCIENCE_QUIZZES, AvatarBodyStage } from '../../config/catalogConfig';
 
@@ -198,6 +198,7 @@ export const HomeTab: React.FC = () => {
         <div className="space-y-1.5">
           {store.quests.map((q) => {
             const isReady = q.progress >= q.target && !q.claimed;
+            const displayTitle = INITIAL_QUESTS.find((iq) => iq.id === q.id)?.titleZh || q.titleZh;
             return (
               <div
                 key={q.id}
@@ -210,7 +211,7 @@ export const HomeTab: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                  <span className="text-xs font-black text-white break-words leading-snug">{q.titleZh}</span>
+                  <span className="text-xs font-black text-white break-words leading-snug">{displayTitle}</span>
                   <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono text-[10px] font-black shrink-0">
                     +{q.rewardCoins * (store.doubleCoinActive ? 2 : 1)}🪙
                   </span>
