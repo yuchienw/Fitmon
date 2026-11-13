@@ -22,10 +22,12 @@ import {
   TodayWorkoutStatus,
   SquadMemberState,
   SQUAD_CANDIDATE_POOL,
+  getSquadInviteCode,
 } from '../../stores/useGameStore';
 import {
   ADVENTURE_BOSS_CATALOG,
   AVATAR_ITEMS,
+  FRIEND_PROFILES,
 } from '../../config/catalogConfig';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { bossSpriteUrl } from '../../game/pixelSpriteDrawer';
@@ -120,6 +122,7 @@ export const PlazaTab: React.FC = () => {
     squadBossTemplate.maxHp * 1.8 * (1 + (store.squadStage - 1) * 0.25)
   );
   const squadCurrentHp = Math.min(squadMaxHp, store.squadBossHp);
+  const squadInviteCode = getSquadInviteCode(store.squadName);
 
   // Squad attendance
   const legitSquadCount =
@@ -651,16 +654,16 @@ export const PlazaTab: React.FC = () => {
               <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
                 <div>
                   <div className="text-[10px] text-slate-400 font-bold">隊長專屬邀請碼</div>
-                  <div className="text-xs font-mono font-black text-amber-300">FIT-8842</div>
+                  <div className="text-xs font-mono font-black text-amber-300">{squadInviteCode}</div>
                 </div>
                 <button
                   onClick={() => {
                     if (navigator.clipboard) {
                       navigator.clipboard.writeText(
-                        `🛡️ 隊長【${store.nickname}】邀請你加入 FitMon 固定戰隊【${store.squadName}】！我們正在共同討伐 Stage ${store.squadStage}【${squadBossTemplate.nameZh}】（剩餘 ${squadCurrentHp} HP），輸入邀請碼 FIT-8842 加入同隊一起消磨血量：https://yuchienw.github.io/Fitmon/`
+                        `🛡️ 隊長【${store.nickname}】邀請你加入 FitMon 固定戰隊【${store.squadName}】！我們正在共同討伐 Stage ${store.squadStage}【${squadBossTemplate.nameZh}】（剩餘 ${squadCurrentHp} HP），輸入邀請碼 ${squadInviteCode} 加入同隊一起消磨血量：https://yuchienw.github.io/Fitmon/`
                       );
                     }
-                    store.showToast('📲 已複製隊長邀請連結與邀請碼 FIT-8842！傳給朋友即可入隊同打一隻王！');
+                    store.showToast(`📲 已複製隊長邀請連結與邀請碼 ${squadInviteCode}！傳給朋友即可入隊同打一隻王！`);
                   }}
                   className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-[11px] font-black flex items-center gap-1 shrink-0 shadow"
                 >
@@ -792,7 +795,15 @@ export const PlazaTab: React.FC = () => {
                       </div>
                       <div className="min-w-0 space-y-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-black text-white break-words">
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (FRIEND_PROFILES.some((f) => f.id === member.id)) {
+                                store.setSelectedProfileId(member.id);
+                              }
+                            }}
+                            className="text-xs font-black text-white break-words hover:underline cursor-pointer"
+                          >
                             {member.nameZh}
                           </span>
                           <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[10px] font-black">
