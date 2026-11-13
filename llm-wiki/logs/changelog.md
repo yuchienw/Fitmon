@@ -703,3 +703,30 @@
 - [`PROJECT_STATE.md`](../PROJECT_STATE.md)：同步 16:18–16:20 決策、遊戲幣 Demo 起始提案數字、T1 第 1 階段放行；記錄 PR #5（`e5198c8`，來源：幕僚長轉述）與 PR #6（2026-11-10 16:18 Asia/Taipei，`de73747`）已合併。
 - [`logs/changelog.md`](changelog.md)：追加本筆。
 - [`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：本分支稍早已補記決策 20–30（本次不另改此檔）。
+
+---
+
+## [2026-11-13] 修正規格頁與看板上的動態牆、PARK-002、歷史項目矛盾
+
+### 1. 觸發原因 (Trigger / Context)
+- 主題規格頁與看板歷史項仍有多處把已廢除的站內公開動態牆、打賞、發布拍立得，以及已被取代的 PARK-002（「不做複雜 RPG」）寫成現行功能或有效擱置約束。
+- 需與 YuChien 於 2026-11-10 15:04、15:08（Asia/Taipei）的親口決定對齊，並標註看板過時歷史項。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+- 15:04：站內動態牆已廢除，打賞和發布拍立得也已拿掉，改成合照；遊戲模式改為冒險 RPG（Tap Titans 式冒險與 Boss），取代 PARK-002。
+- 15:08：不恢復公開動態牆，改走戰隊和站外分享；拿掉付費跳過冷卻（D-4）。
+- 速記功能已於 2026-11-13 由 [PR #5](https://github.com/yuchienw/Fitmon/pull/5) 移除（09:38 Asia/Taipei，merge commit `e5198c8`）。
+- 拍貼工坊（TASK-027）是否保留標為「未確認」，待 YuChien 確認。
+- 檢查 `AGENT.md`「原則 5」（§4 不可侵犯原則第 5 項「商業導購道德／No Pay-to-Win」，以及 §5 程式碼風格約束）後，與上述決定不衝突，故未改該檔。
+- 本日誌只追加、不改寫既有歷史條目。只改 `llm-wiki/` 文件，不改程式；等 YuChien 同意後才合併本 PR。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [`wiki/business_model.md`](../wiki/business_model.md)：§1–§2 好友打賞、發布拍立得標為已廢除並註來源。
+- [`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)：拍立得布告欄、公開廣場、打賞與相關雲端職責標為已廢除；PARK-002 標為已被冒險 RPG 取代；TASK-027 標為未確認。
+- [`wiki/roadmap.md`](../wiki/roadmap.md)、[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)：里程碑 2 改為戰隊與站外分享，動態牆與打賞交付物標為已廢除。
+- [`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)：拍立得打卡背景與「社群廣場看課表」改註合照／站外分享，並註動態牆已廢除。
+- [`wiki/tech_architecture.md`](../wiki/tech_architecture.md)：`posts`／`tips_and_gifts` 與課金秒解標為已廢除或已廢止。
+- [`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)：PARK-002 開頭表述標為已被取代；打賞／發布拍立得任務與參數標為已廢除；拍貼工坊標為未確認。
+- [`adr/0002-app-shell-with-embedded-pixel-canvas.md`](../adr/0002-app-shell-with-embedded-pixel-canvas.md)：為 Tab 4 動態瀑布流補後續更正，不推翻 App Shell 決策。
+- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：PARK-002 標為已被取代；速記、動態牆、打賞、付費跳過冷卻等歷史項標註已廢止或已廢除；TASK-027 標為是否保留未確認。
+- [`logs/changelog.md`](changelog.md)：追加本筆。
