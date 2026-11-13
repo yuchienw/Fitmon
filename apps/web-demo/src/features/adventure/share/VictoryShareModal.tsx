@@ -33,7 +33,7 @@ export const VictoryShareModal: React.FC<VictoryShareModalProps> = ({ report, on
         },
         ...store.squadMembers.map((member) => ({
           nameZh: member.nameZh,
-          damageText: member.hasWorkedOutToday ? `${member.damageDealt.toLocaleString()} HP` : '未出勤',
+          damageText: member.hasWorkedOutToday ? `${member.damageDealt.toLocaleString()} HP` : '還沒動',
           highlight: false,
         })),
       ],
@@ -50,25 +50,21 @@ export const VictoryShareModal: React.FC<VictoryShareModalProps> = ({ report, on
   );
   const watermark = watermarkCopy(identity.brand, identity.level, identity.nickname);
 
+  const fileName = `fitmon-stage${stage}-${aspect.replace(':', 'x')}.png`;
+  const shareTitle = `Fitmon・第 ${stage} 關通關！`;
+  const shareText = `我在 Fitmon 打倒了第 ${stage} 關的${report.boss.nameZh}！一起來動一下 💪 #Fitmon`;
+
   const save = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const result = await shareOrDownloadCanvas(
-      canvas,
-      `fitmon-boss-clear-stage-${report.clearedStage}-${aspect.replace(':', 'x')}.png`,
-      `FitMon 討伐捷報：我給出了 Stage ${report.clearedStage} Boss 最後一擊！`,
-    );
+    const result = await shareOrDownloadCanvas(canvas, fileName, shareTitle, shareText);
     if (result === 'downloaded') store.showToast('已儲存最後一擊戰報');
   };
 
   const share = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const result = await shareOrDownloadCanvas(
-      canvas,
-      `fitmon-boss-clear-stage-${report.clearedStage}-${aspect.replace(':', 'x')}.png`,
-      `FitMon 討伐捷報：我給出了 Stage ${report.clearedStage} Boss 最後一擊！`,
-    );
+    const result = await shareOrDownloadCanvas(canvas, fileName, shareTitle, shareText);
     store.showToast(result === 'shared' ? '已開啟系統分享' : '已儲存最後一擊戰報');
   };
 
