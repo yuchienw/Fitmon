@@ -32,14 +32,19 @@ export function drawVictoryPoster(
   paintConfetti(ctx, W, H);
   paintWordmark(ctx, spec.safe, story ? 118 : 86);
 
-  const titleSize = story ? 118 : 86;
+  const stage = data.stage ?? data.clearedStage;
+  const titleSize = story ? 88 : 64;
+  const subTitleSize = Math.round(titleSize * 0.4);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#9a3412';
   ctx.font = `800 ${story ? 34 : 26}px "Barlow Condensed", "Noto Sans TC", sans-serif`;
   ctx.fillText('FINAL BLOW', W / 2, story ? 210 : 150);
   ctx.fillStyle = '#29221e';
-  ctx.font = `900 ${titleSize}px "Barlow Condensed", "Noto Sans TC", sans-serif`;
-  ctx.fillText('STAGE CLEAR', W / 2, story ? 330 : 240);
+  ctx.font = `900 ${titleSize}px "Noto Sans TC", sans-serif`;
+  ctx.fillText(`第 ${stage} 關 通關！`, W / 2, story ? 302 : 216);
+  ctx.fillStyle = 'rgba(41, 34, 30, 0.7)';
+  ctx.font = `900 ${subTitleSize}px "Barlow Condensed", "Noto Sans TC", sans-serif`;
+  ctx.fillText('STAGE CLEAR', W / 2, story ? 350 : 252);
   ctx.fillStyle = '#7c4a1e';
   ctx.font = `800 ${story ? 36 : 28}px "Noto Sans TC", sans-serif`;
   ctx.fillText(`你擊敗了 ${data.boss.nameZh}`, W / 2, story ? 400 : 292);

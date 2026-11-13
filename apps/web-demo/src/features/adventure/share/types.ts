@@ -8,7 +8,8 @@ export const SHARE_PIXELS: Record<ShareAspect, { width: number; height: number; 
 };
 
 export interface VictoryPosterData {
-  clearedStage: number;
+  clearedStage?: number;
+  stage?: number;
   boss: AdventureBoss;
   finalBlowDamage: number;
   attackTypeLabel: string;
