@@ -76,6 +76,7 @@ export const ShopTab: React.FC = () => {
 
   const hasTryOnChanges =
     Object.keys(cleanTryOnEquipped).length > 0 || Object.keys(cleanTryOnRoom).length > 0;
+  const hasCheckoutBar = store.cartItemIds.length > 0 || hasTryOnChanges;
 
   const allCatalog = [...AVATAR_ITEMS, ...ROOM_ITEMS];
   const cartItems = store.cartItemIds
@@ -105,7 +106,7 @@ export const ShopTab: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col pb-24">
+    <div className="flex flex-col">
       {/* =====================================================================
           1. STICKY PINNED TOP LIVE TRY-ON STAGE + CATEGORY CONTROLS (V2-05)
          ===================================================================== */}
@@ -289,7 +290,14 @@ export const ShopTab: React.FC = () => {
       {/* =====================================================================
           2. SCROLLABLE VISUAL ITEM CATALOG GRID
          ===================================================================== */}
-      <div className="p-3.5">
+      <div
+        className="p-3.5"
+        style={{
+          paddingBottom: hasCheckoutBar
+            ? 'calc(172px + max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, 0px)))'
+            : 'calc(100px + max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, 0px)))',
+        }}
+      >
         {category === 'avatar' || category === 'room' ? (
           <div className="grid grid-cols-2 gap-2.5">
             {(category === 'avatar' ? filteredAvatarItems : filteredRoomItems).map((item) => {
@@ -566,11 +574,16 @@ export const ShopTab: React.FC = () => {
       </div>
 
       {/* =====================================================================
-          3. STICKY SHOPPING CART & TRY-ON CHECKOUT BAR (Cleared above BottomNav)
+          3. SHOPPING CART & TRY-ON CHECKOUT BAR (Cleared above BottomNav)
          ===================================================================== */}
-      {(store.cartItemIds.length > 0 || hasTryOnChanges) && (
-        <div className="sticky bottom-6 w-full px-3.5 pt-2 z-20">
-          <div className="retro-box rounded-2xl p-3 bg-slate-950/95 border-2 border-amber-400 shadow-2xl flex items-center justify-between gap-2">
+      {hasCheckoutBar && (
+        <div
+          className="fixed left-0 right-0 mx-auto max-w-[430px] w-full px-3.5 z-20 pointer-events-none"
+          style={{
+            bottom: 'calc(92px + max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, 0px)))',
+          }}
+        >
+          <div className="pointer-events-auto retro-box rounded-2xl p-3 bg-slate-950/95 border-2 border-amber-400 shadow-2xl flex items-center justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <ShoppingCart className="w-4 h-4 text-amber-400 shrink-0" />
