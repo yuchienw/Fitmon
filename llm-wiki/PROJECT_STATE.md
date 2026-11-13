@@ -9,17 +9,25 @@
 | 欄位 | 當前數值 | 說明 |
 |---|---|---|
 | **專案名稱** | FitMon (泛運動打卡社群 × 像素紙娃娃與運動科學) | 核心：雙軌紙娃娃、任務金幣、雙情境拍貼、開源科學動作庫、Tap Titans 冒險推圖 |
-| **目前階段** | **Phase 1：Web Demo & Native iOS/Android App v2.9 實機測試期** | 🚀 **【已完成 V2.8 七大體感升級 ＋ V2.9 冒險推圖 ＋ 雙情境拍貼分享中心 ＋ 課表動作隔離 ＋ 日曆月週切換引擎】** |
-| **當前版本** | `v2.9.4-analytics-queue-polish` | 課表動作隔離紀錄、成效分析月瀏覽(1號~月底)與週瀏覽(週日~週六)切換、Web/Mobile防跑版優化、單人/組隊冒險雙軌、個人戰鬥素質專頁、防作弊Server權威 |
-| **最後更新時間** | `2026-11-07 22:45 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
-| **最後 Git Commit** | `468d239` | 與本地儲存庫保持同步 |
-| **當前焦點 (Current Focus)** | 今日開發與優化項目全數驗證完畢；iOS 原生 App 與 Web 開發伺服器已同步待實機試玩 |
+| **目前階段** | **Phase 1：Web Demo & Native iOS/Android 實機測試與打磨期** | 已合併冒險 PR #1–#3 與資安第一批 PR #4；上架時程暫不排定（等 App 做到 YuChien 滿意再談） |
+| **當前版本** | `v2.9.4-analytics-queue-polish` | 文件不擅自升版。11/10 已在此版本之上合併暖日光戰場、健身房島爬塔與組隊檢視 |
+| **最後更新時間** | `2026-11-10 16:03 (Asia/Taipei)` | 每次討論結束必須更新時間戳 |
+| **最後 Git Commit** | `c82b17b` | 本次文件同步時的 main HEAD（[PR #4](https://github.com/yuchienw/Fitmon/pull/4) 合併 commit） |
+| **當前焦點 (Current Focus)** | 專注好用、好玩、修 bug（一輪約一週）；上架時程暫不排定 |
 
 ---
 
 ## 2. 待辦事項動態看板 (Kanban Board)
 
 ### 🔴 進行中 (In Progress)
+- [ ] **TASK-DELETE-QUICK-LOG**：刪除「速記」功能。
+- [ ] **TASK-NEW-PLAYER-LV1**：新玩家從 Lv.1 開始。
+- [ ] **TASK-FLOOR-REPLAY-NO-FIRST-CLEAR**：已通關的樓層可以重打，但不給首通獎勵和掉落。
+- [ ] **TASK-REMOVE-PAID-COOLDOWN-SKIP**：拿掉付費跳過冷卻。
+- [ ] **TASK-D3-DAILY-CHECKIN-FIXED-XP**：D-3 運動規則採方案 B：每天打卡一次，固定給 XP（提案值 100 XP）；不指定項目、不處罰，保留每天打一次 Boss，也保留「我不舒服」按鈕和免責聲明。詳見 [`ADR-0003`](adr/0003-daily-checkin-fixed-xp.md)。
+- [ ] **TASK-MIN-AGE-13-MINOR-PROTECTION**：最低使用年齡 13 歲以上，並加上未成年保護：不能加陌生人、不能聊天、內購要家長同意或設上限、轉蛋要限制、要有檢舉和封鎖。詳見 [`ADR-0004`](adr/0004-minimum-age-13-minor-protection.md)。
+- [ ] **TASK-DOUBLE-COUPON-EARN-ONLY**：兩倍券只能在遊戲裡賺，不能用真錢買；收入改靠真錢買斷外觀。詳見 [`ADR-0005`](adr/0005-double-coupon-earn-only-cosmetic-revenue.md)。
+- [ ] **SEC-BATCH-2**：資安第二批修正與 Supabase（MILESTONE-2）一起做；測試外掛暫時保留，接雲端前再移除。
 - [ ] **MVP-V2.9-ADVENTURE-PLAYTEST**：實機安裝至 iPhone（Xcode 執行安裝）與朋友測試新版 `[⚔️ 冒險]`、我的紀錄月/週切換與雙情境拍貼工坊分享至 IG/LINE
 
 ### 🟢 已完成：V2.9.4 課表動作隔離、成效分析月週切換與雙端防跑版 (Queue Isolation, Analytics & Web/Mobile Polish)
@@ -99,9 +107,13 @@
 - [x] **MILESTONE-3 [Capacitor iOS / Android 雙端原生 App 專案產出]**：完成 `@capacitor/ios` 與 `@capacitor/android` 建置（`apps/web-demo/ios` 與 `apps/web-demo/android`），並支援 iOS PWA 全螢幕主畫面安裝。
 
 #### F. 後續里程碑 (Future Milestones)
-- [ ] **MILESTONE-2**：串接 Supabase 雲端資料庫與 OAuth 漸進式綁定
+- [ ] **MILESTONE-2**：串接 Supabase 雲端資料庫與 OAuth 漸進式綁定。資安第二批修正與此一併進行；測試外掛暫時保留，接雲端前再移除。
 
 ### 🟢 最近已完成 (Recently Done)
+- [x] **DONE-20261110-33**：合併 [PR #4](https://github.com/yuchienw/Fitmon/pull/4) `chore(security): 資安清單第一批（防作弊標記、機密忽略與 gitleaks、Actions 釘 SHA、CSP、Vite 6）`（合併於 2026-11-10 15:08 Asia/Taipei，merge commit `c82b17b`）
+- [x] **DONE-20261110-32**：合併 [PR #3](https://github.com/yuchienw/Fitmon/pull/3) `fix(adventure): PR #2 設計驗收修正（站位、缺資料剪影、狀態膠囊、Sheet 層級、島色溫）`（合併於 2026-11-10 13:35 Asia/Taipei，merge commit `4d42d26`）
+- [x] **DONE-20261110-31**：合併 [PR #2](https://github.com/yuchienw/Fitmon/pull/2) `feat(adventure): 冒險模式選單、健身房島爬塔與組隊檢視`（合併於 2026-11-10 12:12 Asia/Taipei，merge commit `a743494`）
+- [x] **DONE-20261110-30**：合併 [PR #1](https://github.com/yuchienw/Fitmon/pull/1) `feat(adventure): 暖日光戰場與固定浮水印分享圖`（合併於 2026-11-10 09:25 Asia/Taipei，merge commit `3e497fe`）
 - [x] **DONE-20261107-29**：升級拍貼工坊為雙情境模式（運動自拍+4模板數據+360°紙娃娃 vs 鎖定官方Boss首通勝利卡），全面轉向純外部社群分享 (TASK-027)
 - [x] **DONE-20261107-28**：全面落地 UI/UX Pro Max 體系：Barlow Condensed 傾斜運動字體、Lucide SVG 向量圖標、3D 觸覺物理動效 (TASK-028)
 - [x] **DONE-20261107-27**：建立 GitHub Actions 自動部署至 GitHub Pages 工作流程，調整 Vite 與 Web Manifest 為相對路徑 (TASK-022)
@@ -117,6 +129,7 @@
 ### ⏸️ 擱置 / 暫不考慮 (Parked / Post-MVP)
 - **PARK-001**：外部補劑/品牌電商導購商務（俟社群人氣積累後再行考慮）
 - **PARK-002**：複雜 RPG 怪物對戰與數值打怪數值（改採直觀任務與金幣制）
+- **SCHEDULE-STORE-RELEASE**：上架時程暫不排定；等 App 做到 YuChien 滿意再談。
 
 ---
 
@@ -129,3 +142,5 @@ xychart-beta
     y-axis "完成百分比" 0 --> 100
     bar [100, 100, 25, 0]
 ```
+
+> 註：上圖「Milestone 3: 雙端APP上架」為 0%，且上架時程暫不排定。看板中已勾選的 MILESTONE-3 僅指 Capacitor 專案產出，不代表商店已上架。
