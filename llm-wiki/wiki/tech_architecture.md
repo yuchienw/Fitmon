@@ -76,8 +76,8 @@ flowchart TB
 
     subgraph Cloud ["雲端後端層 (Supabase - 防作弊權威)"]
         Auth["Supabase Auth (Apple / Google OAuth 匿名 UID)"]
-        DB[("PostgreSQL 雲端庫\n• profiles (雙軌紙娃娃配置)\n• items & quests (圖鑑與任務)\n• workouts & posts (運動與拍立得)\n• tips_and_gifts (打賞明細)\n• game_economy_config (配置化常數)")]
-        RPC["原子交易預存程序\n• rpc_send_tip_or_gift\n• rpc_claim_quest_reward"]
+        DB[("PostgreSQL 雲端庫\n• profiles (雙軌紙娃娃配置)\n• items & quests (圖鑑與任務)\n• workouts（運動紀錄）\n• posts / tips_and_gifts（動態牆與打賞已廢除）\n• game_economy_config (配置化常數)")]
+        RPC["原子交易預存程序\n• rpc_claim_quest_reward\n• rpc_send_tip_or_gift（打賞已廢除）"]
 
         StateLayer -.->|"漸進式綁定時無損合併"| Auth
         StateLayer -.->|"RPC 交易與社群同步"| DB
@@ -91,7 +91,7 @@ flowchart TB
 
 1. **SPA 毫秒級無感切換 (No Full-Page Reload)**：
    - 底部 4 個主 Tab 切換為單頁內部切換，**零跳頁白屏、零重新載入**。
-   - 僅在遠端拉取新社群動態時使用局部骨架屏 (Skeleton UI)。
+   - 僅在遠端拉取需同步的資料時使用局部骨架屏 (Skeleton UI)。舊文「拉取新社群動態」隨站內公開動態牆 **已廢除**（YuChien 2026-11-10 15:04、15:08）。
 2. **嵌入式像素畫布生命週期 (Smart Canvas Hibernation)**：
    - 畫布僅在「Tab 1: 訓練室」掛載並渲染。
    - 當使用者切換至「運動」、「社群」或「數據」Tab 時，PixiJS 的 `ticker` 自動暫停，CPU/GPU 佔用率直接歸零，手機完全不發燙。
@@ -109,7 +109,7 @@ flowchart TB
 3. **`quests` & `user_daily_quests`**：定義日常任務、打卡連擊暴擊與玩家每日進度。
 4. **`posts` (已停用 / 轉為外部社群分享)**：原規劃儲存內部動態牆貼文，自 V2.9 起徹底轉為「純外部社群分享 (Instagram Stories / Threads / LINE)」，雲端不儲存玩家自拍照片，維持 100% 零個資 (Zero-PII) 與零 UGC 風控成本。
 5. **`routine_templates` & `user_workout_schedules`**：自訂課表模板、每週分化排程與休息日標記。
-6. **`tips_and_gifts`**：記錄打賞金額與能量水互贈，由資料庫交易保證防刷。
+6. **`tips_and_gifts`（打賞已廢除）**：舊規劃記錄打賞金額與能量水互贈。站內打賞 **已廢除**（YuChien 2026-11-10 15:04；15:08 不恢復公開動態牆）。此表若仍留在 schema，不視為現行功能；互贈能量水是否另保留，本次未另作決定。
 7. **`game_economy_config`**：數值配置表，支持未來動態模擬熱更新。
 
 ---
@@ -148,7 +148,7 @@ flowchart TB
    * 透過 Capacitor 官方外掛（`@capawesome-team/capacitor-health`）在用戶授權下自動讀取 Apple Watch / Android 手機之體重、睡眠與步數。
    * 資料直存本機沙盒，提供最無痛的數據輸入體驗。
 4. **雲端防作弊唯一職責 (Server-Authoritative Anti-Cheat & Zero-PII Ledger)**：
-   * **伺服器端核心驗證**：未來所有防止作弊機制（包括：**運動組間休息真偽檢查、出拳冷卻驗證、每日課金秒解限 1 次、天梯排行榜排名判定、冒險關卡進度與血量結算**）均全數由雲端後端（Supabase / Serverless RPC）作為唯一權威（Server-Authoritative）執行校驗，客戶端僅作樂觀 UI 渲染，嚴防透過竄改客戶端記憶體或本機時間作弊。
+   * **伺服器端核心驗證**：未來所有防止作弊機制（包括：**運動組間休息真偽檢查、出拳冷卻驗證、天梯排行榜排名判定、冒險關卡進度與血量結算**）均全數由雲端後端（Supabase / Serverless RPC）作為唯一權威（Server-Authoritative）執行校驗。舊文「每日課金秒解限 1 次」**已廢止**（YuChien 2026-11-10 15:08 D-4，拿掉付費跳過冷卻），客戶端僅作樂觀 UI 渲染，嚴防透過竄改客戶端記憶體或本機時間作弊。
    * **零個資（Zero-PII）帳號映射規範**：
      - 雲端資料庫僅儲存與遊戲帳號唯一對應之匿名識別碼（OAuth UID / Account ID）。
      - 身高、體重、體脂率、年齡、生理數值等私密健康個資 100% 留存在本地裝置沙盒，**嚴禁上傳至伺服器**。
