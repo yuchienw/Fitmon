@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Sparkles, Users, User, ChevronRight, Trophy, Gift, Wrench } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { getVenueForStage } from './venueConfig';
 import { AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
 
@@ -160,15 +160,8 @@ const ModeIslandCanvas: React.FC<ModeIslandCanvasProps> = ({ hero, teammates }) 
           ctx.restore();
 
           if (!tm.hasWorkedOutToday) {
-            ctx.save();
-            ctx.font = '900 13px "Noto Sans TC", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.lineWidth = 3.5;
-            ctx.strokeStyle = '#ffffff';
-            ctx.strokeText('Zzz', tx + 6, ty - 70);
-            ctx.fillStyle = '#B45309';
-            ctx.fillText('Zzz', tx + 6, ty - 70);
-            ctx.restore();
+            const headTopY = ty - 60 * 1.3;
+            drawZzz(ctx, tx, headTopY, 1.3);
           }
         });
 
