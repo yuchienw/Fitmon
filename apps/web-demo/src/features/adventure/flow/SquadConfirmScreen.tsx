@@ -8,7 +8,8 @@ import {
   ChevronRight,
   UserPlus,
 } from 'lucide-react';
-import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
+import { useGameStore, resolveSquadMemberAvatar, getSquadInviteCode } from '../../../stores/useGameStore';
+import { FRIEND_PROFILES } from '../../../config/catalogConfig';
 import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { TeammateStatusChip } from '../../../components/adventure/TeammateStatusChip';
 import { TeammateHitRect } from '../../../components/adventure/memberStats';
@@ -30,9 +31,7 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
   const [copied, setCopied] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const inviteCode = store.squadName
-    ? `FIT${(Math.abs(store.squadName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 732)) % 900 + 100)}`
-    : 'FIT732';
+  const inviteCode = getSquadInviteCode(store.squadName);
 
   const copyInviteCode = () => {
     navigator.clipboard?.writeText(inviteCode).catch(() => undefined);
@@ -355,7 +354,15 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
             tabIndex={0}
             className="retro-box min-w-0 overflow-hidden cursor-pointer rounded-xl bg-card p-1.5 transition-transform active:scale-95 hover:border-amber-400"
           >
-            <div className="truncate text-[11px] font-black text-foreground">
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                if (FRIEND_PROFILES.some((f) => f.id === tm.id)) {
+                  store.setSelectedProfileId(tm.id);
+                }
+              }}
+              className="truncate text-[11px] font-black text-foreground hover:underline cursor-pointer"
+            >
               {tm.nameZh.split('·')[1]?.trim() || tm.nameZh}
             </div>
             <div className="mt-1 flex justify-center min-w-0 overflow-hidden">
