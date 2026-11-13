@@ -1,9 +1,10 @@
 import React from 'react';
 import { Trophy, Coins, Camera, Sparkles, Check, Swords } from 'lucide-react';
-import { useGameStore } from '../../stores/useGameStore';
+import { useGameStore, selectStreakDays } from '../../stores/useGameStore';
 
 export const VictoryModal: React.FC = () => {
   const store = useGameStore();
+  const streakDays = useGameStore(selectStreakDays);
   const data = store.victoryModalData;
   if (!data) return null;
 
@@ -20,9 +21,10 @@ export const VictoryModal: React.FC = () => {
             VICTORY!
           </h2>
           <p className="text-xs text-slate-300 font-bold">
-            🔥 連續運動推進至 <span className="text-orange-400">{store.streakDays} 天</span>！
+            🔥 連續運動推進至 <span className="text-orange-400">{streakDays} 天</span>！
           </p>
         </div>
+
 
         {/* New PR Badges */}
         {data.newPRs.length > 0 && (
@@ -65,20 +67,12 @@ export const VictoryModal: React.FC = () => {
               ⚡ 觸發預釀氮泵神經暴擊！經驗與收益翻倍！
             </div>
           )}
-
-          {data.staminaDepletedNotice && (
-            <div className="text-center text-[11px] text-slate-400 bg-slate-900 rounded p-1.5">
-              🛡️ 體力雖已耗盡，但您的訓練容量與連勝已 100% 免費完整保存！
-            </div>
-          )}
         </div>
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-1">
           <button
             onClick={() => {
-              const targetStatus = data.workoutStatus ?? store.todayWorkoutStatus;
-              store.setTodayWorkoutStatus(targetStatus);
               store.closeVictoryModal();
               store.setActiveTab('plaza');
             }}

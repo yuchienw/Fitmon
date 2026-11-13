@@ -3,11 +3,63 @@ import { persist } from 'zustand/middleware';
 import { calculateWorkoutExp, CalculationResult, ExerciseCategory } from '@fitmon/engine';
 import { ECONOMY_CONFIG, Locale } from '../config/economyConfig';
 import {
+  CHECKIN_XP,
+  CHECKIN_COINS,
+  ROOM_INTERACT_COINS,
+  QUIZ_COINS,
+  xpToNext,
+  NEW_PLAYER_START_LEVEL,
+  STAMINA_MAX,
+  REPLAY_STAMINA_COST,
+  BCAA_COIN_PRICE,
+  BCAA_STAMINA_RESTORE,
+  DAILY_COIN_CAP,
+  COIN_CAP_REACHED_COPY,
+  WEEKLY_CHEST_COINS,
+  WEEKLY_CHEST_DAYS_REQUIRED,
+  WEEKLY_CHEST_REWARD,
+  BOSS_CLEAR_BOUNTY_BY_STAGE,
+  getBossClearBounty,
+  DOUBLE_COIN_MULTIPLIER,
+  DOUBLE_COIN_DURATION_MS,
+  DOUBLE_COIN_COUPON_COIN_PRICE,
+  GACHA_TICKET_COIN_PRICE,
+} from '../config/economy';
+import {
+  getLocalDayKey,
+  getWeekKey,
+  getWeekDayKeys,
+  getNextResetAt,
+  getCheckinStreak,
+} from '../game/day';
+
+import {
+  checkin as checkinRule,
+  getDamageInfo as getDamageInfoRule,
+  bossAttack as bossAttackRule,
+  replayFloor as replayFloorRule,
+  useBcaa as useBcaaRule,
+  buyWithCoins as buyWithCoinsRule,
+  grantCoins as grantCoinsRule,
+  claimWeeklyChest as claimWeeklyChestRule,
+  activateDoubleCoin as activateDoubleCoinRule,
+  roomInteractReward as roomInteractRewardRule,
+  quizReward as quizRewardRule,
+  grantUncappedCoins as grantUncappedCoinsRule,
+  CheckinAnnotation,
+  CheckinLogEntry,
+  CheckinResultData,
+  DamageInfoResult,
+  BossAttackResult,
+  CoinSource,
+} from '../game/economyRules';
+import {
   AVATAR_ITEMS,
   ROOM_ITEMS,
   EXERCISE_LIBRARY,
   INITIAL_SAVED_ROUTINES,
-  IAP_PACKAGES,
+  COSMETIC_BUYOUT_CATALOG,
+  CosmeticBuyoutItem,
   FRIEND_PROFILES,
   resolveFriendProfileId,
   hasFriendProfile,
@@ -24,7 +76,14 @@ import { soundFX } from '../audio/SoundManager';
 
 export type MainTab = 'home' | 'workout' | 'shop' | 'plaza' | 'analytics';
 
-export type TodayWorkoutStatus = 'none' | 'legit_rest' | 'cheated_fast';
+export type {
+  CheckinAnnotation,
+  CheckinLogEntry,
+  CheckinResultData,
+  DamageInfoResult,
+  BossAttackResult,
+  CoinSource,
+};
 export type AdventureSportSkillType = 'strength' | 'cardio' | 'bodyweight';
 export type RoomPoseOverride = 'AUTO' | 'IDLE' | 'SQUAT' | 'CURL' | 'WALK';
 
@@ -362,7 +421,6 @@ export interface VictorySettlementData {
   newPRs: string[];
   staminaDepletedNotice: boolean;
   topExerciseName: string;
-  workoutStatus?: TodayWorkoutStatus;
 }
 
 interface GameState {
@@ -385,17 +443,37 @@ interface GameState {
   victoryModalData: VictorySettlementData | null;
   toastMessage: string | null;
 
-  // Player Profile & Economy
+  // Player Profile & Economy (T1 Phase 1)
   nickname: string;
   bodyStage: AvatarBodyStage;
   level: number;
   exp: number;
   coins: number;
   stamina: number;
-  maxStamina: number;
   streakDays: number;
-  streakFreezes: number;
-  doubleCoinActive: boolean;
+  doubleCoinUntil: number;
+  lastCheckinDate: string | null;
+  lastBossDate: string | null;
+  checkinDayKeys: string[];
+  joinDayKey: string;
+  disclaimerAcceptedAt: number | null;
+  coinsEarnedToday: number;
+  coinsEarnedDayKey: string | null;
+  chestClaimedWeekKey: string | null;
+  checkinLogs: CheckinLogEntry[];
+  ownedCosmeticBuyoutIds: string[];
+
+  // UI Flags for Screens
+  checkinSheetOpen: boolean;
+  setCheckinSheetOpen: (open: boolean) => void;
+  checkinResult: CheckinResultData | null;
+  setCheckinResult: (res: CheckinResultData | null) => void;
+  unwellSheetOpen: boolean;
+  setUnwellSheetOpen: (open: boolean) => void;
+  disclaimerOpen: boolean;
+  setDisclaimerOpen: (open: boolean) => void;
+  lowStaminaSheet: { stamina: number; required: number } | null;
+  setLowStaminaSheet: (data: { stamina: number; required: number } | null) => void;
 
   // 5-Slot Paper-Doll & 3-Slot Flexible Room (V2-04, V2-08, V2-13)
   equipped: Record<EquipSlot, string>;
@@ -454,10 +532,6 @@ interface GameState {
   squadBossHp: number;
   squadName: string;
   squadMembers: SquadMemberState[];
-  adventureCooldownUntil: number;
-  dailyIapCooldownResetCount: number;
-  dailyIapCooldownResetDate: string;
-  raidTickets: number;
   personalMaxStage: number;
   squadMaxStage: number;
   personalMaxDamage: number;
@@ -466,7 +540,6 @@ interface GameState {
   totalStrikesCount: number;
   totalDamageDealt: number;
   shareRaidModalOpen: boolean;
-  todayWorkoutStatus: TodayWorkoutStatus;
   todaySportType: AdventureSportSkillType;
   activeTeamComboBuff: 'none' | 'armor_break' | 'burn_mark' | 'crit_aura';
   collectedBossLoots: string[];
@@ -505,9 +578,14 @@ interface GameState {
   toggleCartItem: (itemId: string) => void;
   clearTryOnAndCart: () => void;
   checkoutCart: () => void;
-  buyConsumable: (id: ConsumableItem['id'], useIapSim?: boolean) => void;
-  purchaseIapPackage: (packId: string) => void;
+  buyConsumable: (id: ConsumableItem['id']) => void;
+  purchaseCosmeticBuyout: (id: string) => void;
   useConsumableItem: (id: ConsumableItem['id']) => void;
+  buyWithCoins: (id: string) => void;
+  useBcaa: () => void;
+  activateDoubleCoin: () => void;
+  claimWeeklyChest: () => void;
+  acceptDisclaimer: () => void;
 
   // Routine & Workout Focus Actions (V2-06, V2-14, V2-15)
   toggleFavoriteRoutine: (routineId: string) => void;
@@ -534,15 +612,18 @@ interface GameState {
   giftWaterPost: (postId: string) => void;
   publishPost: (caption: string, stickerText?: string, customImageDataUrl?: string) => void;
   completePhotoWithAvatarQuest: () => void;
-  attackAdventureBoss: (mode: 'solo' | 'squad') => {
-    damage: number;
-    isCrit: boolean;
-    defeated: boolean;
-    attackTypeLabel: string;
-    droppedLootName?: string;
-    isCheatPenalty?: boolean;
-  } | null;
-  resetAdventureCooldown: (method: 'ticket' | 'iap') => void;
+  bossAttack: (mode: 'solo' | 'squad') => BossAttackResult | null;
+  replayFloor: (mode: 'solo' | 'squad', floor: number) => { ok: boolean; damage?: number } | null;
+  checkin: (annotation?: CheckinAnnotation) => CheckinResultData | null;
+  grantCoins: (amount: number, source: CoinSource) => { granted: number; capReached: boolean };
+  roomInteractReward: () => { granted: number; capReached: boolean };
+  quizReward: () => { granted: number; capReached: boolean };
+  getDamageInfo: (now?: number) => DamageInfoResult;
+  getStreakDays: (now?: number) => number;
+  isCheckedInToday: (now?: number) => boolean;
+
+  isBossDoneToday: (now?: number) => boolean;
+  getNextResetAt: (now?: number) => number;
   nudgeSquadMember: (memberId: string) => void;
   simulateFriendWorkoutJoin: (memberId: string) => void;
   reportCheatingMember: (memberId: string) => void;
@@ -550,7 +631,6 @@ interface GameState {
   recruitSquadMember: (candidate: SquadMemberState) => void;
   kickSquadMember: (memberId: string) => void;
   refreshSquadMemberAvatar: (memberId: string) => boolean;
-  setTodayWorkoutStatus: (status: TodayWorkoutStatus) => void;
   setTodaySportType: (sport: AdventureSportSkillType) => void;
 
   // Biometrics & Demo Cheats
@@ -558,6 +638,8 @@ interface GameState {
   setDevRoomPoseOverride: (pose: RoomPoseOverride) => void;
   setDevBossHpToLow: () => void;
   setDevForceNextLootDrop: () => void;
+  setDevCheckinToday: (checkedIn: boolean) => void;
+  setDevResetBoss: () => void;
   addDemoCoins: (amount: number) => void;
   refillStaminaFull: () => void;
   resetDemoState: () => void;
@@ -567,7 +649,7 @@ export const INITIAL_QUESTS: DailyQuest[] = [
   {
     id: 'q_interact_pet',
     titleZh: '在房間與角色或寵物互動',
-    rewardCoins: ECONOMY_CONFIG.dailyPetInteractCoins,
+    rewardCoins: ROOM_INTERACT_COINS,
     progress: 0,
     target: 1,
     claimed: false,
@@ -933,15 +1015,35 @@ export const useGameStore = create<GameState>()(
       toastMessage: null,
 
       nickname: '鐵館勇者 #01',
-      bodyStage: 'powerlifter',
-      level: 6,
-      exp: 520,
+      bodyStage: 'beginner',
+      level: NEW_PLAYER_START_LEVEL,
+      exp: 0,
       coins: ECONOMY_CONFIG.ftueStarterCoins,
-      stamina: ECONOMY_CONFIG.maxStamina,
-      maxStamina: ECONOMY_CONFIG.maxStamina,
-      streakDays: 7,
-      streakFreezes: 1,
-      doubleCoinActive: false,
+      stamina: STAMINA_MAX,
+      streakDays: 0,
+      doubleCoinUntil: 0,
+      lastCheckinDate: null,
+      lastBossDate: null,
+      checkinDayKeys: [],
+      joinDayKey: getLocalDayKey(),
+      disclaimerAcceptedAt: null,
+      coinsEarnedToday: 0,
+      coinsEarnedDayKey: null,
+      chestClaimedWeekKey: null,
+      checkinLogs: [],
+      ownedCosmeticBuyoutIds: [],
+
+      checkinSheetOpen: false,
+      checkinResult: null,
+      unwellSheetOpen: false,
+      disclaimerOpen: false,
+      lowStaminaSheet: null,
+
+      setCheckinSheetOpen: (open) => set({ checkinSheetOpen: open }),
+      setCheckinResult: (res) => set({ checkinResult: res }),
+      setUnwellSheetOpen: (open) => set({ unwellSheetOpen: open }),
+      setDisclaimerOpen: (open) => set({ disclaimerOpen: open }),
+      setLowStaminaSheet: (data) => set({ lowStaminaSheet: data }),
 
       equipped: {
         hair: 'hair_ headband_red',
@@ -971,10 +1073,9 @@ export const useGameStore = create<GameState>()(
         'pet_shiba_dog',
       ],
       consumables: {
-        bcaa_water: 2,
-        double_coin_card: 1,
-        streak_freeze: 1,
-        gacha_ticket: 1,
+        bcaa_water: 1,
+        double_coin_card: 0,
+        gacha_ticket: 0,
       },
 
       tryOnEquipped: {},
@@ -1090,10 +1191,6 @@ export const useGameStore = create<GameState>()(
           },
         },
       ],
-      adventureCooldownUntil: 0,
-      dailyIapCooldownResetCount: 0,
-      dailyIapCooldownResetDate: '',
-      raidTickets: 2,
       personalMaxStage: 1,
       squadMaxStage: 2,
       personalMaxDamage: 680,
@@ -1102,7 +1199,6 @@ export const useGameStore = create<GameState>()(
       totalStrikesCount: 11,
       totalDamageDealt: 6420,
       shareRaidModalOpen: false,
-      todayWorkoutStatus: 'legit_rest',
       todaySportType: 'cardio',
       activeTeamComboBuff: 'armor_break',
       collectedBossLoots: [],
@@ -1230,12 +1326,11 @@ export const useGameStore = create<GameState>()(
         if (state.answeredQuizIds.includes(quizId)) return;
         if (isCorrect) {
           soundFX.playCoin();
-          const reward = ECONOMY_CONFIG.dailyQuizRewardCoins * (state.doubleCoinActive ? 2 : 1);
+          const grant = state.quizReward();
           set({
-            answeredQuizIds: [...state.answeredQuizIds, quizId],
-            coins: state.coins + reward,
+            answeredQuizIds: [...get().answeredQuizIds, quizId],
           });
-          state.showToast(`🧠 答對科普問答！獲得 +${reward} 🪙`);
+          state.showToast(`🧠 答對科普問答！獲得 +${grant.granted} 🪙`);
         } else {
           soundFX.playBlip();
         }
@@ -1246,13 +1341,18 @@ export const useGameStore = create<GameState>()(
         const quest = state.quests.find((q) => q.id === questId);
         if (!quest || quest.claimed || quest.progress < quest.target) return;
         soundFX.playCoin();
-        const mult = state.doubleCoinActive ? 2 : 1;
-        const reward = quest.rewardCoins * mult;
+        let grantedCoins = 0;
+        if (questId === 'q_interact_pet') {
+          const grant = state.roomInteractReward();
+          grantedCoins = grant.granted;
+        } else {
+          const grant = state.grantCoins(quest.rewardCoins, 'quest');
+          grantedCoins = grant.granted;
+        }
         set({
-          coins: state.coins + reward,
-          quests: state.quests.map((q) => (q.id === questId ? { ...q, claimed: true } : q)),
+          quests: get().quests.map((q) => (q.id === questId ? { ...q, claimed: true } : q)),
         });
-        state.showToast(`🎉 領取任務獎勵 +${reward} 🪙！`);
+        state.showToast(`🎉 領取任務獎勵 +${grantedCoins} 🪙！`);
       },
 
       // ================= SHOP TRY-ON & CART ACTIONS (V2-05) =================
@@ -1382,45 +1482,116 @@ export const useGameStore = create<GameState>()(
         state.showToast(`🛍️ 結帳成功！一次購入 ${cartItems.length} 件裝備並自動換上！`);
       },
 
-      buyConsumable: (id, useIapSim = false) => {
+      grantCoins: (amount, source) => {
         const state = get();
-        const priceMap: Record<ConsumableItem['id'], number> = {
-          bcaa_water: 60,
-          double_coin_card: 100,
-          streak_freeze: 120,
-          gacha_ticket: 120,
-        };
-        const cost = priceMap[id];
-        if (!useIapSim && state.coins < cost) {
-          state.showToast(`⚠️ 金幣不足，需 ${cost} 🪙`);
+        const res = grantCoinsRule(state, { amount, source });
+        if (res.ok) {
+          set(res.patch);
+          if (res.result.capReached) {
+            state.showToast(COIN_CAP_REACHED_COPY);
+          }
+        }
+        return res.result;
+      },
+
+
+      roomInteractReward: () => {
+        const state = get();
+        const res = roomInteractRewardRule(state);
+        set(res.patch);
+        if (res.result.capReached) {
+          state.showToast(COIN_CAP_REACHED_COPY);
+        }
+        return res.result;
+      },
+
+      quizReward: () => {
+        const state = get();
+        const res = quizRewardRule(state);
+        set(res.patch);
+        if (res.result.capReached) {
+          state.showToast(COIN_CAP_REACHED_COPY);
+        }
+        return res.result;
+      },
+
+      buyWithCoins: (id) => {
+        const state = get();
+        const res = buyWithCoinsRule(state, { itemId: id });
+        if (!res.ok) {
+          if (res.reason === 'insufficient_coins') {
+            soundFX.playBlip();
+            state.showToast('⚠️ 金幣不足，無法購買！');
+          }
           return;
         }
         soundFX.playCoin();
-        set({
-          coins: useIapSim ? state.coins : state.coins - cost,
-          consumables: {
-            ...state.consumables,
-            [id]: (state.consumables[id] || 0) + 1,
-          },
-        });
-        state.showToast(useIapSim ? '💳 模擬內購成功！道具已存入背包' : '🧪 道具已購買存入背包');
+        set(res.patch!);
+        state.showToast('🧪 道具已購買存入背包！');
       },
 
-      purchaseIapPackage: (packId) => {
+      buyConsumable: (id) => {
+        get().buyWithCoins(id);
+      },
+
+      purchaseCosmeticBuyout: (id) => {
+        const item = COSMETIC_BUYOUT_CATALOG.find((p) => p.id === id);
+        if (!item) return;
         const state = get();
-        const pack = IAP_PACKAGES.find((p) => p.id === packId);
-        if (!pack) return;
+        if (state.ownedCosmeticBuyoutIds.includes(id)) {
+          state.showToast('⚠️ 您已擁有此買斷外觀！');
+          return;
+        }
         soundFX.playVictory();
         set({
-          coins: state.coins + pack.rewardCoins,
-          stamina: pack.bonusStamina
-            ? Math.min(state.maxStamina, state.stamina + pack.bonusStamina)
-            : state.stamina,
-          streakFreezes: pack.bonusFreezes
-            ? Math.min(5, state.streakFreezes + pack.bonusFreezes)
-            : state.streakFreezes,
+          ownedCosmeticBuyoutIds: [...state.ownedCosmeticBuyoutIds, id],
         });
-        state.showToast(`💎 模擬內購成功！獲得 +${pack.rewardCoins} 🪙`);
+        state.showToast(`💎 模擬內購成功！已永久解鎖【${item.nameZh}】`);
+      },
+
+      useBcaa: () => {
+        const state = get();
+        const res = useBcaaRule(state);
+        if (!res.ok) {
+          state.showToast('⚠️ 背包內沒有 BCAA 能量水！');
+          return;
+        }
+        soundFX.playSetComplete();
+        set(res.patch!);
+        state.showToast(`🧪 體力恢復 +${BCAA_STAMINA_RESTORE} ⚡！`);
+      },
+
+      activateDoubleCoin: () => {
+        const state = get();
+        const res = activateDoubleCoinRule(state);
+        if (!res.ok) {
+          state.showToast('⚠️ 背包內沒有雙倍金幣卡！');
+          return;
+        }
+        soundFX.playPRFanfare();
+        set(res.patch!);
+        state.showToast('⚡ 雙倍金幣 2X 已啟動（持續 24 小時）！');
+      },
+
+      claimWeeklyChest: () => {
+        const state = get();
+        const res = claimWeeklyChestRule(state);
+        if (!res.ok) {
+          if (res.reason === 'already_claimed') {
+            state.showToast('本週寶箱已經領取過了！');
+          } else {
+            state.showToast(`本週運動天數尚未達標（需動滿 ${WEEKLY_CHEST_DAYS_REQUIRED} 天）！`);
+          }
+          return;
+        }
+        soundFX.playVictory();
+        set(res.patch!);
+        const coinsAwarded = res.result?.coinsGranted ?? WEEKLY_CHEST_COINS;
+        state.showToast(`🎁 領取每週寶箱：+${coinsAwarded} 🪙、雙倍金幣卡 ×1`);
+      },
+
+      acceptDisclaimer: () => {
+        set({ disclaimerAcceptedAt: Date.now(), disclaimerOpen: false });
       },
 
       useConsumableItem: (id) => {
@@ -1431,26 +1602,9 @@ export const useGameStore = create<GameState>()(
           return;
         }
         if (id === 'bcaa_water') {
-          soundFX.playSetComplete();
-          set({
-            stamina: Math.min(state.maxStamina, state.stamina + 50),
-            consumables: { ...state.consumables, bcaa_water: count - 1 },
-          });
-          state.showToast('🧪 體力恢復 +50 ⚡！');
+          state.useBcaa();
         } else if (id === 'double_coin_card') {
-          soundFX.playPRFanfare();
-          set({
-            doubleCoinActive: true,
-            consumables: { ...state.consumables, double_coin_card: count - 1 },
-          });
-          state.showToast('⚡ 雙倍金幣 2X 已啟動！');
-        } else if (id === 'streak_freeze') {
-          soundFX.playSetComplete();
-          set({
-            streakFreezes: Math.min(3, state.streakFreezes + 1),
-            consumables: { ...state.consumables, streak_freeze: count - 1 },
-          });
-          state.showToast('🧊 連勝保護盾 +1！');
+          state.activateDoubleCoin();
         } else if (id === 'gacha_ticket') {
           const allCosmetics = [...AVATAR_ITEMS, ...ROOM_ITEMS];
           const unowned = allCosmetics.filter((i) => !state.ownedItemIds.includes(i.id));
@@ -1463,11 +1617,11 @@ export const useGameStore = create<GameState>()(
             });
             state.showToast(`🎰 抽中稀有外觀【${prize.nameZh}】！`);
           } else {
+            const grantRes = state.grantCoins(250, 'achievement');
             set({
-              coins: state.coins + 250,
               consumables: { ...state.consumables, gacha_ticket: count - 1 },
             });
-            state.showToast('🎰 已集齊圖鑑，獲得頭獎 +250 🪙！');
+            state.showToast(`🎰 已集齊圖鑑，獲得頭獎 +${grantRes.granted} 🪙！`);
           }
         }
       },
@@ -1741,14 +1895,14 @@ export const useGameStore = create<GameState>()(
         else if (muscleSetsCount === 11) decayFactor = 0.15;
         else if (muscleSetsCount >= 12) decayFactor = 0.0;
 
-        const hasStamina = state.stamina >= ECONOMY_CONFIG.staminaPerSet;
-        const newStamina = hasStamina ? state.stamina - ECONOMY_CONFIG.staminaPerSet : 0;
-
-        const mult = state.doubleCoinActive ? 2 : 1;
-        const instantCoins =
-          hasStamina && decayFactor > 0
-            ? Math.max(1, Math.round(ECONOMY_CONFIG.coinsPerValidSet * decayFactor * mult))
-            : 0;
+        // Stamina is no longer deducted for workout sets (stamina is only for replays)
+        // Workout coin drops go through grantCoins
+        const baseCoins = decayFactor > 0 ? Math.max(1, Math.round(ECONOMY_CONFIG.coinsPerValidSet * decayFactor)) : 0;
+        let instantCoins = 0;
+        if (baseCoins > 0) {
+          const grant = state.grantCoins(baseCoins, 'workout');
+          instantCoins = grant.granted;
+        }
 
         const prevBest = state.personalRecords[ex.id] || 0;
         const isPR =
@@ -1804,8 +1958,6 @@ export const useGameStore = create<GameState>()(
         }
 
         set({
-          stamina: newStamina,
-          coins: state.coins + instantCoins,
           sessionSets: [...state.sessionSets, newSet],
           personalRecords: isPR
             ? { ...state.personalRecords, [ex.id]: state.currentWeightKg }
@@ -1841,17 +1993,26 @@ export const useGameStore = create<GameState>()(
           })),
           {
             hasWheyProtein: true,
-            hasPreWorkout: state.doubleCoinActive,
+            hasPreWorkout: state.doubleCoinUntil > Date.now(),
           }
         );
 
-        const hasStaminaForBonus =
-          state.stamina > 0 || state.sessionSets.some((s) => s.coinsEarned > 0);
-        const mult = state.doubleCoinActive ? 2 : 1;
-        const settlementCoins = hasStaminaForBonus ? calcResult.totalCoins * mult : 0;
+        // Workout coin drops go through grantCoins
+        let settlementCoins = 0;
+        if (calcResult.totalCoins > 0) {
+          const grant = state.grantCoins(calcResult.totalCoins, 'workout');
+          settlementCoins = grant.granted;
+        }
 
-        const newExp = state.exp + calcResult.totalExperience;
-        const newLevel = Math.floor(newExp / 250) + 1;
+        // Finishing a workout session counts as the day's check-in
+        let checkinRes: CheckinResultData | null = null;
+        if (!state.isCheckedInToday()) {
+          checkinRes = state.checkin({
+            type: '重訓',
+            minutes: Math.max(1, Math.round(state.workoutElapsedSeconds / 60)),
+            intensity: '中等',
+          });
+        }
 
         const newPRs = Array.from(
           new Set(
@@ -1905,7 +2066,7 @@ export const useGameStore = create<GameState>()(
           totalVolume: calcResult.totalRawVolume,
           totalSets: state.sessionSets.length,
           coinsEarned: settlementCoins,
-          expEarned: calcResult.totalExperience,
+          expEarned: checkinRes ? checkinRes.xpGained : 0,
           topExerciseZh: topEx,
           exerciseLogs: Array.from(groupedMap.values()),
         };
@@ -1914,20 +2075,13 @@ export const useGameStore = create<GameState>()(
 
         const firstEx = EXERCISE_LIBRARY.find((e) => e.id === state.sessionSets[0]?.exerciseId);
         const detectedSport: AdventureSportSkillType = firstEx?.sportType || 'strength';
-        // If user spent at least 30s in focus mode, count as legit rest timer workout; otherwise suspected fast spam
-        const isLegitRest = state.workoutElapsedSeconds >= 30;
-        const evaluatedWorkoutStatus: TodayWorkoutStatus = isLegitRest ? 'legit_rest' : 'cheated_fast';
 
         set({
-          coins: state.coins + settlementCoins,
-          exp: newExp,
-          level: newLevel,
-          streakDays: state.streakDays + 1,
           isWorkoutFocusActive: false,
           workoutElapsedSeconds: 0,
+
           isRestRunning: false,
           restSecondsLeft: 0,
-          todayWorkoutStatus: evaluatedWorkoutStatus,
           todaySportType: detectedSport,
           victoryModalData: {
             calcResult,
@@ -1935,9 +2089,8 @@ export const useGameStore = create<GameState>()(
             setsCount: state.sessionSets.length,
             bonusCoins: settlementCoins,
             newPRs,
-            staminaDepletedNotice: !hasStaminaForBonus,
+            staminaDepletedNotice: false,
             topExerciseName: topEx,
-            workoutStatus: evaluatedWorkoutStatus,
           },
           workoutHistory: [sessionRecord, ...state.workoutHistory],
           quests: state.quests.map((q) =>
@@ -2074,8 +2227,9 @@ export const useGameStore = create<GameState>()(
             ? `${latestHist.routineName} · ${latestHist.totalSets}組`
             : '自主訓練打卡',
           totalVolumeKg: latestHist ? latestHist.totalVolume : 3600,
-          streakDays: state.streakDays,
+          streakDays: getCheckinStreak(state.checkinDayKeys),
           caption: caption || '今日份的鋼鐵修煉完成！💪',
+
           stickerText,
           tipsCount: 1,
           waterCount: 1,
@@ -2105,285 +2259,102 @@ export const useGameStore = create<GameState>()(
         });
       },
 
-      attackAdventureBoss: (mode) => {
+      bossAttack: (mode) => {
         const state = get();
         const now = Date.now();
-        if (state.todayWorkoutStatus === 'none') {
-          state.showToast('🔒 今日尚未完成運動打卡！請先去運動才能出拳打怪！');
+        const res = bossAttackRule(state, { mode }, now);
+        if (!res.ok) {
+          if (res.reason === 'not_checked_in') {
+            state.showToast('今天還沒動，動一下就能出擊');
+          } else if (res.reason === 'boss_done_today') {
+            state.showToast('今天已出擊，明天 00:00 再來');
+          }
           return null;
         }
-        if (state.adventureCooldownUntil > now) {
-          state.showToast('⏳ 出擊冷卻中，請等待倒數或使用討伐券重置！');
-          return null;
-        }
+
+        const result = res.result!;
+        set(res.patch!);
 
         const stageNum = mode === 'solo' ? state.soloStage : state.squadStage;
-        const bossIndex = (stageNum - 1) % ADVENTURE_BOSS_CATALOG.length;
-        const boss = ADVENTURE_BOSS_CATALOG[bossIndex];
-        const cooldownMs = 12 * 60 * 60 * 1000;
+        const boss = ADVENTURE_BOSS_CATALOG[(stageNum - 1) % ADVENTURE_BOSS_CATALOG.length];
 
-        // ANTI-CHEAT STRICT PENALTY: If skipped rest timer / 3s spam click
-        if (state.todayWorkoutStatus === 'cheated_fast') {
-          const scratchDmg = 15;
-          soundFX.playBlip();
-          if (mode === 'solo') {
-            set({
-              soloBossHp: Math.max(1, state.soloBossHp - scratchDmg),
-              adventureCooldownUntil: now + cooldownMs,
-            });
-          } else {
-            set({
-              squadBossHp: Math.max(1, state.squadBossHp - scratchDmg),
-              adventureCooldownUntil: now + cooldownMs,
-            });
-          }
+        if (result.defeated) {
+          soundFX.playVictory();
+          const defeatMsg = result.droppedLootName
+            ? `🎁 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關（賞金 +${result.coinsGranted} 🪙）並爆出隱藏神裝【${result.droppedLootName}】！`
+            : `🎉 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關（賞金 +${result.coinsGranted} 🪙）`;
+          state.showToast(defeatMsg);
+        } else {
+          soundFX.playPRFanfare();
           state.showToast(
-            '🤥 系統偵測未跑組間休息（疑似亂按作弊）！傷害懲罰 -95%，僅打出 -15 HP 刮痧拳，且無掉寶資格！'
+            result.droppedLootName
+              ? `🎁 暴擊 -${result.damage} HP！從 Boss 身上打落【${result.droppedLootName}】！`
+              : `⚔️ ${result.attackTypeLabel}！對【${boss.nameZh}】造成 -${result.damage} HP！`
           );
-          return {
-            damage: scratchDmg,
-            isCrit: false,
-            defeated: false,
-            attackTypeLabel: '💨 作弊刮痧拳 (懲罰 -95%)',
-            isCheatPenalty: true,
-          };
         }
-
-        // Calculate gear attributes
-        const equippedIds = Object.values(state.equipped);
-        let phyBonus = 0;
-        let magBonus = 0;
-        equippedIds.forEach((id) => {
-          const item = AVATAR_ITEMS.find((a) => a.id === id);
-          if (item?.combatStat) {
-            if (item.combatStat.type === 'phy') phyBonus += item.combatStat.value;
-            if (item.combatStat.type === 'mag') magBonus += item.combatStat.value;
-          }
-        });
-
-        // Base attack from task completion & streak (No weight/tonnage comparison!)
-        const completedQuests = state.quests.filter((q) => q.progress >= q.target).length;
-        const baseDmg = 340 + completedQuests * 60 + state.streakDays * 25;
-
-        let isWeaknessHit = false;
-        let attackTypeLabel = '🥊 物理重擊';
-        let rawDmg = baseDmg + phyBonus * 4 + magBonus * 4;
-        let nextComboBuff = state.activeTeamComboBuff;
-        let lootChanceBoost = 1.0;
-
-        // Sport Type Skill Selection & Team Combo Synergy
-        if (state.todaySportType === 'strength') {
-          attackTypeLabel = '🔨 重訓技【破甲重擊】';
-          rawDmg += phyBonus * 3;
-          nextComboBuff = 'armor_break';
-          if (boss.weakness === 'phy') {
-            isWeaknessHit = true;
-            rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
-          }
-        } else if (state.todaySportType === 'cardio') {
-          attackTypeLabel = '🔥 有氧技【燃脂魔焰】';
-          rawDmg += magBonus * 3;
-          if (boss.weakness === 'mag') {
-            isWeaknessHit = true;
-            rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
-          }
-          // Detonate teammate's Armor Break combo!
-          if (state.activeTeamComboBuff === 'armor_break') {
-            isWeaknessHit = true;
-            rawDmg = Math.round(rawDmg * 1.6);
-            attackTypeLabel = '💥 連攜引爆【破甲＋燃脂魔焰 ×2.0】';
-            nextComboBuff = 'burn_mark';
-          }
-        } else {
-          attackTypeLabel = '🌪️ 核心技【聚氣暴擊陣】';
-          isWeaknessHit = true;
-          rawDmg = Math.round(rawDmg * 1.4);
-          lootChanceBoost = 2.0;
-          nextComboBuff = 'crit_aura';
-        }
-
-        // Full Squad Attendance Berserk (1.5x)
-        const allSquadAttended = state.squadMembers.every(
-          (m) => m.hasWorkedOutToday && !m.isSuspectedCheater
-        );
-        if (mode === 'squad' && allSquadAttended) {
-          rawDmg = Math.round(rawDmg * 1.5);
-          isWeaknessHit = true;
-          attackTypeLabel = '🔥 全員真運動狂暴合擊';
-        }
-
-        const finalDamage = Math.max(280, rawDmg);
-        const newMaxDmg = Math.max(state.personalMaxDamage, finalDamage);
-
-        // Roll for Boss Hidden Rare Loot Drop (18% base drop rate — ~1 in 5-6 strikes; or 100% if devForceNextLootDrop is enabled)
-        let droppedLootName: string | undefined;
-        const alreadyHasLoot = state.collectedBossLoots.includes(boss.hiddenLoot.id);
-        const dropRoll = Math.random();
-        const isGuaranteedByCheat = state.devForceNextLootDrop;
-        if (isGuaranteedByCheat || (!alreadyHasLoot && dropRoll < 0.18 * lootChanceBoost)) {
-          droppedLootName = `${boss.hiddenLoot.emoji} ${boss.hiddenLoot.nameZh}`;
-        }
-
-        const updatedLoots =
-          droppedLootName && !alreadyHasLoot
-            ? [...state.collectedBossLoots, boss.hiddenLoot.id]
-            : state.collectedBossLoots;
-
-        if (mode === 'solo') {
-          const remaining = state.soloBossHp - finalDamage;
-          if (remaining <= 0) {
-            const nextStage = state.soloStage + 1;
-            const nextBoss = ADVENTURE_BOSS_CATALOG[(nextStage - 1) % ADVENTURE_BOSS_CATALOG.length];
-            const scaledHp = Math.round(nextBoss.maxHp * (1 + (nextStage - 1) * 0.25));
-            soundFX.playVictory();
-            set({
-              soloStage: nextStage,
-              soloBossHp: scaledHp,
-              personalMaxStage: Math.max(state.personalMaxStage, nextStage),
-              personalMaxDamage: newMaxDmg,
-              totalBossesDefeated: (state.totalBossesDefeated || 0) + 1,
-              totalFinalBlows: (state.totalFinalBlows || 0) + 1,
-              totalStrikesCount: (state.totalStrikesCount || 0) + 1,
-              totalDamageDealt: (state.totalDamageDealt || 0) + finalDamage,
-              coins: state.coins + boss.rewardCoins,
-              adventureCooldownUntil: now + cooldownMs,
-              activeTeamComboBuff: nextComboBuff,
-              collectedBossLoots: updatedLoots,
-              devForceNextLootDrop: false,
-            });
-            state.showToast(
-              droppedLootName
-                ? `🎁 擊破【${boss.nameZh}】並爆出隱藏神裝【${droppedLootName}】！`
-                : `🎉 擊破【${boss.nameZh}】！晉升 Stage ${nextStage} (+${boss.rewardCoins} 🪙)`
-            );
-            return {
-              damage: finalDamage,
-              isCrit: isWeaknessHit,
-              defeated: true,
-              attackTypeLabel,
-              droppedLootName,
-            };
-          } else {
-            soundFX.playPRFanfare();
-            set({
-              soloBossHp: remaining,
-              personalMaxDamage: newMaxDmg,
-              totalStrikesCount: (state.totalStrikesCount || 0) + 1,
-              totalDamageDealt: (state.totalDamageDealt || 0) + finalDamage,
-              adventureCooldownUntil: now + cooldownMs,
-              activeTeamComboBuff: nextComboBuff,
-              collectedBossLoots: updatedLoots,
-              devForceNextLootDrop: false,
-            });
-            state.showToast(
-              droppedLootName
-                ? `🎁 暴擊 -${finalDamage} HP！從 Boss 身上打落【${droppedLootName}】！`
-                : `⚔️ ${attackTypeLabel}！對【${boss.nameZh}】造成 -${finalDamage} HP！`
-            );
-            return {
-              damage: finalDamage,
-              isCrit: isWeaknessHit,
-              defeated: false,
-              attackTypeLabel,
-              droppedLootName,
-            };
-          }
-        } else {
-          const remaining = state.squadBossHp - finalDamage;
-          if (remaining <= 0) {
-            const nextStage = state.squadStage + 1;
-            const nextBoss = ADVENTURE_BOSS_CATALOG[(nextStage - 1) % ADVENTURE_BOSS_CATALOG.length];
-            const scaledHp = Math.round(nextBoss.maxHp * 1.8 * (1 + (nextStage - 1) * 0.25));
-            soundFX.playVictory();
-            set({
-              squadStage: nextStage,
-              squadBossHp: scaledHp,
-              squadMaxStage: Math.max(state.squadMaxStage, nextStage),
-              personalMaxDamage: newMaxDmg,
-              totalBossesDefeated: (state.totalBossesDefeated || 0) + 1,
-              totalFinalBlows: (state.totalFinalBlows || 0) + 1,
-              totalStrikesCount: (state.totalStrikesCount || 0) + 1,
-              totalDamageDealt: (state.totalDamageDealt || 0) + finalDamage,
-              coins: state.coins + boss.rewardCoins,
-              adventureCooldownUntil: now + cooldownMs,
-              activeTeamComboBuff: nextComboBuff,
-              collectedBossLoots: updatedLoots,
-              devForceNextLootDrop: false,
-            });
-            state.showToast(
-              droppedLootName
-                ? `🏆 戰隊擊破【${boss.nameZh}】！你獲得隱藏掉落【${droppedLootName}】！`
-                : `🏆 戰隊合力擊破【${boss.nameZh}】！推進至 Stage ${nextStage}！`
-            );
-            return {
-              damage: finalDamage,
-              isCrit: isWeaknessHit,
-              defeated: true,
-              attackTypeLabel,
-              droppedLootName,
-            };
-          } else {
-            soundFX.playPRFanfare();
-            set({
-              squadBossHp: remaining,
-              personalMaxDamage: newMaxDmg,
-              totalStrikesCount: (state.totalStrikesCount || 0) + 1,
-              totalDamageDealt: (state.totalDamageDealt || 0) + finalDamage,
-              adventureCooldownUntil: now + cooldownMs,
-              activeTeamComboBuff: nextComboBuff,
-              collectedBossLoots: updatedLoots,
-              devForceNextLootDrop: false,
-            });
-            state.showToast(
-              droppedLootName
-                ? `🎁 連攜重擊 -${finalDamage} HP！幸運打落【${droppedLootName}】！`
-                : `⚔️ ${attackTypeLabel}！造成 -${finalDamage} HP！`
-            );
-            return {
-              damage: finalDamage,
-              isCrit: isWeaknessHit,
-              defeated: false,
-              attackTypeLabel,
-              droppedLootName,
-            };
-          }
-        }
+        return result;
       },
 
-      resetAdventureCooldown: (method) => {
+      replayFloor: (mode, floor) => {
         const state = get();
-        if (method === 'ticket') {
-          if (state.raidTickets <= 0) {
-            state.showToast('⚠️ 討伐挑戰券不足，可使用模擬內購補充！');
-            return;
+        const res = replayFloorRule(state, { mode, floor });
+        if (!res.ok) {
+          if (res.reason === 'insufficient_stamina') {
+            set({ lowStaminaSheet: { stamina: res.stamina!, required: res.required! } });
+            state.showToast('⚡ 體力不足！');
+          } else if (res.reason === 'invalid_floor') {
+            state.showToast('⚠️ 無效的關卡樓層！');
+          } else {
+            state.showToast('🔒 該樓層尚未通關，無法重打！');
           }
-          soundFX.playSetComplete();
-          set({
-            raidTickets: state.raidTickets - 1,
-            adventureCooldownUntil: 0,
-          });
-          state.showToast('🎫 已消耗 1 張討伐挑戰券，冷卻立即歸零！');
-        } else {
-          const todayDateStr = new Date().toISOString().slice(0, 10);
-          const currentCount =
-            state.dailyIapCooldownResetDate === todayDateStr
-              ? state.dailyIapCooldownResetCount || 0
-              : 0;
-
-          if (currentCount >= 1) {
-            state.showToast('🛑 今日秒解冷卻次數已達上限 (1/1 次)，請等待自然倒數或使用討伐券！');
-            return;
-          }
-
-          soundFX.playCoin();
-          set({
-            raidTickets: state.raidTickets + 1,
-            adventureCooldownUntil: 0,
-            dailyIapCooldownResetCount: currentCount + 1,
-            dailyIapCooldownResetDate: todayDateStr,
-          });
-          state.showToast('💎 模擬內購成功！今日秒解冷卻已使用 (1/1 次)，冷卻立即歸零！');
+          return null;
         }
+        soundFX.playSetComplete();
+        set(res.patch!);
+        state.showToast(`造成 ${res.result?.cosmeticDamage} 點傷害（重打完成・無獎勵）`);
+        return { ok: true, damage: res.result?.cosmeticDamage };
+      },
+
+
+      checkin: (annotation) => {
+        const state = get();
+        const res = checkinRule(state, { annotation });
+        if (!res.ok) {
+          if (res.reason === 'already_checked_in') {
+            state.showToast('今天已經打過卡了喔！');
+          }
+          return null;
+        }
+        soundFX.playVictory();
+        set(res.patch!);
+        set({ checkinResult: res.result!, checkinSheetOpen: false });
+        if (res.result!.leveledUp) {
+          state.showToast(`🎉 升上 Lv.${res.result!.levelAfter}！+${res.result!.xpGained} XP`);
+        } else {
+          state.showToast(`✅ 打卡成功！+${res.result!.xpGained} XP`);
+        }
+        return res.result!;
+      },
+
+      getDamageInfo: (now = Date.now()) => {
+        return getDamageInfoRule(get(), now);
+      },
+
+      getStreakDays: (now = Date.now()) => {
+        return getCheckinStreak(get().checkinDayKeys, now);
+      },
+
+      isCheckedInToday: (now = Date.now()) => {
+
+        return get().lastCheckinDate === getLocalDayKey(now);
+      },
+
+      isBossDoneToday: (now = Date.now()) => {
+        return get().lastBossDate === getLocalDayKey(now);
+      },
+
+      getNextResetAt: (now = Date.now()) => {
+        return getNextResetAt(now);
       },
 
       nudgeSquadMember: (memberId) => {
@@ -2522,11 +2493,6 @@ export const useGameStore = create<GameState>()(
         return false;
       },
 
-      setTodayWorkoutStatus: (status) => {
-        soundFX.playBlip();
-        set({ todayWorkoutStatus: status, adventureCooldownUntil: 0 });
-      },
-
       setTodaySportType: (sport) => {
         soundFX.playBlip();
         set({ todaySportType: sport });
@@ -2555,23 +2521,52 @@ export const useGameStore = create<GameState>()(
         );
       },
 
+      setDevCheckinToday: (checkedIn) => {
+        const today = getLocalDayKey();
+        const existing = get().checkinDayKeys || [];
+        if (checkedIn) {
+          set({
+            lastCheckinDate: today,
+            checkinDayKeys: existing.includes(today) ? existing : [...existing, today],
+          });
+          get().showToast('⚡ 外掛：已設為今天已打卡');
+        } else {
+          set({
+            lastCheckinDate: null,
+            checkinDayKeys: existing.filter((k) => k !== today),
+          });
+          get().showToast('⚡ 外掛：已設為尚未打卡');
+        }
+      },
+
+      setDevResetBoss: () => {
+        set({ lastBossDate: null });
+        get().showToast('🔄 外掛：已重置今日 Boss 出擊次數');
+      },
+
       setDevBossHpToLow: () => {
         soundFX.playBlip();
+        const today = getLocalDayKey();
+        const existing = get().checkinDayKeys || [];
         set({
           squadBossHp: 10,
           soloBossHp: 10,
-          todayWorkoutStatus: 'legit_rest',
-          adventureCooldownUntil: 0,
+          lastCheckinDate: today,
+          lastBossDate: null,
+          checkinDayKeys: existing.includes(today) ? existing : [...existing, today],
         });
         get().showToast('⚡ 外掛已將 Boss 血量設為 10 HP！現在揮拳即可觸發「最後一擊」戰報分享畫面！');
       },
 
       setDevForceNextLootDrop: () => {
         soundFX.playBlip();
+        const today = getLocalDayKey();
+        const existing = get().checkinDayKeys || [];
         set({
           devForceNextLootDrop: true,
-          todayWorkoutStatus: 'legit_rest',
-          adventureCooldownUntil: 0,
+          lastCheckinDate: today,
+          lastBossDate: null,
+          checkinDayKeys: existing.includes(today) ? existing : [...existing, today],
         });
         get().showToast('🎁 外掛已開啟：下一拳 100% 必噴隱藏稀有神裝！快揮拳體驗「噴裝分享畫面」！');
       },
@@ -2584,8 +2579,8 @@ export const useGameStore = create<GameState>()(
 
       refillStaminaFull: () => {
         soundFX.playSetComplete();
-        set((s) => ({ stamina: s.maxStamina, dailySocialSentTotal: 0, dailySentPerAuthor: {} }));
-        get().showToast('⚡ 體力已補滿 100/100');
+        set({ stamina: STAMINA_MAX, dailySocialSentTotal: 0, dailySentPerAuthor: {} });
+        get().showToast(`⚡ 體力已補滿 ${STAMINA_MAX}/${STAMINA_MAX}`);
       },
 
       resetDemoState: () => {
@@ -2595,8 +2590,8 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'fitmon-mvp-storage-v6',
-      version: 1,
-      migrate: (persistedState: unknown) => {
+      version: 2,
+      migrate: (persistedState: unknown, version: number) => {
         if (!persistedState || typeof persistedState !== 'object') return persistedState;
         const state = persistedState as Record<string, unknown>;
         if (typeof state.soloStage !== 'number' || state.soloStage < 1) {
@@ -2605,11 +2600,62 @@ export const useGameStore = create<GameState>()(
         if (typeof state.squadStage !== 'number' || state.squadStage < 1) {
           state.squadStage = 1;
         }
+        if (version < 2) {
+          // Delete old fields
+          delete state.adventureCooldownUntil;
+          delete state.dailyIapCooldownResetCount;
+          delete state.dailyIapCooldownResetDate;
+          delete state.todayWorkoutStatus;
+          delete state.raidTickets;
+          delete state.streakFreezes;
+          delete state.doubleCoinActive;
+
+          // Consumables: keep bcaa_water, remove old coupon/freeze/gacha ticket inventory
+          const oldConsumables = (state.consumables as Record<string, number>) || {};
+          state.consumables = {
+            bcaa_water: typeof oldConsumables.bcaa_water === 'number' ? oldConsumables.bcaa_water : 1,
+            double_coin_card: 0,
+            gacha_ticket: 0,
+          };
+
+          // Defaults for new fields
+          state.lastCheckinDate = null;
+          state.lastBossDate = null;
+          state.checkinDayKeys = [];
+          state.joinDayKey = '1970-01-01'; // old players don't get rookie floor
+          state.disclaimerAcceptedAt = null;
+          state.coinsEarnedToday = 0;
+          state.coinsEarnedDayKey = null;
+          state.chestClaimedWeekKey = null;
+          state.doubleCoinUntil = 0;
+          state.checkinLogs = [];
+          state.ownedCosmeticBuyoutIds = [];
+
+          const existingStamina = typeof state.stamina === 'number' ? state.stamina : STAMINA_MAX;
+          state.stamina = Math.min(STAMINA_MAX, Math.max(0, existingStamina));
+        }
         return state;
       },
-      onRehydrateStorage: () => () => {
-        // Real fields and avatarCache are naturally preserved by partialize.
-        // Fallback avatars must never be written back to state.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        if (state.lastCheckinDate === undefined) state.lastCheckinDate = null;
+        if (state.lastBossDate === undefined) state.lastBossDate = null;
+        if (!Array.isArray(state.checkinDayKeys)) state.checkinDayKeys = [];
+        if (!state.joinDayKey) state.joinDayKey = '1970-01-01';
+        if (state.disclaimerAcceptedAt === undefined) state.disclaimerAcceptedAt = null;
+        if (typeof state.coinsEarnedToday !== 'number') state.coinsEarnedToday = 0;
+        if (state.coinsEarnedDayKey === undefined) state.coinsEarnedDayKey = null;
+        if (state.chestClaimedWeekKey === undefined) state.chestClaimedWeekKey = null;
+        if (typeof state.doubleCoinUntil !== 'number') state.doubleCoinUntil = 0;
+        if (!Array.isArray(state.checkinLogs)) state.checkinLogs = [];
+        if (!Array.isArray(state.ownedCosmeticBuyoutIds)) state.ownedCosmeticBuyoutIds = [];
+        if (typeof state.stamina !== 'number') state.stamina = STAMINA_MAX;
+        else state.stamina = Math.min(STAMINA_MAX, Math.max(0, state.stamina));
+        if (Array.isArray(state.quests)) {
+          state.quests = state.quests.map((q) =>
+            q.id === 'q_interact_pet' ? { ...q, rewardCoins: ROOM_INTERACT_COINS } : q
+          );
+        }
       },
       partialize: (state) => ({
         locale: state.locale,
@@ -2621,8 +2667,17 @@ export const useGameStore = create<GameState>()(
         coins: state.coins,
         stamina: state.stamina,
         streakDays: state.streakDays,
-        streakFreezes: state.streakFreezes,
-        doubleCoinActive: state.doubleCoinActive,
+        doubleCoinUntil: state.doubleCoinUntil,
+        lastCheckinDate: state.lastCheckinDate,
+        lastBossDate: state.lastBossDate,
+        checkinDayKeys: state.checkinDayKeys,
+        joinDayKey: state.joinDayKey,
+        disclaimerAcceptedAt: state.disclaimerAcceptedAt,
+        coinsEarnedToday: state.coinsEarnedToday,
+        coinsEarnedDayKey: state.coinsEarnedDayKey,
+        chestClaimedWeekKey: state.chestClaimedWeekKey,
+        checkinLogs: state.checkinLogs,
+        ownedCosmeticBuyoutIds: state.ownedCosmeticBuyoutIds,
         equipped: state.equipped,
         room: state.room,
         ownedItemIds: state.ownedItemIds,
@@ -2643,10 +2698,6 @@ export const useGameStore = create<GameState>()(
         squadBossHp: state.squadBossHp,
         squadName: state.squadName,
         squadMembers: state.squadMembers,
-        adventureCooldownUntil: state.adventureCooldownUntil,
-        dailyIapCooldownResetCount: state.dailyIapCooldownResetCount,
-        dailyIapCooldownResetDate: state.dailyIapCooldownResetDate,
-        raidTickets: state.raidTickets,
         personalMaxStage: state.personalMaxStage,
         squadMaxStage: state.squadMaxStage,
         personalMaxDamage: state.personalMaxDamage,
@@ -2654,7 +2705,6 @@ export const useGameStore = create<GameState>()(
         totalFinalBlows: state.totalFinalBlows,
         totalStrikesCount: state.totalStrikesCount,
         totalDamageDealt: state.totalDamageDealt,
-        todayWorkoutStatus: state.todayWorkoutStatus,
         todaySportType: state.todaySportType,
         activeTeamComboBuff: state.activeTeamComboBuff,
         collectedBossLoots: state.collectedBossLoots,
@@ -2662,3 +2712,13 @@ export const useGameStore = create<GameState>()(
     }
   )
 );
+
+/**
+ * Pure store selector to derive streakDays from checkinDayKeys:
+ * consecutive local days ending today or yesterday.
+ * Kept streakDays in state only as a legacy persisted field.
+ */
+export const selectStreakDays = (state: GameState): number =>
+  getCheckinStreak(state.checkinDayKeys);
+export const selectCheckinStreak = selectStreakDays;
+

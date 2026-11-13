@@ -14,6 +14,11 @@ import { WardrobeModal } from './components/modals/WardrobeModal';
 import { UserProfileModal } from './components/modals/UserProfileModal';
 import { SessionDetailModal } from './components/modals/SessionDetailModal';
 import { ExerciseGuideModal } from './components/modals/ExerciseGuideModal';
+import { CheckInSheet } from './components/sheets/CheckInSheet';
+import { UnwellSheet } from './components/sheets/UnwellSheet';
+import { DisclaimerSheet } from './components/sheets/DisclaimerSheet';
+import { CheckInResultModal } from './components/sheets/CheckInResultModal';
+import { LowStaminaSheet } from './components/sheets/LowStaminaSheet';
 
 export const App: React.FC = () => {
   const {
@@ -119,6 +124,13 @@ export const App: React.FC = () => {
         <UserProfileModal />
         <SessionDetailModal />
         <ExerciseGuideModal />
+
+        {/* Global T1 Phase 1 Sheets (Requirement 11) */}
+        <CheckInSheet />
+        <UnwellSheet />
+        <DisclaimerSheet />
+        <CheckInResultModal />
+        <LowStaminaSheet />
       </div>
     </div>
   );

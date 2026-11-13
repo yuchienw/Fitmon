@@ -19,7 +19,8 @@ import {
   EyeOff,
   SlidersHorizontal,
 } from 'lucide-react';
-import { useGameStore } from '../../stores/useGameStore';
+import { useGameStore, selectStreakDays } from '../../stores/useGameStore';
+
 import { drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
 import { BRAND_CONFIG } from '../../config/economyConfig';
 
@@ -62,6 +63,8 @@ const SHARE_TEMPLATES: {
 
 export const MemeStudioModal: React.FC = () => {
   const store = useGameStore();
+  const streakDays = useGameStore(selectStreakDays);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const latestHist = store.workoutHistory[0];
@@ -436,10 +439,11 @@ export const MemeStudioModal: React.FC = () => {
         ctx.fillStyle = '#fbbf24';
         ctx.font = '900 18px "Barlow Condensed", "Noto Sans TC", sans-serif';
         ctx.fillText(
-          `⚔️ Lv.${store.level} ${store.nickname}  ·  🔥 連勝 ${store.streakDays} 天`,
+          `⚔️ Lv.${store.level} ${store.nickname}  ·  🔥 連勝 ${streakDays} 天`,
           50,
           63
         );
+
 
         // Bottom RPG Stat Dock
         const dockY = H - (showWatermark ? 170 : 132);
@@ -522,8 +526,9 @@ export const MemeStudioModal: React.FC = () => {
     store.equipped,
     store.level,
     store.nickname,
-    store.streakDays,
+    streakDays,
     latestHist,
+
   ]);
 
   if (!store.memeStudioOpen) return null;

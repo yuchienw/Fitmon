@@ -10,7 +10,8 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { useGameStore } from '../../stores/useGameStore';
+import { useGameStore, selectStreakDays } from '../../stores/useGameStore';
+
 import { BRAND_CONFIG } from '../../config/economyConfig';
 
 function formatCompact(num: number): string {
@@ -31,7 +32,8 @@ interface TopHeaderProps {
 
 export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' }) => {
   const store = useGameStore();
-  const staminaLow = store.stamina <= 20;
+  const streakDays = useGameStore(selectStreakDays);
+
 
   const showFloatingWorkoutBanner =
     (store.isWorkoutFocusActive || store.isRestRunning) && store.activeTab !== 'workout';
@@ -68,26 +70,13 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
           {/* Streak Pill */}
           <button
             onClick={() => store.setActiveTab('home')}
-            aria-label={`連勝 ${store.streakDays} 天`}
+            aria-label={`連勝 ${streakDays} 天`}
             className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 px-2 py-1 min-h-[32px] rounded-lg text-xs font-mono font-extrabold text-orange-500 shrink-0 active:scale-95 transition"
           >
             <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 shrink-0" aria-hidden="true" />
-            <span>{formatCompact(store.streakDays)}</span>
+            <span>{formatCompact(streakDays)}</span>
           </button>
 
-          {/* Stamina Pill */}
-          <button
-            onClick={() => store.setActiveTab('shop')}
-            aria-label={`體力 ${store.stamina}`}
-            className={`flex items-center gap-1 px-2 py-1 min-h-[32px] rounded-lg text-xs font-mono font-extrabold border shrink-0 active:scale-95 transition ${
-              staminaLow
-                ? 'bg-rose-950/60 border-rose-500/60 text-rose-300 animate-pulse'
-                : 'bg-slate-900 border-slate-700/80 text-emerald-400'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5 fill-current shrink-0" aria-hidden="true" />
-            <span>{store.stamina}</span>
-          </button>
 
           {/* Coins Pill (Auto-compacts at 10K+ so it never overflows!) */}
           <button
