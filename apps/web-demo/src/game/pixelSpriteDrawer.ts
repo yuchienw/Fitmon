@@ -464,6 +464,37 @@ export function drawCreamChibiSilhouette(
 }
 
 /**
+ * QA-09: Shared drawZzz helper
+ * Draws floating Zzz above teammate's head
+ * - x = headTopX + 10px * scale
+ * - y = headTopY - 8px * scale
+ * - font-size = 18px * scale (min 13px), font-weight 900
+ * - white stroke 4px, fill #B45309
+ */
+export function drawZzz(
+  ctx: CanvasRenderingContext2D,
+  headTopX: number,
+  headTopY: number,
+  scale: number = 1
+) {
+  ctx.save();
+  const zX = headTopX + 10 * scale;
+  const zY = headTopY - 8 * scale;
+  const fontSize = Math.max(13, Math.round(18 * scale));
+  ctx.font = `900 ${fontSize}px "Noto Sans TC", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#ffffff';
+  ctx.strokeText('Zzz', zX, zY);
+  ctx.fillStyle = '#B45309';
+  ctx.fillText('Zzz', zX, zY);
+  ctx.restore();
+}
+
+/**
  * ============================================================================
  * 2. MAPLESTORY-STYLE HD 2D CHIBI PAPER-DOLL AVATAR RENDERER
  *    (Big Cute Head, Glossy Anime Eyes, Cel-Shaded Hair & Gear, Zero Blocky Pixels!)

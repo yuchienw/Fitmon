@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AdventureBoss, AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
-import { drawBossSprite, drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawBossSprite, drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { TeammatePeekCard } from '../../../components/adventure/TeammatePeekCard';
 import { useGameStore } from '../../../stores/useGameStore';
 
@@ -417,22 +417,11 @@ export function paintArena(
 
       ctx.restore();
 
-      // Unattended teammate: draw bold and crisp Zzz 18-20px font-weight 900, white 4px stroke, fill #B45309
+      // QA-09: Shared drawZzz for unattended teammate
       if (!teammate.hasWorkedOutToday) {
-        ctx.save();
         const headTopY = ty - 60 * teammateScale;
         const zOff = state.reducedMotion ? 0 : Math.sin(now / 300 + originalIdx * 1.5) * 3;
-        const zX = tx + 10;
-        const zY = headTopY - 8 + zOff;
-        ctx.font = '900 18px "Noto Sans TC", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#ffffff';
-        ctx.strokeText('Zzz', zX, zY);
-        ctx.fillStyle = '#B45309';
-        ctx.fillText('Zzz', zX, zY);
-        ctx.restore();
+        drawZzz(ctx, tx, headTopY + zOff, teammateScale);
       }
     });
   }

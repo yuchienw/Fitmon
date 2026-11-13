@@ -9,7 +9,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { TeammateStatusChip } from '../../../components/adventure/TeammateStatusChip';
 import { TeammateHitRect } from '../../../components/adventure/memberStats';
 
@@ -117,23 +117,28 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
       }
 
       // Wooden Signpost "Fitmon GYM ISLAND" on right
+      // QA-08 (5): When slot 3 (index 2, ~0.86w) has a teammate, move sign to ~0.95w and draw behind teammates, never overlapping standing slots (including silhouettes)
+      const hasSlot3 = Boolean(teammates[2]);
+      const signX = hasSlot3 ? Math.round(w * 0.95) : Math.round(w * 0.88);
       ctx.save();
-      ctx.translate(w * 0.88, deckY - 42);
+      ctx.translate(signX, deckY - 42);
       ctx.fillStyle = '#a07246';
       ctx.fillRect(-2, 0, 5, 42);
       ctx.fillStyle = '#fff9ed';
       ctx.strokeStyle = '#6e4420';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(-26, -26, 52, 26, 4);
+      const boardW = hasSlot3 ? 36 : 52;
+      const boardLeft = hasSlot3 ? -18 : -26;
+      ctx.roundRect(boardLeft, -26, boardW, 26, 4);
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = '#4a2810';
       ctx.font = 'bold 8px "Noto Sans TC", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Fitmon', 0, -14);
+      ctx.fillText('Fitmon', boardLeft + boardW / 2, -14);
       ctx.font = 'bold 7px sans-serif';
-      ctx.fillText('GYM ISLAND', 0, -5);
+      ctx.fillText('GYM ISLAND', boardLeft + boardW / 2, -5);
       ctx.restore();
 
       // 2. Draw Teammates & Empty Dashed Pedestals
@@ -182,20 +187,11 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
 
           ctx.restore();
 
-          // Unworked teammate: crisp floating Zzz (18-20px font-weight 900, white 4px stroke, fill #B45309, 8px above head, 10px right)
+          // QA-09: Shared drawZzz for unworked teammate
           if (!tm.hasWorkedOutToday) {
-            ctx.save();
             const headTopY = tmDeckY - 60 * tmScale;
             const zOff = Math.sin(now / 320 + i) * 3;
-            ctx.font = '900 18px "Noto Sans TC", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#ffffff';
-            ctx.strokeText('Zzz', tx + 10, headTopY - 8 + zOff);
-            ctx.fillStyle = '#B45309';
-            ctx.fillText('Zzz', tx + 10, headTopY - 8 + zOff);
-            ctx.restore();
+            drawZzz(ctx, tx, headTopY + zOff, tmScale);
           }
         } else {
           // Empty slot: Dashed pedestal on deck
