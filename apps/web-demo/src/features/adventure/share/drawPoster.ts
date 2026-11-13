@@ -38,7 +38,7 @@ export function drawVictoryPoster(
   ctx.textAlign = 'center';
   ctx.fillStyle = '#9a3412';
   ctx.font = `800 ${story ? 34 : 26}px "Barlow Condensed", "Noto Sans TC", sans-serif`;
-  ctx.fillText('FINAL BLOW', W / 2, story ? 210 : 150);
+  ctx.fillText('最後一擊', W / 2, story ? 210 : 150);
   ctx.fillStyle = '#29221e';
   ctx.font = `900 ${titleSize}px "Noto Sans TC", sans-serif`;
   ctx.fillText(`第 ${stage} 關 通關！`, W / 2, story ? 302 : 216);

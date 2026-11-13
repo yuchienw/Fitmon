@@ -16,6 +16,7 @@ export const VictoryShareModal: React.FC<VictoryShareModalProps> = ({ report, on
   const store = useGameStore();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [aspect, setAspect] = useState<ShareAspect>('9:16');
+  const stage = report.stage ?? report.clearedStage;
   const identity = useMemo<PosterIdentity>(
     () => ({
       brand: BRAND_CONFIG.appName,
@@ -83,9 +84,9 @@ export const VictoryShareModal: React.FC<VictoryShareModalProps> = ({ report, on
       <div className="m-auto max-h-full w-full overflow-y-auto rounded-2xl border-2 border-border bg-card p-3 shadow-[var(--shadow-card)]">
         <div className="mb-2 flex items-start justify-between gap-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wide text-primary">Final Blow</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-primary">最後一擊</p>
             <h3 id="victory-share-title" className="text-sm font-black text-foreground">
-              Stage {report.clearedStage} {report.boss.nameZh}
+              第 {stage} 關・{report.boss.nameZh}
             </h3>
           </div>
           <button
