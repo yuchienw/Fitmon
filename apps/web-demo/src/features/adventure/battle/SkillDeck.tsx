@@ -126,7 +126,7 @@ export const SkillDeck: React.FC<SkillDeckProps> = ({
           }`}
         >
           <Swords className="h-5 w-5" aria-hidden="true" />
-          {workoutStatus === 'cheated_fast' ? '刮痧' : 'STRIKE'}
+          {workoutStatus === 'cheated_fast' ? '刮痧' : '出擊'}
         </button>
       )}
       <span className="sr-only">{ready ? '可以出擊' : '目前不能出擊'}</span>
