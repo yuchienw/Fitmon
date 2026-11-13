@@ -65,13 +65,18 @@ export async function shareOrDownloadCanvas(
   canvas: HTMLCanvasElement,
   fileName: string,
   title: string,
+  text?: string,
 ): Promise<'shared' | 'downloaded'> {
   try {
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
     if (blob && typeof navigator !== 'undefined' && navigator.share) {
       const file = new File([blob], fileName, { type: 'image/png' });
       if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-        await navigator.share({ title, files: [file] });
+        await navigator.share({
+          title,
+          ...(text ? { text } : {}),
+          files: [file],
+        });
         return 'shared';
       }
     }
