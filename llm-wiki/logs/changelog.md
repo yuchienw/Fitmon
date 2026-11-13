@@ -682,3 +682,70 @@
 - [`logs/meetings/README.md`](meetings/README.md)、[`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：新增會議紀錄目錄規範與第一份紀錄（含 15:04、15:08、15:55、16:00 決策）。
 - [`adr/0003-daily-checkin-fixed-xp.md`](../adr/0003-daily-checkin-fixed-xp.md)、[`adr/0004-minimum-age-13-minor-protection.md`](../adr/0004-minimum-age-13-minor-protection.md)、[`adr/0005-double-coupon-earn-only-cosmetic-revenue.md`](../adr/0005-double-coupon-earn-only-cosmetic-revenue.md)：新增 D-3 每日打卡固定 XP、最低年齡 13 與未成年保護、兩倍券只在遊戲裡賺與買斷外觀收入之決策紀錄。
 - [`wiki/00_INDEX.md`](../wiki/00_INDEX.md)、[`README.md`](../README.md)（知識庫）：加上會議紀錄資料夾相對路徑連結；索引補上 ADR-0003、ADR-0004、ADR-0005。
+
+---
+
+## [2026-11-13] 補記 11/10 16:18–16:20 與 Demo 起始數字、同步看板，並記錄 PR #5／#6 合併
+
+### 1. 觸發原因 (Trigger / Context)
+- 會議紀錄 [`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md) 已補上決策 20–30（16:18、16:20，以及 11/13 轉達的遊戲幣 Demo 起始數字與 T1 第 1 階段放行），需同步更新 ADR-0005、`PROJECT_STATE.md` 與本日誌。
+- 幕僚長轉述：YuChien 於 2026-11-13 09:38（Asia/Taipei）指示合併 [PR #5](https://github.com/yuchienw/Fitmon/pull/5)（移除「速記」功能）。GitHub 核實該 PR 已由 yuchienw 合併，時間為 2026-11-13 09:38（Asia/Taipei），merge commit `e5198c8`。
+- GitHub 核實 [PR #6](https://github.com/yuchienw/Fitmon/pull/6) 已於 2026-11-10 16:18（Asia/Taipei）合併，merge commit `de73747`。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+- 只記載有來源、由 YuChien 親口做成的決定；16:18 已將「遊戲幣能否用真錢買」由待確認改為定案（不開放用真錢買）。遊戲幣 Demo 起始數字（打卡 70 幣、每日上限 90、兩倍券 40 幣、BCAA 10 幣、Boss 賞金 100 到 250）標為提案，YuChien 玩過後再調。
+- ADR-0005 補上 16:18 後續（兩倍券也可用金幣買、遊戲幣不開放真錢買、轉蛋券不賣真錢、外觀買斷 NT$30 到 90 含季節組合、真錢外觀與金幣時裝分開）與 16:20（BCAA 不賣真錢）。
+- `PROJECT_STATE.md` 將已從程式移除的「速記」功能改列已完成，main HEAD 同步為 `e5198c8`；T1 第 1 階段（只改 Demo）放行記入看板。
+- 本次僅改 `llm-wiki/` 文件，不改程式；等 YuChien 同意後才合併本 PR。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [`adr/0005-double-coupon-earn-only-cosmetic-revenue.md`](../adr/0005-double-coupon-earn-only-cosmetic-revenue.md)：補記 16:18、16:20 後續定案，遊戲幣不開放真錢買改為已定案。
+- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：同步 16:18–16:20 決策、遊戲幣 Demo 起始提案數字、T1 第 1 階段放行；記錄 PR #5（`e5198c8`，來源：幕僚長轉述）與 PR #6（2026-11-10 16:18 Asia/Taipei，`de73747`）已合併。
+- [`logs/changelog.md`](changelog.md)：追加本筆。
+- [`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：本分支稍早已補記決策 20–30（本次不另改此檔）。
+
+---
+
+## [2026-11-13] 修正規格頁與看板上的動態牆、PARK-002、歷史項目矛盾
+
+### 1. 觸發原因 (Trigger / Context)
+- 主題規格頁與看板歷史項仍有多處把已廢除的站內公開動態牆、打賞、發布拍立得，以及已被取代的 PARK-002（「不做複雜 RPG」）寫成現行功能或有效擱置約束。
+- 需與 YuChien 於 2026-11-10 15:04、15:08（Asia/Taipei）的親口決定對齊，並標註看板過時歷史項。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+- 15:04：站內動態牆已廢除，打賞和發布拍立得也已拿掉，改成合照；遊戲模式改為冒險 RPG（Tap Titans 式冒險與 Boss），取代 PARK-002。
+- 15:08：不恢復公開動態牆，改走戰隊和站外分享；拿掉付費跳過冷卻（D-4）。
+- 速記功能已於 2026-11-13 由 [PR #5](https://github.com/yuchienw/Fitmon/pull/5) 移除（09:38 Asia/Taipei，merge commit `e5198c8`）。
+- 拍貼工坊（TASK-027）是否保留標為「未確認」，待 YuChien 確認。
+- 檢查 `AGENT.md`「原則 5」（§4 不可侵犯原則第 5 項「商業導購道德／No Pay-to-Win」，以及 §5 程式碼風格約束）後，與上述決定不衝突，故未改該檔。
+- 本日誌只追加、不改寫既有歷史條目。只改 `llm-wiki/` 文件，不改程式；等 YuChien 同意後才合併本 PR。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [`wiki/business_model.md`](../wiki/business_model.md)：§1–§2 好友打賞、發布拍立得標為已廢除並註來源。
+- [`wiki/product_vision_and_privacy.md`](../wiki/product_vision_and_privacy.md)：拍立得布告欄、公開廣場、打賞與相關雲端職責標為已廢除；PARK-002 標為已被冒險 RPG 取代；TASK-027 標為未確認。
+- [`wiki/roadmap.md`](../wiki/roadmap.md)、[`wiki/00_INDEX.md`](../wiki/00_INDEX.md)：里程碑 2 改為戰隊與站外分享，動態牆與打賞交付物標為已廢除。
+- [`wiki/dual_mode_experience.md`](../wiki/dual_mode_experience.md)：拍立得打卡背景與「社群廣場看課表」改註合照／站外分享，並註動態牆已廢除。
+- [`wiki/tech_architecture.md`](../wiki/tech_architecture.md)：`posts`／`tips_and_gifts` 與課金秒解標為已廢除或已廢止。
+- [`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)：PARK-002 開頭表述標為已被取代；打賞／發布拍立得任務與參數標為已廢除；拍貼工坊標為未確認。
+- [`adr/0002-app-shell-with-embedded-pixel-canvas.md`](../adr/0002-app-shell-with-embedded-pixel-canvas.md)：為 Tab 4 動態瀑布流補後續更正，不推翻 App Shell 決策。
+- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：PARK-002 標為已被取代；速記、動態牆、打賞、付費跳過冷卻等歷史項標註已廢止或已廢除；TASK-027 標為是否保留未確認。
+- [`logs/changelog.md`](changelog.md)：追加本筆。
+
+---
+
+## [2026-11-13] 補註遊戲幣起始數字決定時間，並記錄 PR #7 合併
+
+### 1. 觸發原因 (Trigger / Context)
+- 幕僚長轉達：遊戲幣起始數字是 YuChien 在確認卡上回答「先用這套經濟數字，玩過再調」，T1 第 1 階段放行也是同一批。時間在產品經理於 2026-11-10 約 16:29（Asia/Taipei）送出數字之後、幕僚長 2026-11-13 轉達之前，確切時間未記錄。文件原先寫「確切時間待補」或僅寫「11/13 轉達」，需改為「2026-11-10 16:29 之後，確切時間未記錄」，不推測確切時間。
+- 幕僚長轉述：YuChien 於 2026-11-13 10:47（Asia/Taipei）指示合併 [PR #7](https://github.com/yuchienw/Fitmon/pull/7)。GitHub 核實該 PR 已由 yuchienw 合併，時間為 2026-11-13 10:47（Asia/Taipei），merge commit `f28d928`。
+
+### 2. 思考推演與決策脈絡 (Deduction & Rationale)
+- 只補註已有來源的時間範圍與確認卡原話，不把 16:29 寫成拍板時刻（那是產品經理送出數字的約略時間）。
+- `PROJECT_STATE.md` 與本日誌一併記入「2026-11-13 10:47 PR #7 合併（幕僚長轉述 YuChien 指示）」及實際 merge sha。
+- 本日誌只追加本筆，不改寫既有歷史條目。只改 `llm-wiki/` 文件，不改程式；等 YuChien 同意後才合併本 PR。
+
+### 3. 影響範圍與異動檔案清單 (Impact & Modified Files)
+- [`logs/meetings/2026-11-10_決策同步.md`](meetings/2026-11-10_決策同步.md)：決策 29–30 的時間改為「2026-11-10 16:29 之後，確切時間未記錄」；來源改為確認卡原話與幕僚長 2026-11-13 轉達。
+- [`wiki/game_mechanics_and_science.md`](../wiki/game_mechanics_and_science.md)：Demo 暫定提案值補上同一時間與來源。
+- [`PROJECT_STATE.md`](../PROJECT_STATE.md)：T1 第 1 階段／遊戲幣起始數字補上同一時間與來源；記錄 2026-11-13 10:47 PR #7 合併（幕僚長轉述 YuChien 指示；merge commit `f28d928`）；main HEAD 同步為 `f28d928`。
+- [`logs/changelog.md`](changelog.md)：追加本筆。

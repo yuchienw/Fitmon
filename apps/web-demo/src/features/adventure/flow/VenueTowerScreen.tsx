@@ -359,9 +359,6 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <h1 className="text-sm font-black text-foreground">{venue.nameZh}</h1>
-              <span className="text-[10px] font-bold text-muted-foreground">
-                ({venue.nameEn})
-              </span>
             </div>
             <div className="text-[10px] font-bold text-primary">
               第 {venueIndex + 1} 場館 · 爬塔樓層清單
@@ -383,7 +380,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
           </div>
           <div>
             <div className="text-[11px] font-black text-amber-900">
-              VENUE SELECT · {venue.nameZh}
+              選擇場館 · {venue.nameZh}
             </div>
             <div className="text-[10px] font-bold text-amber-800">
               {venue.descriptionZh}
@@ -414,7 +411,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
               >
                 {/* Stage Ribbon */}
                 <div className="absolute right-0 top-0 rounded-bl-xl bg-primary px-3 py-0.5 text-[10px] font-black text-primary-foreground shadow-sm">
-                  STAGE {stageNumber} · 當前進度
+                  第 {stageNumber} 關 · 當前進度
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -530,7 +527,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-black font-mono text-foreground">F{floor}</span>
                     <span className="text-xs font-bold text-muted-foreground">
-                      STAGE {stageNumber} · 已通關
+                      第 {stageNumber} 關 · 已通關
                     </span>
                   </div>
                   <div className="text-[10px] text-muted-foreground">已通關 · 點擊查看關卡資訊</div>
@@ -552,7 +549,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
               <div>
                 <div className="text-lg font-black font-mono text-muted-foreground">F{floor}</div>
                 <div className="text-xs font-bold text-muted-foreground">
-                  STAGE {stageNumber} · 尚未解鎖
+                  第 {stageNumber} 關 · 尚未解鎖
                 </div>
               </div>
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -566,7 +563,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
       {/* Bottom Boss Preview Sheet & Enter Battle CTA (as in 03-venue-tower.jpg) */}
       <div className="retro-box mt-4 rounded-2xl bg-card p-3 shadow-lg">
         <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-          BOSS PREVIEW · 樓層關卡預覽
+          首領預覽 · 樓層關卡預覽
         </div>
 
         <div className="flex items-center gap-3">
@@ -607,7 +604,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
             onClick={() => onEnterBattle()}
             className="retro-btn mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3 font-black text-white shadow-lg active:translate-y-0.5 bg-gradient-to-b from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
           >
-            <span className="text-sm">進入戰鬥（挑戰 STAGE {playerStage}）</span>
+            <span className="text-sm">進入戰鬥（挑戰第 {playerStage} 關）</span>
             <ChevronRight className="h-4 w-4" />
           </button>
         ) : selectedStatus === 'cleared' ? (
@@ -630,7 +627,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
               }}
               className="retro-btn flex w-full items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-b from-orange-500 to-amber-500 py-2.5 text-xs font-black text-white shadow active:translate-y-0.5"
             >
-              <span>前往目前進度（STAGE {playerStage} · {currentVenue.nameZh} F{currentFloorForPlayer}）</span>
+              <span>前往目前進度（第 {playerStage} 關 · {currentVenue.nameZh} F{currentFloorForPlayer}）</span>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -654,7 +651,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
               }}
               className="retro-btn flex w-full items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-b from-orange-500 to-amber-500 py-2.5 text-xs font-black text-white shadow active:translate-y-0.5"
             >
-              <span>前往目前進度（STAGE {playerStage} · {currentVenue.nameZh} F{currentFloorForPlayer}）</span>
+              <span>前往目前進度（第 {playerStage} 關 · {currentVenue.nameZh} F{currentFloorForPlayer}）</span>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
