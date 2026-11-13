@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawCreamChibiSilhouette, drawMapleChibiAvatar, bossSpriteUrl } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar, bossSpriteUrl, drawZzz } from '../../../game/pixelSpriteDrawer';
 import {
   GYM_VENUES,
   GymVenueInfo,
@@ -268,16 +268,8 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
           ctx.restore();
 
           if (!tm.hasWorkedOutToday) {
-            ctx.save();
-            const headTopY = ty - 56 * tmScale;
-            ctx.font = '900 14px "Noto Sans TC", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.lineWidth = 3.5;
-            ctx.strokeStyle = '#ffffff';
-            ctx.strokeText('Zzz', tx + 8, headTopY - 6);
-            ctx.fillStyle = '#B45309';
-            ctx.fillText('Zzz', tx + 8, headTopY - 6);
-            ctx.restore();
+            const headTopY = ty - 60 * tmScale;
+            drawZzz(ctx, tx, headTopY, tmScale);
           }
         });
 

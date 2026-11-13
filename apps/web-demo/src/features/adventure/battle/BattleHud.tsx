@@ -59,7 +59,7 @@ export const BattleHud: React.FC<BattleHudProps> = ({
           <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
         <span className="shrink-0 rounded-full bg-primary px-1.5 text-[10px] font-black leading-5 text-primary-foreground">
-          STAGE {stage}
+          第 {stage} 關
         </span>
         <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-bold leading-5 text-muted-foreground">
           {mode === 'squad' ? '組隊' : '單人'}

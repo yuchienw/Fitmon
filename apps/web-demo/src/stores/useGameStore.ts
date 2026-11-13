@@ -49,6 +49,9 @@ import {
   COSMETIC_BUYOUT_CATALOG,
   CosmeticBuyoutItem,
   FRIEND_PROFILES,
+  resolveFriendProfileId,
+  hasFriendProfile,
+  getFriendProfile,
   ADVENTURE_BOSS_CATALOG,
   AvatarBodyStage,
   EquipSlot,
@@ -139,7 +142,7 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
     },
   },
   {
-    id: 'friend_leo',
+    id: 'user_leo',
     nameZh: '街頭健體 · Leo',
     roleType: 'phy',
     roleBadgeZh: '🥊 力量型',
@@ -231,6 +234,19 @@ export interface ResolvedSquadAvatar {
   equipped?: Partial<Record<EquipSlot, string>>;
 }
 
+export { resolveFriendProfileId, hasFriendProfile, getFriendProfile } from '../config/catalogConfig';
+
+/**
+ * QA-07 戰隊邀請碼單一真相來源：依 squadName 雜湊產生 FITxxx，無隊名時為 FIT732
+ */
+export function getSquadInviteCode(squadName?: string | null): string {
+  if (!squadName) return 'FIT732';
+  const hash = Math.abs(
+    squadName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 732)
+  );
+  return `FIT${(hash % 900) + 100}`;
+}
+
 export function resolveSquadMemberAvatar(member: SquadMemberState): ResolvedSquadAvatar {
   // 1. Full self data: bodyStage has a value and equipped is an object
   if (member.bodyStage && member.equipped && typeof member.equipped === 'object') {
@@ -264,9 +280,10 @@ export function resolveSquadMemberAvatar(member: SquadMemberState): ResolvedSqua
     };
   }
 
-  // 3. Exact ID match only (remove nameZh/includes fuzzy match)
-  const candidate = SQUAD_CANDIDATE_POOL.find((c) => c.id === member.id);
-  const profile = FRIEND_PROFILES.find((p) => p.id === member.id);
+  // 3. Exact ID match or resolved profile ID match (supports legacy save IDs)
+  const resolvedId = resolveFriendProfileId(member.id) || member.id;
+  const candidate = SQUAD_CANDIDATE_POOL.find((c) => c.id === member.id || c.id === resolvedId);
+  const profile = getFriendProfile(member.id);
   const matched = candidate || profile;
 
   if (matched?.bodyStage && matched?.equipped) {
@@ -1118,7 +1135,7 @@ export const useGameStore = create<GameState>()(
           },
         },
         {
-          id: 'friend_leo',
+          id: 'user_leo',
           nameZh: '街頭健體 · Leo',
           roleType: 'phy',
           roleBadgeZh: '🥊 力量型',
@@ -1225,7 +1242,7 @@ export const useGameStore = create<GameState>()(
 
       setSelectedProfileId: (id) => {
         soundFX.playBlip();
-        set({ selectedProfileId: id });
+        set({ selectedProfileId: id ? resolveFriendProfileId(id) || id : null });
       },
 
       setSelectedHistorySessionId: (id) => {
@@ -2056,13 +2073,16 @@ export const useGameStore = create<GameState>()(
 
       // ================= SOCIAL ACTIONS WITH ANTI-ABUSE CAPS (V2-12, V2-16) =================
       toggleFriend: (profileId) => {
+        const resolved = resolveFriendProfileId(profileId) || profileId;
         const state = get();
-        const isAlreadyFriend = state.friendIds.includes(profileId);
-        const target = FRIEND_PROFILES.find((f) => f.id === profileId);
+        const isAlreadyFriend = state.friendIds.some(
+          (id) => (resolveFriendProfileId(id) || id) === resolved
+        );
+        const target = getFriendProfile(resolved);
         soundFX.playSetComplete();
         const nextFriendIds = isAlreadyFriend
-          ? state.friendIds.filter((id) => id !== profileId)
-          : [...state.friendIds, profileId];
+          ? state.friendIds.filter((id) => (resolveFriendProfileId(id) || id) !== resolved)
+          : [...state.friendIds, resolved];
         set({ friendIds: nextFriendIds });
         state.showToast(
           isAlreadyFriend
@@ -2359,7 +2379,8 @@ export const useGameStore = create<GameState>()(
 
       recruitSquadMember: (candidate) => {
         const state = get();
-        if (state.squadMembers.some((m) => m.id === candidate.id)) {
+        const candResolved = resolveFriendProfileId(candidate.id) || candidate.id;
+        if (state.squadMembers.some((m) => (resolveFriendProfileId(m.id) || m.id) === candResolved)) {
           state.showToast(`⚠️ 【${candidate.nameZh}】已經在你的戰隊中囉！`);
           return;
         }
@@ -2393,9 +2414,10 @@ export const useGameStore = create<GameState>()(
         const state = get();
         const m = state.squadMembers.find((item) => item.id === memberId);
         if (!m) return false;
-        // Exact ID match only (candidate pool or friend profiles)
-        const candidate = SQUAD_CANDIDATE_POOL.find((c) => c.id === m.id);
-        const profile = FRIEND_PROFILES.find((p) => p.id === m.id);
+        // Exact ID match or resolved profile ID match (supports legacy save IDs)
+        const resolvedId = resolveFriendProfileId(m.id) || m.id;
+        const candidate = SQUAD_CANDIDATE_POOL.find((c) => c.id === m.id || c.id === resolvedId);
+        const profile = getFriendProfile(m.id);
         const matched = candidate || profile;
         if (matched?.bodyStage && matched?.equipped) {
           const cache: SquadMemberAvatarCache = {

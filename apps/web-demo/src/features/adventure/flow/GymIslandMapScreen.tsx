@@ -3,12 +3,11 @@ import {
   ChevronLeft,
   Lock,
   Check,
-  MapPin,
   ChevronRight,
   Coins,
 } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { GYM_VENUES, getFloorForStage } from './venueConfig';
 import { ADVENTURE_BOSS_CATALOG } from '../../../config/catalogConfig';
 import { formatResetCountdown } from '../../../game/day';
@@ -240,6 +239,202 @@ export function getIslandTeammatePos(
   return cluster.positions[idx] || { tx: standX, ty: standY };
 }
 
+export interface GymIslandPartyLayout {
+  standX: number;
+  standY: number;
+  facingRight: boolean;
+  heroScale: number;
+  teammateScale: number;
+  teammatePositions: Array<{ tx: number; ty: number }>;
+  partyBoundingBox: { left: number; top: number; right: number; bottom: number };
+  clusterHitRect: { left: number; top: number; width: number; height: number };
+  choice: 'default_below' | 'left_side' | 'right_side' | 'outer_0.85';
+}
+
+export function calculateGymIslandPartyLayout(
+  venueIdx: number,
+  w: number,
+  h: number,
+  teammates: Array<{ id: string; nameZh: string; hasWorkedOutToday?: boolean }>,
+  isSolo: boolean,
+  getCardBox: (idx: number) => { left: number; right: number; top: number; bottom: number; cx: number; cy: number; width: number; height: number },
+): GymIslandPartyLayout {
+  const safeW = w > 0 ? w : 390;
+  const safeH = h > 0 ? h : 600;
+  const currentCard = getCardBox(venueIdx);
+  const venue = GYM_VENUES[venueIdx];
+  const totalTeammates = isSolo ? 0 : Math.min(teammates.length, 3);
+
+  const islandLeft = 0.07 * safeW;
+  const islandRight = 0.93 * safeW;
+  const islandTop = 0.08 * safeH;
+  const islandBottom = 0.90 * safeH;
+
+  const offsets =
+    totalTeammates === 1
+      ? [{ dx: -0.20, dy: -0.12 }]
+      : totalTeammates === 2
+      ? [
+          { dx: -0.24, dy: -0.10 },
+          { dx: -0.14, dy: -0.16 },
+        ]
+      : [
+          { dx: -0.28, dy: -0.10 },
+          { dx: -0.20, dy: -0.17 },
+          { dx: -0.16, dy: -0.13 },
+        ];
+
+  function evaluateCandidate(
+    standX: number,
+    standY: number,
+    heroScale: number,
+    facingRight: boolean,
+    choice: 'default_below' | 'left_side' | 'right_side' | 'outer_0.85'
+  ): GymIslandPartyLayout {
+    const heroDrawH = 60 * heroScale;
+    const teammateScale = heroScale * 0.65;
+    const stageW = heroDrawH * 2.4;
+    const stageH = heroDrawH * 2.4;
+    const sign = facingRight ? 1 : -1;
+
+    const teammatePositions: Array<{ tx: number; ty: number }> = [];
+    let minL = standX - 28 * heroScale;
+    let maxR = standX + 28 * heroScale;
+    let minT = standY - heroDrawH;
+    let maxB = standY;
+
+    for (let i = 0; i < totalTeammates; i++) {
+      const off = offsets[i];
+      let tx = Math.round(standX + off.dx * stageW * sign);
+      const ty = Math.round(standY + off.dy * stageH);
+
+      if (facingRight) {
+        const maxX = Math.round(standX - 0.16 * stageW);
+        if (tx > maxX) tx = maxX;
+      } else {
+        const minX = Math.round(standX + 0.16 * stageW);
+        if (tx < minX) tx = minX;
+      }
+
+      teammatePositions.push({ tx, ty });
+
+      const tm = teammates[i];
+      const zMargin = tm && !tm.hasWorkedOutToday ? 20 * teammateScale : 0;
+      minL = Math.min(minL, tx - 28 * teammateScale);
+      maxR = Math.max(maxR, tx + 28 * teammateScale);
+      minT = Math.min(minT, ty - 60 * teammateScale - zMargin);
+      maxB = Math.max(maxB, ty);
+    }
+
+    const hitBoxes = teammatePositions.map(({ tx, ty }) => ({
+      left: tx - 28 * teammateScale - 8,
+      top: ty - 60 * teammateScale - 8,
+      width: 56 * teammateScale + 16,
+      height: 65 * teammateScale + 16,
+    }));
+
+    const hitMinX = hitBoxes.length > 0 ? Math.min(...hitBoxes.map((b) => b.left)) : 0;
+    const hitMinY = hitBoxes.length > 0 ? Math.min(...hitBoxes.map((b) => b.top)) : 0;
+    const hitMaxX = hitBoxes.length > 0 ? Math.max(...hitBoxes.map((b) => b.left + b.width)) : 0;
+    const hitMaxY = hitBoxes.length > 0 ? Math.max(...hitBoxes.map((b) => b.top + b.height)) : 0;
+
+    return {
+      standX,
+      standY,
+      facingRight,
+      heroScale,
+      teammateScale,
+      teammatePositions,
+      partyBoundingBox: { left: minL, right: maxR, top: minT, bottom: maxB },
+      clusterHitRect: {
+        left: Math.round(hitMinX),
+        top: Math.round(hitMinY),
+        width: Math.round(hitMaxX - hitMinX),
+        height: Math.round(hitMaxY - hitMinY),
+      },
+      choice,
+    };
+  }
+
+  function collides(box: { left: number; right: number; top: number; bottom: number }) {
+    if (
+      box.left < islandLeft ||
+      box.right > islandRight ||
+      box.top < islandTop ||
+      box.bottom > islandBottom
+    ) {
+      return true;
+    }
+    for (let i = 0; i < GYM_VENUES.length; i++) {
+      const c = getCardBox(i);
+      const ox = Math.min(box.right, c.right) - Math.max(box.left, c.left);
+      const oy = Math.min(box.bottom, c.bottom) - Math.max(box.top, c.top);
+      if (ox > 0 && oy > 0) return true;
+    }
+    return false;
+  }
+
+  const baseScale = 1.05;
+
+  // QA-08 (1): Default anchor (or partyAnchor from venueConfig)
+  if (venue.partyAnchor) {
+    const ax = venue.partyAnchor.x <= 100 ? (venue.partyAnchor.x / 100) * safeW : venue.partyAnchor.x;
+    const ay = venue.partyAnchor.y <= 100 ? (venue.partyAnchor.y / 100) * safeH : venue.partyAnchor.y;
+    const facingRight = ax < safeW * 0.5;
+    const cand = evaluateCandidate(ax, ay, baseScale, facingRight, 'default_below');
+    if (!collides(cand.partyBoundingBox)) return cand;
+  } else {
+    // Default: card bottom edge center + 10px down
+    const facingRight = currentCard.cx > safeW * 0.5;
+    const testCand = evaluateCandidate(currentCard.cx, 200, baseScale, facingRight, 'default_below');
+    const partyH = 200 - testCand.partyBoundingBox.top;
+    const standY = currentCard.bottom + 10 + partyH;
+    const standX = currentCard.cx;
+    const cand = evaluateCandidate(standX, standY, baseScale, facingRight, 'default_below');
+    if (!collides(cand.partyBoundingBox)) return cand;
+  }
+
+  // QA-08 (2): Try left side of card
+  {
+    const facingRight = true;
+    const standY = currentCard.cy + 30 * baseScale;
+    const testCand = evaluateCandidate(200, standY, baseScale, facingRight, 'left_side');
+    const pWidth = testCand.partyBoundingBox.right - 200;
+    const standX = currentCard.left - 10 - pWidth;
+    const cand = evaluateCandidate(standX, standY, baseScale, facingRight, 'left_side');
+    if (!collides(cand.partyBoundingBox)) return cand;
+  }
+
+  // QA-08 (2): Try right side of card
+  {
+    const facingRight = false;
+    const standY = currentCard.cy + 30 * baseScale;
+    const testCand = evaluateCandidate(200, standY, baseScale, facingRight, 'right_side');
+    const pWidth = 200 - testCand.partyBoundingBox.left;
+    const standX = currentCard.right + 10 + pWidth;
+    const cand = evaluateCandidate(standX, standY, baseScale, facingRight, 'right_side');
+    if (!collides(cand.partyBoundingBox)) return cand;
+  }
+
+  // QA-08 (2): Outer side with scale = 0.85 if still colliding
+  {
+    const scale = 0.85;
+    const isOuterLeft = currentCard.cx < safeW * 0.5;
+    const facingRight = isOuterLeft;
+    const standY = currentCard.cy + 30 * scale;
+    const testCand = evaluateCandidate(200, standY, scale, facingRight, 'outer_0.85');
+    let standX: number;
+    if (isOuterLeft) {
+      const pWidth = testCand.partyBoundingBox.right - 200;
+      standX = Math.max(islandLeft + 28 * scale, currentCard.left - 8 - pWidth);
+    } else {
+      const pWidth = 200 - testCand.partyBoundingBox.left;
+      standX = Math.min(islandRight - 28 * scale, currentCard.right + 8 + pWidth);
+    }
+    return evaluateCandidate(standX, standY, scale, facingRight, 'outer_0.85');
+  }
+}
+
 export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
   mode,
   onBack,
@@ -259,7 +454,10 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
   const selectedBoss = ADVENTURE_BOSS_CATALOG[selectedVenue.bossIndex];
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mapCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const paperdollCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const venueCardRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const [partyLayout, setPartyLayout] = useState<GymIslandPartyLayout | null>(null);
 
   // Teammates data
   const teammates = isSolo
@@ -276,23 +474,71 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
   const selectedStatus = getNodeStatus(selectedVenueIdx);
   const currentStandPercent = getAvatarStandPercent(currentVenueIdx);
 
+  const getVenueCardBox = (venueIdx: number) => {
+    const venue = GYM_VENUES[venueIdx];
+    const w = wrapSize.w > 0 ? wrapSize.w : 390;
+    const h = wrapSize.h > 0 ? wrapSize.h : 600;
+    const el = venueCardRefs.current[venueIdx];
+    const wrap = wrapRef.current;
+    if (el && wrap) {
+      const eRect = el.getBoundingClientRect();
+      const wRect = wrap.getBoundingClientRect();
+      const left = eRect.left - wRect.left;
+      const top = eRect.top - wRect.top;
+      const width = eRect.width;
+      const height = eRect.height;
+      if (width > 0 && height > 0) {
+        return {
+          left,
+          right: left + width,
+          top,
+          bottom: top + height,
+          cx: left + width / 2,
+          cy: top + height / 2,
+          width,
+          height,
+        };
+      }
+    }
+    const cx = (venue.mapCoords.x / 100) * w;
+    const cy = (venue.mapCoords.y / 100) * h;
+    const cardW = 84;
+    const cardH = 60;
+    return {
+      left: cx - cardW / 2,
+      right: cx + cardW / 2,
+      top: cy - cardH / 2,
+      bottom: cy + cardH / 2,
+      cx,
+      cy,
+      width: cardW,
+      height: cardH,
+    };
+  };
+
   // Draw Island Map, Landmarks & Characters
   useEffect(() => {
     let frame = 0;
-    const canvas = canvasRef.current;
+    const mapCanvas = mapCanvasRef.current;
+    const paperdollCanvas = paperdollCanvasRef.current;
     const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!mapCanvas || !paperdollCanvas || !wrap) return;
+    const mapCtx = mapCanvas.getContext('2d');
+    const paperdollCtx = paperdollCanvas.getContext('2d');
+    if (!mapCtx || !paperdollCtx) return;
 
     const syncSize = () => {
       const rect = wrap.getBoundingClientRect();
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const targetW = Math.round(rect.width * dpr);
       const targetH = Math.round(rect.height * dpr);
-      if (canvas.width !== targetW || canvas.height !== targetH) {
-        canvas.width = targetW;
-        canvas.height = targetH;
+      if (mapCanvas.width !== targetW || mapCanvas.height !== targetH) {
+        mapCanvas.width = targetW;
+        mapCanvas.height = targetH;
+      }
+      if (paperdollCanvas.width !== targetW || paperdollCanvas.height !== targetH) {
+        paperdollCanvas.width = targetW;
+        paperdollCanvas.height = targetH;
       }
       setWrapSize((prev) =>
         prev.w === rect.width && prev.h === rect.height
@@ -310,85 +556,109 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       const w = rect.width;
       const h = rect.height;
 
-      ctx.save();
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, w, h);
+      const layout = calculateGymIslandPartyLayout(
+        currentVenueIdx,
+        w,
+        h,
+        teammates,
+        isSolo,
+        getVenueCardBox,
+      );
+
+      setPartyLayout((prev) => {
+        if (
+          prev &&
+          prev.standX === layout.standX &&
+          prev.standY === layout.standY &&
+          prev.heroScale === layout.heroScale &&
+          prev.facingRight === layout.facingRight &&
+          prev.teammatePositions.length === layout.teammatePositions.length &&
+          prev.teammatePositions.every((p, i) => p.tx === layout.teammatePositions[i]?.tx && p.ty === layout.teammatePositions[i]?.ty)
+        ) {
+          return prev;
+        }
+        return layout;
+      });
+
+      mapCtx.save();
+      mapCtx.scale(dpr, dpr);
+      mapCtx.clearRect(0, 0, w, h);
 
       // 1. Cream Sky Band + Warm Soft Ocean Background (PR #2 QA Spec)
-      const oceanGrad = ctx.createLinearGradient(0, 0, 0, h);
+      const oceanGrad = mapCtx.createLinearGradient(0, 0, 0, h);
       oceanGrad.addColorStop(0, '#FAF6F0');
       oceanGrad.addColorStop(0.12, '#F5E6C8');
       oceanGrad.addColorStop(0.24, '#D9E8DF');
       oceanGrad.addColorStop(0.60, '#A8C9C0');
       oceanGrad.addColorStop(1.0, '#7FA8A0');
-      ctx.fillStyle = oceanGrad;
-      ctx.fillRect(0, 0, w, h);
+      mapCtx.fillStyle = oceanGrad;
+      mapCtx.fillRect(0, 0, w, h);
 
       // Animated soft wave lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.lineWidth = 1.6;
+      mapCtx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      mapCtx.lineWidth = 1.6;
       for (let i = 0; i < 7; i++) {
         const wy = 30 + i * 58;
         const offset = Math.sin(now / 1100 + i * 1.2) * 8;
-        ctx.beginPath();
-        ctx.moveTo(10, wy + offset);
-        ctx.quadraticCurveTo(w * 0.35, wy - 7 + offset, w * 0.65, wy + 4 + offset);
-        ctx.quadraticCurveTo(w * 0.85, wy - 5 + offset, w - 10, wy + offset);
-        ctx.stroke();
+        mapCtx.beginPath();
+        mapCtx.moveTo(10, wy + offset);
+        mapCtx.quadraticCurveTo(w * 0.35, wy - 7 + offset, w * 0.65, wy + 4 + offset);
+        mapCtx.quadraticCurveTo(w * 0.85, wy - 5 + offset, w - 10, wy + offset);
+        mapCtx.stroke();
       }
 
       // 2. Island Landmass Layers
       // Drop Shadow into deep sea
-      ctx.save();
-      ctx.fillStyle = 'rgba(12, 74, 110, 0.28)';
-      ctx.translate(0, 7);
-      drawOrganicIslandPath(ctx, w, h, 0);
-      ctx.fill();
-      ctx.restore();
+      mapCtx.save();
+      mapCtx.fillStyle = 'rgba(12, 74, 110, 0.28)';
+      mapCtx.translate(0, 7);
+      drawOrganicIslandPath(mapCtx, w, h, 0);
+      mapCtx.fill();
+      mapCtx.restore();
 
       // Layer A: Rocky Cliff Edge
-      ctx.fillStyle = '#7a6042';
-      ctx.strokeStyle = '#5a422a';
-      ctx.lineWidth = 4;
-      drawOrganicIslandPath(ctx, w, h, 0);
-      ctx.fill();
-      ctx.stroke();
+      mapCtx.fillStyle = '#7a6042';
+      mapCtx.strokeStyle = '#5a422a';
+      mapCtx.lineWidth = 4;
+      drawOrganicIslandPath(mapCtx, w, h, 0);
+      mapCtx.fill();
+      mapCtx.stroke();
 
       // Layer B: Coastal Sand Beach (#E8D4A8 per PR #2 spec)
-      ctx.fillStyle = '#E8D4A8';
-      ctx.strokeStyle = '#d6be8e';
-      ctx.lineWidth = 2;
-      drawOrganicIslandPath(ctx, w, h, 7);
-      ctx.fill();
-      ctx.stroke();
+      mapCtx.fillStyle = '#E8D4A8';
+      mapCtx.strokeStyle = '#d6be8e';
+      mapCtx.lineWidth = 2;
+      drawOrganicIslandPath(mapCtx, w, h, 7);
+      mapCtx.fill();
+      mapCtx.stroke();
 
       // Foam Crest line hugging coastline
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.lineWidth = 2;
-      drawOrganicIslandPath(ctx, w, h, 3.5);
-      ctx.stroke();
+      mapCtx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      mapCtx.lineWidth = 2;
+      drawOrganicIslandPath(mapCtx, w, h, 3.5);
+      mapCtx.stroke();
 
       // Layer C: Warm Olive Interior (#C5C07A -> #9E9A56 per PR #2 spec)
-      const grassGrad = ctx.createLinearGradient(0, 0, 0, h);
+      const grassGrad = mapCtx.createLinearGradient(0, 0, 0, h);
       grassGrad.addColorStop(0, '#C5C07A');
       grassGrad.addColorStop(1, '#9E9A56');
-      ctx.fillStyle = grassGrad;
-      ctx.strokeStyle = '#6e6c38';
-      ctx.lineWidth = 3;
-      drawOrganicIslandPath(ctx, w, h, 15);
-      ctx.fill();
-      ctx.stroke();
+      mapCtx.fillStyle = grassGrad;
+      mapCtx.strokeStyle = '#6e6c38';
+      mapCtx.lineWidth = 3;
+      drawOrganicIslandPath(mapCtx, w, h, 15);
+      mapCtx.fill();
+      mapCtx.stroke();
 
       // Layer D: Topographic Sunny Plateau
-      ctx.fillStyle = 'rgba(215, 210, 145, 0.35)';
-      drawOrganicIslandPath(ctx, w, h, 26);
-      ctx.fill();
+      mapCtx.fillStyle = 'rgba(215, 210, 145, 0.35)';
+      drawOrganicIslandPath(mapCtx, w, h, 26);
+      mapCtx.fill();
 
       // Mini palm trees at capes
-      drawMiniPalm(ctx, w * 0.08, h * 0.28, 0.65);
-      drawMiniPalm(ctx, w * 0.92, h * 0.30, 0.65);
-      drawMiniPalm(ctx, w * 0.09, h * 0.88, 0.65);
-      drawMiniPalm(ctx, w * 0.90, h * 0.88, 0.65);
+      drawMiniPalm(mapCtx, w * 0.08, h * 0.28, 0.65);
+      drawMiniPalm(mapCtx, w * 0.92, h * 0.30, 0.65);
+      drawMiniPalm(mapCtx, w * 0.09, h * 0.88, 0.65);
+      drawMiniPalm(mapCtx, w * 0.90, h * 0.88, 0.65);
 
       // 3. Sandy Trails Connecting the 6 Venues
       const pts = GYM_VENUES.map((v) => ({
@@ -397,106 +667,100 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       }));
 
       // Main Winding Sandy Trail
-      ctx.save();
-      ctx.strokeStyle = '#E8D4A8';
-      ctx.lineWidth = 9;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      mapCtx.save();
+      mapCtx.strokeStyle = '#E8D4A8';
+      mapCtx.lineWidth = 9;
+      mapCtx.lineCap = 'round';
+      mapCtx.lineJoin = 'round';
 
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      ctx.quadraticCurveTo(w * 0.5, h * 0.12, pts[1].x, pts[1].y);
-      ctx.quadraticCurveTo(w * 0.74, h * 0.34, pts[3].x, pts[3].y);
-      ctx.quadraticCurveTo(w * 0.50, h * 0.46, pts[2].x, pts[2].y);
-      ctx.quadraticCurveTo(w * 0.32, h * 0.64, pts[4].x, pts[4].y);
-      ctx.quadraticCurveTo(w * 0.52, h * 0.73, pts[5].x, pts[5].y);
-      ctx.stroke();
+      mapCtx.beginPath();
+      mapCtx.moveTo(pts[0].x, pts[0].y);
+      mapCtx.quadraticCurveTo(w * 0.5, h * 0.12, pts[1].x, pts[1].y);
+      mapCtx.quadraticCurveTo(w * 0.74, h * 0.34, pts[3].x, pts[3].y);
+      mapCtx.quadraticCurveTo(w * 0.50, h * 0.46, pts[2].x, pts[2].y);
+      mapCtx.quadraticCurveTo(w * 0.32, h * 0.64, pts[4].x, pts[4].y);
+      mapCtx.quadraticCurveTo(w * 0.52, h * 0.73, pts[5].x, pts[5].y);
+      mapCtx.stroke();
 
       // Wooden Plank / Trail Dashes
-      ctx.strokeStyle = '#8d754b';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4, 6]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
+      mapCtx.strokeStyle = '#8d754b';
+      mapCtx.lineWidth = 2;
+      mapCtx.setLineDash([4, 6]);
+      mapCtx.stroke();
+      mapCtx.setLineDash([]);
+      mapCtx.restore();
 
       // 4. Draw 6 Canvas Landmarks Beside the Venues
       // Venue 0: Couch Lounge (left of button)
-      drawSofaLandmark(ctx, w * 0.12, h * 0.16, 1.0);
+      drawSofaLandmark(mapCtx, w * 0.12, h * 0.16, 1.0);
       // Venue 1: Boba Station (right of button)
-      drawBobaLandmark(ctx, w * 0.88, h * 0.19, 1.0);
+      drawBobaLandmark(mapCtx, w * 0.88, h * 0.19, 1.0);
       // Venue 2: Phone-Ghost Booth (left of button)
-      drawPhoneBoothLandmark(ctx, w * 0.12, h * 0.46, 1.0);
+      drawPhoneBoothLandmark(mapCtx, w * 0.12, h * 0.46, 1.0);
       // Venue 3: Running Track Hall (right of button)
-      drawTrackLandmark(ctx, w * 0.88, h * 0.49, 1.0);
+      drawTrackLandmark(mapCtx, w * 0.88, h * 0.49, 1.0);
       // Venue 4: Alarm-Clock Climbing Tower (left of button)
-      drawClockTowerLandmark(ctx, w * 0.12, h * 0.78, 1.0);
+      drawClockTowerLandmark(mapCtx, w * 0.12, h * 0.78, 1.0);
       // Venue 5: Fried-Chicken Throne Gym (right of button)
-      drawChickenThroneLandmark(ctx, w * 0.88, h * 0.80, 1.0);
+      drawChickenThroneLandmark(mapCtx, w * 0.88, h * 0.80, 1.0);
 
       // 5. Active Avatar Staging Clearing Platform
-      const standPercent = getAvatarStandPercent(currentVenueIdx);
-      const standX = (standPercent.x / 100) * w;
-      const standY = (standPercent.y / 100) * h;
+      const standX = layout.standX;
+      const standY = layout.standY;
       const currentPos = pts[currentVenueIdx];
 
       // Feeder trail connecting current venue button to the avatar platform
       if (currentPos) {
-        ctx.save();
-        ctx.strokeStyle = 'rgba(249, 115, 22, 0.45)';
-        ctx.lineWidth = 4;
-        ctx.setLineDash([3, 4]);
-        ctx.beginPath();
-        ctx.moveTo(currentPos.x, currentPos.y);
-        ctx.lineTo(standX, standY);
-        ctx.stroke();
-        ctx.restore();
+        mapCtx.save();
+        mapCtx.strokeStyle = 'rgba(249, 115, 22, 0.45)';
+        mapCtx.lineWidth = 4;
+        mapCtx.setLineDash([3, 4]);
+        mapCtx.beginPath();
+        mapCtx.moveTo(currentPos.x, currentPos.y);
+        mapCtx.lineTo(standX, standY);
+        mapCtx.stroke();
+        mapCtx.restore();
       }
 
       // Wooden staging deck & pulsing amber halo
-      ctx.save();
-      ctx.fillStyle = '#E8D4A8';
-      ctx.strokeStyle = '#b59e74';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.ellipse(standX, standY + 2, 40, 15, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
+      const scaleMultiplier = layout.heroScale / 1.05;
+      mapCtx.save();
+      mapCtx.fillStyle = '#E8D4A8';
+      mapCtx.strokeStyle = '#b59e74';
+      mapCtx.lineWidth = 3;
+      mapCtx.beginPath();
+      mapCtx.ellipse(standX, standY + 2, 40 * scaleMultiplier, 15 * scaleMultiplier, 0, 0, Math.PI * 2);
+      mapCtx.fill();
+      mapCtx.stroke();
 
-      ctx.strokeStyle = 'rgba(234, 88, 12, 0.45)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.ellipse(standX, standY + 2, 28, 10.5, 0, 0, Math.PI * 2);
-      ctx.stroke();
+      mapCtx.strokeStyle = 'rgba(234, 88, 12, 0.45)';
+      mapCtx.lineWidth = 1.5;
+      mapCtx.beginPath();
+      mapCtx.ellipse(standX, standY + 2, 28 * scaleMultiplier, 10.5 * scaleMultiplier, 0, 0, Math.PI * 2);
+      mapCtx.stroke();
 
       const pulse = Math.sin(now / 350) * 3;
-      ctx.strokeStyle = '#f97316';
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.ellipse(standX, standY + 2, 44 + pulse, 17 + pulse * 0.4, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+      mapCtx.strokeStyle = '#f97316';
+      mapCtx.lineWidth = 2.2;
+      mapCtx.beginPath();
+      mapCtx.ellipse(standX, standY + 2, (44 + pulse) * scaleMultiplier, (17 + pulse * 0.4) * scaleMultiplier, 0, 0, Math.PI * 2);
+      mapCtx.stroke();
+      mapCtx.restore();
 
-      // 6. Draw Paper-Doll Chibi Avatars in the Clearing
-      // Hero scale 1.05 in front, Teammates scale 0.65 in rear, sorted by ty ascending
-      const heroScale = 1.05;
-      const teammateScale = heroScale * 0.65;
-      const facingRight = currentVenueIdx % 2 === 1;
+      mapCtx.restore(); // Restore mapCtx dpr scale
 
+      // ==========================================
+      // 2. PAPERDOLL CANVAS (Top Layer, z-30, pointer-events: none)
+      // ==========================================
+      paperdollCtx.save();
+      paperdollCtx.scale(dpr, dpr);
+      paperdollCtx.clearRect(0, 0, w, h);
+
+      // Draw Teammates in rear (sorted by ty ascending)
       if (!isSolo && teammates.length > 0) {
-        const cluster = getIslandTeammatesCluster(
-          standX,
-          standY,
-          facingRight,
-          teammates.length,
-          w,
-          h,
-          teammateScale,
-          heroScale,
-        );
         const positioned = teammates.map((tm, idx) => {
           const avatar = resolveSquadMemberAvatar(tm);
-          const pos = cluster.positions[idx] || { tx: standX, ty: standY };
+          const pos = layout.teammatePositions[idx] || { tx: standX, ty: standY };
           return { tm, avatar, idx, pos };
         });
 
@@ -506,72 +770,69 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
         sorted.forEach(({ tm, avatar, idx, pos }) => {
           const { tx, ty } = pos;
 
-          ctx.save();
-          ctx.translate(tx, ty);
-          ctx.scale(teammateScale, teammateScale);
+          // Soft shadow underneath
+          paperdollCtx.save();
+          paperdollCtx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+          paperdollCtx.beginPath();
+          paperdollCtx.ellipse(tx, ty + 2, 16 * layout.teammateScale, 5 * layout.teammateScale, 0, 0, Math.PI * 2);
+          paperdollCtx.fill();
+          paperdollCtx.restore();
+
+          paperdollCtx.save();
+          paperdollCtx.translate(tx, ty);
+          paperdollCtx.scale(layout.teammateScale, layout.teammateScale);
 
           if (!tm.hasWorkedOutToday) {
-            ctx.filter = 'grayscale(1)';
-            ctx.globalAlpha = 0.72;
+            paperdollCtx.filter = 'grayscale(1)';
+            paperdollCtx.globalAlpha = 0.72;
           }
 
           if (avatar.status === 'syncing' || !avatar.bodyStage) {
-            drawCreamChibiSilhouette(ctx, {
+            drawCreamChibiSilhouette(paperdollCtx, {
               x: 0,
               y: 0,
-              facingRight,
+              facingRight: layout.facingRight,
               nameZh: tm.nameZh,
             });
           } else {
-            drawMapleChibiAvatar(ctx, {
+            drawMapleChibiAvatar(paperdollCtx, {
               x: -28,
               y: -60,
               bodyStage: avatar.bodyStage,
               equipped: avatar.equipped || {},
               state: 'IDLE',
-              facingRight,
+              facingRight: layout.facingRight,
               frameTick: Math.floor(now / 16),
             });
           }
 
-          ctx.restore();
+          paperdollCtx.restore();
 
-          // Unworked teammate: crisp bold floating Zzz 18-20px font-weight 900, white 4px stroke, fill #B45309
+          // QA-09: Shared drawZzz for unworked teammate
           if (!tm.hasWorkedOutToday) {
-            ctx.save();
-            const headTopY = ty - 60 * teammateScale;
+            const headTopY = ty - 60 * layout.teammateScale;
             const zOff = Math.sin(now / 300 + idx * 1.5) * 3;
-            const zX = tx + 10;
-            const zY = headTopY - 8 + zOff;
-            ctx.font = '900 18px "Noto Sans TC", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#ffffff';
-            ctx.strokeText('Zzz', zX, zY);
-            ctx.fillStyle = '#B45309';
-            ctx.fillText('Zzz', zX, zY);
-            ctx.restore();
+            drawZzz(paperdollCtx, tx, headTopY + zOff, layout.teammateScale);
           }
         });
       }
 
       // Draw Hero in front
-      ctx.save();
-      ctx.translate(standX, standY);
-      ctx.scale(heroScale, heroScale);
-      drawMapleChibiAvatar(ctx, {
+      paperdollCtx.save();
+      paperdollCtx.translate(standX, standY);
+      paperdollCtx.scale(layout.heroScale, layout.heroScale);
+      drawMapleChibiAvatar(paperdollCtx, {
         x: -28,
         y: -60,
         bodyStage: store.bodyStage,
         equipped: store.equipped,
         state: 'IDLE',
-        facingRight,
+        facingRight: layout.facingRight,
         frameTick: Math.floor(now / 16),
       });
-      ctx.restore();
+      paperdollCtx.restore();
 
-      ctx.restore(); // Restore dpr scale
+      paperdollCtx.restore(); // Restore paperdollCtx dpr scale
 
       frame = requestAnimationFrame(render);
     };
@@ -599,7 +860,7 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="rounded-full bg-primary px-2 py-0.2 text-[10px] font-black text-primary-foreground">
-                STAGE {stage}
+                第 {stage} 關
               </span>
               <span className="text-xs font-black text-foreground">
                 {GYM_VENUES[currentVenueIdx].nameZh}
@@ -639,96 +900,83 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
       )}
 
       {/* Main Map Interactive Canvas & Overlay Nodes */}
+      {/* QA-08 (4): Layer hierarchy: bottom is map canvas, middle is venue cards, top is paperdoll canvas (pointer-events: none) */}
       <div ref={wrapRef} className="relative min-h-0 flex-1 overflow-hidden bg-[#A8C9C0]">
+        {/* Layer 1: Map Canvas (Lowest, z-0) */}
         <canvas
-          ref={canvasRef}
-          className="absolute inset-0 block h-full w-full"
+          ref={mapCanvasRef}
+          className="absolute inset-0 block h-full w-full z-0"
         />
 
-        {/* YOU ARE HERE Pin floating safely above avatar squad in the clearing */}
-        <div
-          style={{
-            left: `${currentStandPercent.x}%`,
-            top: `${currentStandPercent.y}%`,
-            transform: 'translate(-50%, -74px)',
-          }}
-          className="pointer-events-none absolute z-20 whitespace-nowrap animate-bounce"
-        >
-          <div className="flex items-center gap-1 rounded-full bg-rose-500 px-2.5 py-0.5 text-[10px] font-black text-white shadow-lg border border-white/80">
-            <MapPin className="h-3 w-3 fill-white" />
-            <span>你在這裡</span>
-          </div>
-          <div className="mx-auto -mt-0.5 h-1.5 w-1.5 rotate-45 bg-rose-500 border-r border-b border-white/80" />
-        </div>
+        {/* Layer 2: Teammates Paper Dolls Cluster Hit Areas (Lower transparent hit area, z-10) */}
+        {!isSolo && teammates.length > 0 && partyLayout && (
+          <>
+            {/* Team Cluster Bounding Area (opens first teammate in cluster) */}
+            <button
+              type="button"
+              onClick={() => store.setInspectMemberId(teammates[0].id)}
+              aria-label="檢視隊伍小隊成員"
+              style={{
+                left: `${partyLayout.clusterHitRect.left}px`,
+                top: `${partyLayout.clusterHitRect.top}px`,
+                width: `${partyLayout.clusterHitRect.width}px`,
+                height: `${partyLayout.clusterHitRect.height}px`,
+              }}
+              className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95"
+            />
 
-        {/* Teammates Paper Dolls & Cluster Hit Areas (8px outer expanded) */}
-        {!isSolo && teammates.length > 0 && wrapSize.w > 0 && (() => {
-          const standX = (currentStandPercent.x / 100) * wrapSize.w;
-          const standY = (currentStandPercent.y / 100) * wrapSize.h;
-          const heroScale = 1.05;
-          const teammateScale = heroScale * 0.65;
-          const facingRight = currentVenueIdx % 2 === 1;
-          const cluster = getIslandTeammatesCluster(
-            standX,
-            standY,
-            facingRight,
-            teammates.length,
-            wrapSize.w,
-            wrapSize.h,
-            teammateScale,
-            heroScale,
-          );
+            {/* Individual Teammates Hit Rects (opens that specific teammate) */}
+            {teammates.map((tm, idx) => {
+              const pos = partyLayout.teammatePositions[idx];
+              if (!pos) return null;
+              const { tx, ty } = pos;
+              const hitW = 56 * partyLayout.teammateScale + 16;
+              const hitH = 65 * partyLayout.teammateScale + 16;
+              const hitX = tx - 28 * partyLayout.teammateScale - 8;
+              const hitY = ty - 60 * partyLayout.teammateScale - 8;
 
+              return (
+                <button
+                  key={tm.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    store.setInspectMemberId(tm.id);
+                  }}
+                  aria-label={`檢視隊友 ${tm.nameZh}`}
+                  style={{
+                    left: `${hitX}px`,
+                    top: `${hitY}px`,
+                    width: `${hitW}px`,
+                    height: `${hitH}px`,
+                  }}
+                  className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95 hover:border-amber-400/40"
+                />
+              );
+            })}
+          </>
+        )}
+
+        {/* Layer 2: QA-08 (3) "你在這裡" Badge (z-20, centered horizontally at current venue card, 10px above top edge) */}
+        {(() => {
+          const cardBox = getVenueCardBox(currentVenueIdx);
           return (
-            <>
-              {/* Team Cluster Bounding Area (opens first teammate in cluster) */}
-              <button
-                type="button"
-                onClick={() => store.setInspectMemberId(teammates[0].id)}
-                aria-label="檢視隊伍小隊成員"
-                style={{
-                  left: `${cluster.clusterHitRect.left}px`,
-                  top: `${cluster.clusterHitRect.top}px`,
-                  width: `${cluster.clusterHitRect.width}px`,
-                  height: `${cluster.clusterHitRect.height}px`,
-                }}
-                className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95"
-              />
-
-              {/* Individual Teammates Hit Rects (opens that specific teammate) */}
-              {teammates.map((tm, idx) => {
-                const pos = cluster.positions[idx];
-                if (!pos) return null;
-                const { tx, ty } = pos;
-                const hitW = 56 * teammateScale + 16;
-                const hitH = 65 * teammateScale + 16;
-                const hitX = tx - 28 * teammateScale - 8;
-                const hitY = ty - 60 * teammateScale - 8;
-
-                return (
-                  <button
-                    key={tm.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      store.setInspectMemberId(tm.id);
-                    }}
-                    aria-label={`檢視隊友 ${tm.nameZh}`}
-                    style={{
-                      left: `${hitX}px`,
-                      top: `${hitY}px`,
-                      width: `${hitW}px`,
-                      height: `${hitH}px`,
-                    }}
-                    className="absolute z-10 cursor-pointer rounded-2xl border border-transparent transition-transform duration-120 active:scale-95 hover:border-amber-400/40"
-                  />
-                );
-              })}
-            </>
+            <div
+              style={{
+                left: `${cardBox.cx}px`,
+                top: `${cardBox.top - 10}px`,
+                transform: 'translate(-50%, -100%)',
+              }}
+              className="pointer-events-none absolute z-20 whitespace-nowrap"
+            >
+              <div className="flex h-[20px] items-center justify-center rounded-md bg-[#EA580C] px-2 text-[11px] font-bold text-white shadow-md">
+                <span>你在這裡</span>
+              </div>
+            </div>
           );
         })()}
 
-        {/* 6 Interactive Venue Nodes Overlay */}
+        {/* Layer 2: 6 Interactive Venue Nodes Overlay (z-20) */}
         {GYM_VENUES.map((venue) => {
           const status = getNodeStatus(venue.index);
           const isSelected = selectedVenueIdx === venue.index;
@@ -739,12 +987,15 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
           return (
             <div
               key={venue.index}
+              ref={(el) => {
+                venueCardRefs.current[venue.index] = el;
+              }}
               style={{
                 left: `${venue.mapCoords.x}%`,
                 top: `${venue.mapCoords.y}%`,
                 transform: 'translate(-50%, -50%)',
               }}
-              className="absolute z-10 select-none"
+              className="absolute z-20 select-none"
             >
               {/* Node Button Card */}
               <button
@@ -794,6 +1045,12 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
             </div>
           );
         })}
+
+        {/* Layer 3: Paper-doll Canvas (Top Layer, z-30, pointer-events: none) */}
+        <canvas
+          ref={paperdollCanvasRef}
+          className="pointer-events-none absolute inset-0 block h-full w-full z-30"
+        />
       </div>
 
       {/* Selected Venue Preview Sheet / Bottom Card */}
@@ -802,14 +1059,11 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="rounded-full bg-primary px-1.5 py-0.2 text-[10px] font-black text-primary-foreground">
-                STAGE {selectedVenue.index + 1 + (currentFloor - 1) * 6}
+                第 {selectedVenue.index + 1 + (currentFloor - 1) * 6} 關
               </span>
               <h2 className="truncate text-sm font-black text-foreground">
                 {selectedVenue.nameZh}
               </h2>
-              <span className="text-[10px] font-bold text-muted-foreground">
-                ({selectedVenue.nameEn})
-              </span>
             </div>
             <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
               {selectedVenue.descriptionZh}

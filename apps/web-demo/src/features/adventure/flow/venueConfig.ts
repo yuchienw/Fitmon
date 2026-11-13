@@ -10,6 +10,7 @@ export interface GymVenueInfo {
   descriptionZh: string;
   themeColor: string;
   mapCoords: { x: number; y: number }; // 0..100% position on Gym Island Map
+  partyAnchor?: { x: number; y: number }; // optional party anchor (percentage 0..100% or pixels)
 }
 
 export const GYM_VENUES: GymVenueInfo[] = [

@@ -10,8 +10,14 @@ import {
   ShieldAlert,
   Zap,
 } from 'lucide-react';
-import { useGameStore, SquadMemberState, SQUAD_CANDIDATE_POOL, resolveSquadMemberAvatar } from '../../stores/useGameStore';
-import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../game/pixelSpriteDrawer';
+import {
+  useGameStore,
+  SquadMemberState,
+  SQUAD_CANDIDATE_POOL,
+  resolveSquadMemberAvatar,
+  resolveFriendProfileId,
+} from '../../stores/useGameStore';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../game/pixelSpriteDrawer';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
 import {
   calculateMemberStats,
@@ -131,20 +137,11 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
 
       ctx.restore();
 
-      // Unworked teammate: crisp floating Zzz (18-20px font-weight 900, white 4px stroke, fill #B45309, 8px above head, 10px right)
+      // QA-09: Shared drawZzz for unworked teammate
       if (!member.hasWorkedOutToday) {
-        ctx.save();
         const headTopY = cy - 60 * scale;
         const zOff = reducedMotion ? 0 : Math.sin(now / 320) * 3;
-        ctx.font = '900 18px "Noto Sans TC", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#ffffff';
-        ctx.strokeText('Zzz', cx + 10, headTopY - 8 + zOff);
-        ctx.fillStyle = '#B45309';
-        ctx.fillText('Zzz', cx + 10, headTopY - 8 + zOff);
-        ctx.restore();
+        drawZzz(ctx, cx, headTopY + zOff, scale);
       }
 
       frame = requestAnimationFrame(render);
@@ -183,7 +180,10 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
   // Replace Teammate action (cycles to candidate from pool)
   const handleReplace = () => {
     const candidates = SQUAD_CANDIDATE_POOL.filter(
-      (c) => !store.squadMembers.some((m) => m.id === c.id)
+      (c) =>
+        !store.squadMembers.some(
+          (m) => (resolveFriendProfileId(m.id) || m.id) === c.id
+        )
     );
     if (candidates.length === 0) {
       store.showToast('ℹ️ 目前候選池中沒有其他隊友可替換！');

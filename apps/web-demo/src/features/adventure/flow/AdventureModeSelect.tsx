@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Sparkles, Users, User, ChevronRight, Trophy, Gift, Wrench } from 'lucide-react';
 import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameStore';
-import { drawCreamChibiSilhouette, drawMapleChibiAvatar } from '../../../game/pixelSpriteDrawer';
+import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { getVenueForStage } from './venueConfig';
 import { AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
 
@@ -160,15 +160,8 @@ const ModeIslandCanvas: React.FC<ModeIslandCanvasProps> = ({ hero, teammates }) 
           ctx.restore();
 
           if (!tm.hasWorkedOutToday) {
-            ctx.save();
-            ctx.font = '900 13px "Noto Sans TC", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.lineWidth = 3.5;
-            ctx.strokeStyle = '#ffffff';
-            ctx.strokeText('Zzz', tx + 6, ty - 70);
-            ctx.fillStyle = '#B45309';
-            ctx.fillText('Zzz', tx + 6, ty - 70);
-            ctx.restore();
+            const headTopY = ty - 60 * 1.3;
+            drawZzz(ctx, tx, headTopY, 1.3);
           }
         });
 
@@ -287,9 +280,6 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
       <div className="mb-2.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="text-base font-black text-foreground">冒險之島</span>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 border border-amber-300">
-            🍁 Maple Daylight
-          </span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -372,7 +362,7 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
                 <span>自己挑戰</span>
               </div>
               <div className="mt-0.5 text-[11px] font-bold text-muted-foreground">
-                進度：STAGE {store.soloStage} · {soloVenue.nameZh}
+                進度：第 {store.soloStage} 關 · {soloVenue.nameZh}
               </div>
             </div>
             <div className="flex items-center gap-1 rounded-xl bg-orange-100 px-2.5 py-1 text-xs font-black text-orange-700 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -416,7 +406,7 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
                 <span>和朋友一起打</span>
               </div>
               <div className="mt-0.5 text-[11px] font-bold text-muted-foreground">
-                進度：STAGE {store.squadStage} · {squadVenue.nameZh}（{1 + store.squadMembers.length}/4 人）
+                進度：第 {store.squadStage} 關 · {squadVenue.nameZh}（{1 + store.squadMembers.length}/4 人）
               </div>
             </div>
             <div className="flex items-center gap-1 rounded-xl bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-800 group-hover:bg-emerald-600 group-hover:text-white transition-colors">

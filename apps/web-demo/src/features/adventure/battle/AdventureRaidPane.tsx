@@ -126,6 +126,7 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
         later(() => {
           setVictory({
             clearedStage: stageBefore,
+            stage: stageBefore,
             boss: bossBefore,
             finalBlowDamage: result.damage,
             attackTypeLabel: result.attackTypeLabel,
