@@ -19,6 +19,8 @@ import {
 } from '../../stores/useGameStore';
 import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../game/pixelSpriteDrawer';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
+import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
+import { FRIEND_PROFILES } from '../../config/catalogConfig';
 import {
   calculateMemberStats,
   EQUIP_SLOTS_ORDER,
@@ -52,6 +54,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
   const touchStartY = useRef<number | null>(null);
   const [touchDeltaY, setTouchDeltaY] = useState(0);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const squadMembers = store.squadMembers;
   const currentIdx = squadMembers.findIndex((m) => m.id === memberId);
@@ -60,6 +63,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (squadMembers.length <= 1) return;
+    setIsPickerOpen(false);
     setIsSwitching(true);
     const nextIdx = (currentIdx - 1 + squadMembers.length) % squadMembers.length;
     onSelectMember?.(squadMembers[nextIdx].id);
@@ -69,6 +73,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (squadMembers.length <= 1) return;
+    setIsPickerOpen(false);
     setIsSwitching(true);
     const nextIdx = (currentIdx + 1) % squadMembers.length;
     onSelectMember?.(squadMembers[nextIdx].id);
@@ -177,22 +182,18 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
     setTouchDeltaY(0);
   };
 
-  // Replace Teammate action (cycles to candidate from pool)
+  // Replace Teammate action: opens candidate picker
   const handleReplace = () => {
-    const candidates = SQUAD_CANDIDATE_POOL.filter(
-      (c) =>
-        !store.squadMembers.some(
-          (m) => (resolveFriendProfileId(m.id) || m.id) === c.id
-        )
-    );
-    if (candidates.length === 0) {
-      store.showToast('ℹ️ 目前候選池中沒有其他隊友可替換！');
-      return;
-    }
-    const nextCandidate = candidates[0];
-    store.recruitSquadMember(nextCandidate);
-    onSelectMember?.(nextCandidate.id);
+    setIsPickerOpen(true);
   };
+
+  const availableCandidates = SQUAD_CANDIDATE_POOL.filter((c) => {
+    const candResolved = resolveFriendProfileId(c.id) || c.id;
+    return !squadMembers.some(
+      (m) => (resolveFriendProfileId(m.id) || m.id) === candResolved
+    );
+  });
+  const currentShortName = member.nameZh.split(/[·・]/)[1]?.trim() || member.nameZh;
 
   // Refresh Teammate Avatar cache from id-exact sources (PR #2 QA Spec)
   const handleRefresh = (e: React.MouseEvent) => {
@@ -479,6 +480,102 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Swap Teammate Picker Sheet */}
+      {isPickerOpen && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsPickerOpen(false);
+          }}
+          className="absolute inset-0 z-50 flex flex-col justify-end bg-[#29221e]/45 backdrop-blur-[2px] transition-opacity duration-180"
+        >
+          <div
+            data-testid="swap-picker"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              paddingBottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
+            }}
+            className={`retro-box max-h-[72vh] w-full overflow-y-auto rounded-t-[20px] border-t-2 border-[#e5dccb] bg-[#faf6f0] p-4 text-[#29221e] shadow-2xl font-black ${
+              reducedMotion ? 'animate-fade-in' : 'animate-slide-up'
+            }`}
+          >
+            {/* Pull Indicator */}
+            <div className="mx-auto -mt-1 mb-2.5 h-1.5 w-10 rounded-full bg-[#e5dccb]" />
+
+            {/* Header: Title & Subtitle */}
+            <div className="mb-3 text-center">
+              <h3 className="text-sm font-black text-[#29221e]">選擇要換上的隊員</h3>
+              <p className="mt-0.5 truncate text-xs font-bold text-[#786b63]">
+                換下：{currentShortName}
+              </p>
+            </div>
+
+            {/* Candidate List */}
+            {availableCandidates.length === 0 ? (
+              <div className="py-8 text-center text-xs font-bold text-[#786b63]">
+                目前候選池中沒有其他隊友可替換
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {availableCandidates.map((candidate) => {
+                  const avatar = resolveSquadMemberAvatar(candidate);
+                  const profileId = resolveFriendProfileId(candidate.id);
+                  const profile = profileId
+                    ? FRIEND_PROFILES.find((p) => p.id === profileId)
+                    : undefined;
+                  const levelText = profile?.level != null ? `Lv.${profile.level}` : null;
+
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      data-testid={`swap-candidate-${candidate.id}`}
+                      onClick={() => {
+                        store.replaceSquadMember(member.id, candidate);
+                        setIsPickerOpen(false);
+                        onSelectMember?.(candidate.id);
+                      }}
+                      className="retro-btn flex w-full items-center gap-2.5 rounded-xl border border-[#e5dccb] bg-[#ffffff] p-2 text-left text-[#29221e] shadow-xs transition-colors hover:bg-[#efe8dc]/50 active:scale-[0.99]"
+                    >
+                      <AvatarPortraitCanvas
+                        bodyStage={avatar.bodyStage}
+                        equipped={avatar.equipped}
+                        status={avatar.status}
+                        size={40}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-xs font-black text-[#29221e]">
+                            {candidate.nameZh}
+                          </span>
+                          {levelText && (
+                            <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-black text-amber-900 border border-amber-300">
+                              {levelText}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 truncate text-[11px] font-bold text-[#786b63]">
+                          {candidate.roleBadgeZh}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Cancel Button */}
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen(false)}
+              className="retro-btn mt-3 flex w-full items-center justify-center rounded-xl border border-[#e5dccb] bg-[#ffffff] py-2.5 text-xs font-black text-[#29221e] hover:bg-[#efe8dc] active:translate-y-0.5 shadow-xs"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
