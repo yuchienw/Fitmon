@@ -391,20 +391,18 @@
 
 /* ============================================================================
    ADVENTURE BATTLE — cream Maple daylight (P0)
-   Battle canvas height = 100dvh − TopHeader − BottomNav − SkillDeck(120px).
-   The live shell already subtracts the real header and nav; the raid pane then
-   reserves --adventure-skill-deck-h so the stage matches that formula.
+   Battle canvas flexes dynamically with SkillDeck docked at bottom above BottomNav.
+   The live shell subtracts TopHeader and BottomNav; the battle stage canvas
+   shrinks to fit the deck's natural content height.
    Do not put game-stage-dark on this arena. That class stays for non-adventure
    surfaces and a possible P2 night skin.
    ============================================================================ */
 :root {
   --adventure-top-header-h: calc(var(--safe-top, 0px) + 48px);
   --adventure-bottom-nav-h: calc(48px + 0.375rem + 0.375rem + var(--safe-bottom, 0px));
-  --adventure-skill-deck-h: 120px;
+  --adventure-skill-deck-h: auto;
   --adventure-hud-h: 56px;
-  --adventure-battle-canvas-h: calc(
-    100dvh - var(--adventure-top-header-h) - var(--adventure-bottom-nav-h) - var(--adventure-skill-deck-h)
-  );
+  --adventure-battle-canvas-h: auto;
 }
 
 .adventure-shell {
@@ -440,13 +438,15 @@
 }
 
 .adventure-battle-canvas {
-  height: var(--adventure-battle-canvas-h);
+  flex: 1 1 0%;
+  min-height: 80px;
   max-height: 100%;
 }
 
 .adventure-skill-deck {
-  height: var(--adventure-skill-deck-h);
-  flex: 0 0 var(--adventure-skill-deck-h);
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   background: var(--color-card);
   border-top: 2px solid var(--color-border);
   box-shadow: var(--shadow-card);

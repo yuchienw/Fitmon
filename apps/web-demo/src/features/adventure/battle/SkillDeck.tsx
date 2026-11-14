@@ -52,7 +52,7 @@ export const SkillDeck: React.FC<SkillDeckProps> = ({
         backgroundColor: '#FFFDF8',
         borderTop: '1.5px solid #E5DCCB',
       }}
-      className="adventure-skill-deck box-border flex shrink-0 flex-col p-3 space-y-2.5 shadow-lg"
+      className="adventure-skill-deck box-border flex flex-col px-3 pt-3 pb-7 space-y-2.5 shadow-lg min-h-0 overflow-y-auto"
       data-testid="skill-deck"
       aria-label="技能與出擊"
     >
