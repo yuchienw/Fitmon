@@ -1098,7 +1098,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TeammateInspectSheet (組隊確認／島／爬塔／我的隊伍清單 共用)          */}
       {/* ================================================================= */}
-      {store.inspectMemberId && !(mainSubTab === 'raid' && adventureStep === 'battle') && (
+      {store.inspectMemberId && store.squadMembers.length > 0 && !(mainSubTab === 'raid' && adventureStep === 'battle') && (
         <TeammateInspectSheet
           memberId={store.inspectMemberId}
           context={
@@ -1226,7 +1226,9 @@ export const PlazaTab: React.FC = () => {
                 全隊同步殘餘血量：{currentHp.toLocaleString()} / {maxHp.toLocaleString()} HP
               </div>
               <div className="p-2 rounded-lg bg-slate-950/90 border border-slate-800 text-[11px] text-amber-300 font-bold leading-relaxed">
-                {missingMember
+                {store.squadMembers.length === 0
+                  ? `「隊伍目前只有你一人（1/4），快去運動打卡或邀請朋友入隊，一起消磨【${bossTemplate.nameZh}】的血量！」`
+                  : missingMember
                   ? `「全隊出勤 ${legitSquadCount}/${totalSquadSize}！@${missingMember.nameZh} 快去運動跑組間休息，一起消磨【${bossTemplate.nameZh}】的血量！」`
                   : `「全隊全員狂暴啟動中！快上線給 ${bossTemplate.nameZh} 最後一擊！」`}
               </div>

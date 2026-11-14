@@ -51,23 +51,35 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
 
   const squadMembers = store.squadMembers;
   const currentIdx = squadMembers.findIndex((m) => m.id === memberId);
-  const member = currentIdx >= 0 ? squadMembers[currentIdx] : squadMembers[0];
+  const member = currentIdx >= 0 ? squadMembers[currentIdx] : (squadMembers[0] ?? null);
+
+  useEffect(() => {
+    if (!member) {
+      onClose();
+    }
+  }, [member, onClose]);
 
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (squadMembers.length <= 1) return;
+    if (squadMembers.length <= 1 || currentIdx < 0) return;
     setIsSwitching(true);
     const nextIdx = (currentIdx - 1 + squadMembers.length) % squadMembers.length;
-    onSelectMember?.(squadMembers[nextIdx].id);
+    const target = squadMembers[nextIdx];
+    if (target) {
+      onSelectMember?.(target.id);
+    }
     setTimeout(() => setIsSwitching(false), 160);
   };
 
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (squadMembers.length <= 1) return;
+    if (squadMembers.length <= 1 || currentIdx < 0) return;
     setIsSwitching(true);
     const nextIdx = (currentIdx + 1) % squadMembers.length;
-    onSelectMember?.(squadMembers[nextIdx].id);
+    const target = squadMembers[nextIdx];
+    if (target) {
+      onSelectMember?.(target.id);
+    }
     setTimeout(() => setIsSwitching(false), 160);
   };
 
