@@ -356,9 +356,9 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
   };
 
   return (
-    <div className="adventure-shell flex min-h-0 flex-1 flex-col overflow-y-auto px-3.5 py-3 pb-8">
+    <div className="adventure-shell flex min-h-0 flex-1 flex-col px-3.5 pt-3 pb-nav-hero-clearance">
       {/* Top Header */}
-      <header className="mb-2.5 flex items-center justify-between">
+      <header className="mb-2.5 shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -387,43 +387,45 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
         </div>
       </header>
 
-      {/* Boss Done Today Banner (Screen 6) */}
-      {bossDoneToday && (
-        <div
-          style={{
-            backgroundColor: '#FFF7ED',
-            borderColor: '#FED7AA',
-          }}
-          className="rounded-2xl border-[1.5px] p-3 mb-3 text-left shadow-xs"
-        >
-          <div className="text-sm font-black text-[#29221E]">
-            今天已出擊，明天 00:00 再來
-          </div>
-          <div className="text-xs text-[#786B63] mt-0.5 font-bold">
-            {formatResetCountdown(store.getNextResetAt(nowMs), nowMs)}
-          </div>
-        </div>
-      )}
-
-      {/* Venue Banner */}
-      <div className="retro-box mb-3 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-3 border-amber-200">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-[11px] font-black text-amber-900">
-              選擇場館 · {venue.nameZh}
+      {/* Scrollable Middle Area: Banners & Floors List */}
+      <div className="min-h-0 flex-1 overflow-y-auto space-y-3 pr-0.5">
+        {/* Boss Done Today Banner (Screen 6) */}
+        {bossDoneToday && (
+          <div
+            style={{
+              backgroundColor: '#FFF7ED',
+              borderColor: '#FED7AA',
+            }}
+            className="rounded-2xl border-[1.5px] p-3 text-left shadow-xs"
+          >
+            <div className="text-sm font-black text-[#29221E]">
+              今天已出擊，明天 00:00 再來
             </div>
-            <div className="text-[10px] font-bold text-amber-800">
-              {venue.descriptionZh}
+            <div className="text-xs text-[#786B63] mt-0.5 font-bold">
+              {formatResetCountdown(store.getNextResetAt(nowMs), nowMs)}
             </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Tower Floors List (Highest on top, like 03-venue-tower.jpg) */}
-      <div className="space-y-2">
+        {/* Venue Banner */}
+        <div className="retro-box rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-3 border-amber-200">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="text-[11px] font-black text-amber-900">
+                選擇場館 · {venue.nameZh}
+              </div>
+              <div className="text-[10px] font-bold text-amber-800">
+                {venue.descriptionZh}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tower Floors List (Highest on top, like 03-venue-tower.jpg) */}
+        <div className="space-y-2 pb-1">
         {floors.map((floor) => {
           const status = getFloorStatus(floor);
           const stageNumber = getStageForVenueFloor(venueIndex, floor);
@@ -676,13 +678,15 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Bottom Boss Preview Sheet & Enter Battle CTA (as in 03-venue-tower.jpg) */}
-      <div className="retro-box mt-4 rounded-2xl bg-card p-3 shadow-lg">
-        <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-          首領預覽 · 樓層關卡預覽
-        </div>
+      <div className="shrink-0 pt-2.5">
+        <div className="retro-box rounded-2xl bg-card p-3 shadow-lg">
+          <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+            首領預覽 · 樓層關卡預覽
+          </div>
 
         <div className="flex items-center gap-3">
           {/* Boss SVG illustration */}
@@ -804,6 +808,7 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
