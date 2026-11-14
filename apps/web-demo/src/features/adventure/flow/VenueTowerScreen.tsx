@@ -534,7 +534,9 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              store.setInspectMemberId(teammates[0].id);
+                              if (teammates[0]) {
+                                store.setInspectMemberId(teammates[0].id);
+                              }
                             }}
                             aria-label="檢視小隊成員"
                             style={{

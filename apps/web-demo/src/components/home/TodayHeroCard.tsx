@@ -134,7 +134,11 @@ export const TodayHeroCard: React.FC = () => {
       >
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-extrabold text-[#786B63]">隊友今天</div>
-          {activeTeammates.length > 0 ? (
+          {store.squadMembers.length === 0 ? (
+            <div className="text-[11.5px] text-[#786B63] mt-0.5">
+              隊伍尚無隊友，邀請朋友一起打
+            </div>
+          ) : activeTeammates.length > 0 ? (
             <div className="flex items-center gap-1.5 mt-1">
               <div className="flex items-center -space-x-1">
                 {activeTeammates.slice(0, 3).map((m, idx) => {
@@ -166,7 +170,7 @@ export const TodayHeroCard: React.FC = () => {
           )}
         </div>
         <span className="text-[12px] font-black text-[#C2410C] shrink-0">
-          查看
+          {store.squadMembers.length === 0 ? '邀請' : '查看'}
         </span>
       </div>
 

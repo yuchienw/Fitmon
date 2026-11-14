@@ -260,6 +260,9 @@ export function getSquadInviteCode(squadName?: string | null): string {
 }
 
 export function resolveSquadMemberAvatar(member: SquadMemberState): ResolvedSquadAvatar {
+  if (!member) {
+    return { status: 'syncing', source: 'cache', equipped: {} };
+  }
   // 1. Full self data: bodyStage has a value and equipped is an object
   if (member.bodyStage && member.equipped && typeof member.equipped === 'object') {
     if (!member.avatarCache || member.avatarCache.bodyStage !== member.bodyStage) {
@@ -1128,69 +1131,7 @@ export const useGameStore = create<GameState>()(
       squadStage: 2,
       squadBossHp: 1150,
       squadName: '🔥 腿日絕不缺席戰隊',
-      squadMembers: [
-        {
-          id: 'friend_akai',
-          nameZh: '重訓狂人 · 阿凱',
-          roleType: 'phy',
-          roleBadgeZh: '🥊 物攻專精',
-          gearDescZh: '紅黑健力服 + 奧林匹亞金槓',
-          hasWorkedOutToday: true,
-          workoutAuditZh: '✅ 胸背重訓 8組 · 組間計時完整 (38分鐘)',
-          isSuspectedCheater: false,
-          comboSkillAppliedZh: '🔨 已施放【破甲重擊】：下位隊友魔攻 ×2.0 倍',
-          damageDealt: 650,
-          nudgedCount: 0,
-          bodyStage: 'powerlifter',
-          equipped: {
-            hair: 'hair_maple_cap',
-            face: 'face_pixel_shades',
-            top: 'top_pump_cover',
-            bottom: 'bottom_camo_joggers',
-            accessory: 'acc_protein_shaker',
-          },
-        },
-        {
-          id: 'user_leo',
-          nameZh: '街頭健體 · Leo',
-          roleType: 'phy',
-          roleBadgeZh: '🥊 力量型',
-          gearDescZh: '黑魂訓練吊嘎 + 鑄鐵啞鈴',
-          hasWorkedOutToday: true,
-          workoutAuditZh: '🤥 耗時 5 秒狂按 6 組深蹲 (組間休息 0秒 · 疑似空氣健身)',
-          isSuspectedCheater: true,
-          damageDealt: 15,
-          nudgedCount: 0,
-          bodyStage: 'aesthetic',
-          equipped: {
-            hair: 'hair_spiky_gold',
-            face: 'face_confident_smile',
-            top: 'top_bare_muscles',
-            bottom: 'bottom_camo_joggers',
-            accessory: 'acc_iron_dumbbell',
-          },
-        },
-        {
-          id: 'friend_alice',
-          nameZh: '有氧女神 · 小愛',
-          roleType: 'mag',
-          roleBadgeZh: '🪄 魔攻破盾',
-          gearDescZh: '綠光泵感寬T + 迷彩跑褲',
-          hasWorkedOutToday: false,
-          workoutAuditZh: '⚠️ 今日尚未運動打卡',
-          isSuspectedCheater: false,
-          damageDealt: 0,
-          nudgedCount: 0,
-          bodyStage: 'aesthetic',
-          equipped: {
-            hair: 'hair_ headband_red',
-            face: 'face_confident_smile',
-            top: 'top_crimson_sbd',
-            bottom: 'bottom_gold_tights',
-            accessory: 'acc_iron_dumbbell',
-          },
-        },
-      ],
+      squadMembers: [],
       personalMaxStage: 1,
       squadMaxStage: 2,
       personalMaxDamage: 680,

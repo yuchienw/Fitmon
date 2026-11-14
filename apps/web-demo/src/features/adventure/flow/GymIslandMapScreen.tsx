@@ -914,7 +914,11 @@ export const GymIslandMapScreen: React.FC<GymIslandMapScreenProps> = ({
             {/* Team Cluster Bounding Area (opens first teammate in cluster) */}
             <button
               type="button"
-              onClick={() => store.setInspectMemberId(teammates[0].id)}
+              onClick={() => {
+                if (teammates[0]) {
+                  store.setInspectMemberId(teammates[0].id);
+                }
+              }}
               aria-label="檢視隊伍小隊成員"
               style={{
                 left: `${partyLayout.clusterHitRect.left}px`,
