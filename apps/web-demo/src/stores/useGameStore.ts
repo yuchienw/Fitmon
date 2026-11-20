@@ -2933,15 +2933,17 @@ export const useGameStore = create<GameState>()(
         state.showToast(res.result?.toastMessage || '已送出組隊邀請');
 
         // 測試用，上線前移除：若對方是假角色，2.5s 後自動以 80% 同意 / 20% 拒絕回應
-        const timer = setTimeout(() => {
-          pendingAutoReplyTimers.delete(id);
-          const current = get().squadInvites.find((i) => i.id === id);
-          if (current && current.status === 'pending') {
-            const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
-            get().resolvePendingAsFake({ id, accept });
-          }
-        }, 2500);
-        pendingAutoReplyTimers.set(id, timer);
+        if (IS_DEMO) {
+          const timer = setTimeout(() => {
+            pendingAutoReplyTimers.delete(id);
+            const current = get().squadInvites.find((i) => i.id === id);
+            if (current && current.status === 'pending') {
+              const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
+              get().resolvePendingAsFake({ id, accept });
+            }
+          }, 2500);
+          pendingAutoReplyTimers.set(id, timer);
+        }
       },
 
       sendJoinRequest: (squadId, source = 'code') => {
@@ -2967,15 +2969,17 @@ export const useGameStore = create<GameState>()(
         state.showToast(res.result?.toastMessage || '已送出入隊請求');
 
         // 測試用，上線前移除
-        const timer = setTimeout(() => {
-          pendingAutoReplyTimers.delete(id);
-          const current = get().squadInvites.find((i) => i.id === id);
-          if (current && current.status === 'pending') {
-            const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
-            get().resolvePendingAsFake({ id, accept });
-          }
-        }, 2500);
-        pendingAutoReplyTimers.set(id, timer);
+        if (IS_DEMO) {
+          const timer = setTimeout(() => {
+            pendingAutoReplyTimers.delete(id);
+            const current = get().squadInvites.find((i) => i.id === id);
+            if (current && current.status === 'pending') {
+              const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
+              get().resolvePendingAsFake({ id, accept });
+            }
+          }, 2500);
+          pendingAutoReplyTimers.set(id, timer);
+        }
       },
 
       acceptInvite: (id) => {
@@ -3395,6 +3399,7 @@ export const useGameStore = create<GameState>()(
 
       // 測試用，上線前移除
       resolvePendingAsFake: ({ id, accept }) => {
+        if (!IS_DEMO) return;
         const state = get();
         const item = state.squadInvites.find((i) => i.id === id);
         if (!item || item.status !== 'pending') return;
@@ -3440,7 +3445,26 @@ export const useGameStore = create<GameState>()(
           state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
-        if (res.patch) set(res.patch);
+
+        const now = Date.now();
+        const resultNotif: NotificationItem = {
+          id: `notif_res_${now}_${Math.random().toString(36).slice(2, 8)}`,
+          type: accept ? 'result_success' : 'result_failure',
+          actorId: item.toId,
+          squadName: item.squadName || state.squadName,
+          createdAt: now,
+          status: 'info',
+          refId: item.id,
+        };
+
+        const currentNotifs = res.patch?.notifications ?? state.notifications ?? [];
+        const nextNotifs = pruneNotifications([...currentNotifs, resultNotif], now);
+
+        set({
+          ...(res.patch || {}),
+          notifications: nextNotifs,
+        });
+
         if (accept) {
           state.showToast(res.result?.toastMessage || '🎉 對方已同意！');
         } else {

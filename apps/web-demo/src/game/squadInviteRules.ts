@@ -1217,6 +1217,27 @@ export function applySquadSocialAction(
         if (fakeSquad) squadName = fakeSquad.name;
       }
 
+      const isIncomingToPlayer = toId === state.playerId || isSameMember(toId, state.playerId);
+      let notifId: string | null = null;
+      let nextNotifications = state.notifications;
+      if (isIncomingToPlayer) {
+        notifId = `notif_invite_${id}`;
+        const newNotif: NotificationItem = {
+          id: notifId,
+          type: 'squad_invite',
+          actorId: fromId,
+          squadName,
+          createdAt: now,
+          status: 'pending',
+          expiresAt: now + INVITE_TTL_MS,
+          refId: id,
+        };
+        nextNotifications = pruneNotifications(
+          [...(state.notifications || []), newNotif],
+          now
+        );
+      }
+
       const newItem: SquadInviteItem = {
         id,
         kind: 'invite',
@@ -1227,14 +1248,17 @@ export function applySquadSocialAction(
         squadId,
         squadName,
         source,
-        notificationId: null,
+        notificationId: notifId,
         createdAt: now,
         expiresAt: now + INVITE_TTL_MS,
       };
 
       return {
         ok: true,
-        patch: { squadInvites: [...invites, newItem] },
+        patch: {
+          squadInvites: [...invites, newItem],
+          ...(isIncomingToPlayer && nextNotifications ? { notifications: nextNotifications } : {}),
+        },
         result: {
           type: 'invite_sent',
           invite: newItem,
@@ -1345,6 +1369,27 @@ export function applySquadSocialAction(
         };
       }
 
+      const isIncomingToPlayer = toId === state.playerId || isSameMember(toId, state.playerId);
+      let notifId: string | null = null;
+      let nextNotifications = state.notifications;
+      if (isIncomingToPlayer) {
+        notifId = `notif_req_${id}`;
+        const newNotif: NotificationItem = {
+          id: notifId,
+          type: 'join_request',
+          actorId: fromId,
+          squadName: targetSquadName,
+          createdAt: now,
+          status: 'pending',
+          expiresAt: now + INVITE_TTL_MS,
+          refId: id,
+        };
+        nextNotifications = pruneNotifications(
+          [...(state.notifications || []), newNotif],
+          now
+        );
+      }
+
       const newItem: SquadInviteItem = {
         id,
         kind: 'request',
@@ -1355,14 +1400,17 @@ export function applySquadSocialAction(
         squadId,
         squadName: targetSquadName,
         source,
-        notificationId: null,
+        notificationId: notifId,
         createdAt: now,
         expiresAt: now + INVITE_TTL_MS,
       };
 
       return {
         ok: true,
-        patch: { squadInvites: [...invites, newItem] },
+        patch: {
+          squadInvites: [...invites, newItem],
+          ...(isIncomingToPlayer && nextNotifications ? { notifications: nextNotifications } : {}),
+        },
         result: {
           type: 'request_sent',
           request: newItem,
@@ -1724,6 +1772,16 @@ export function applySquadSocialAction(
         now
       );
 
+      let updatedNotifications = state.notifications;
+      if (state.notifications) {
+        updatedNotifications = state.notifications.map((n) => {
+          if (n.id === item.id || n.refId === item.id || (item.notificationId && n.id === item.notificationId)) {
+            return { ...n, status: 'accepted' };
+          }
+          return n;
+        });
+      }
+
       return {
         ok: true,
         patch: {
@@ -1731,6 +1789,7 @@ export function applySquadSocialAction(
           squadInvites: updatedInvites,
           squadJoinOrder: newJoinOrder,
           recentTeammates: newRecentTeammates,
+          ...(updatedNotifications ? { notifications: updatedNotifications } : {}),
         },
         result: {
           type: 'joined',
@@ -1767,9 +1826,21 @@ export function applySquadSocialAction(
       const updatedInvites = invites.map((inv) =>
         inv.id === id ? { ...inv, status: 'declined' as const, expiresAt: now } : inv
       );
+      let updatedNotifications = state.notifications;
+      if (state.notifications) {
+        updatedNotifications = state.notifications.map((n) => {
+          if (n.id === id || n.refId === id || (item.notificationId && n.id === item.notificationId)) {
+            return { ...n, status: 'declined' };
+          }
+          return n;
+        });
+      }
       return {
         ok: true,
-        patch: { squadInvites: updatedInvites },
+        patch: {
+          squadInvites: updatedInvites,
+          ...(updatedNotifications ? { notifications: updatedNotifications } : {}),
+        },
         result: {
           type: 'declined',
           toastMessage: '已拒絕邀請',
@@ -1804,9 +1875,21 @@ export function applySquadSocialAction(
       const updatedInvites = invites.map((inv) =>
         inv.id === id ? { ...inv, status: 'declined' as const, expiresAt: now } : inv
       );
+      let updatedNotifications = state.notifications;
+      if (state.notifications) {
+        updatedNotifications = state.notifications.map((n) => {
+          if (n.id === id || n.refId === id || (item.notificationId && n.id === item.notificationId)) {
+            return { ...n, status: 'declined' };
+          }
+          return n;
+        });
+      }
       return {
         ok: true,
-        patch: { squadInvites: updatedInvites },
+        patch: {
+          squadInvites: updatedInvites,
+          ...(updatedNotifications ? { notifications: updatedNotifications } : {}),
+        },
         result: {
           type: 'declined',
           toastMessage: '已拒絕請求',
@@ -1841,9 +1924,21 @@ export function applySquadSocialAction(
       const updatedInvites = invites.map((inv) =>
         inv.id === id ? { ...inv, status: 'cancelled' as const, expiresAt: now } : inv
       );
+      let updatedNotifications = state.notifications;
+      if (state.notifications) {
+        updatedNotifications = state.notifications.map((n) => {
+          if (n.id === id || n.refId === id || (item.notificationId && n.id === item.notificationId)) {
+            return { ...n, status: 'invalid' };
+          }
+          return n;
+        });
+      }
       return {
         ok: true,
-        patch: { squadInvites: updatedInvites },
+        patch: {
+          squadInvites: updatedInvites,
+          ...(updatedNotifications ? { notifications: updatedNotifications } : {}),
+        },
         result: {
           type: 'cancelled',
           toastMessage: '已取消',

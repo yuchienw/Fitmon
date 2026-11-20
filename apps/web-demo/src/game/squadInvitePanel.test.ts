@@ -25,6 +25,7 @@ import { SOCIAL_RATE_LIMITS } from '../config/economy.ts';
 import { type DemoSearchablePlayer } from '../config/demo.ts';
 import { BOSS_REWARD_ALREADY_CLAIMED_NOTE } from './squadMembershipRules.ts';
 import { getBossRewardWeekKey } from './economyRules.ts';
+import { NOTIFICATION_VIEW_WHITELIST } from './notificationCenter.ts';
 
 const BASE_TIME = 1774000000000; // Fixed timestamp for deterministic tests
 
@@ -1153,6 +1154,194 @@ describe('T3-D8 Squad Invite Rules & Invite Panel Logic', () => {
       assert.ok(!text.includes('HP'));
       assert.ok(!text.includes('消磨血量'));
       assert.ok(!text.includes('fitmon.app'));
+    });
+  });
+
+  describe('7. Bell Notification Integration (Incoming Invites & Switch)', () => {
+    it('incoming sendInvite creates a squad_invite notification with refId = invite id and no health/workout fields', () => {
+      const state = createBaseSnapshot({
+        notifications: [],
+      });
+      const inviteId = 'incoming_inv_test_1';
+      const res = applySquadSocialAction(
+        state,
+        {
+          type: 'sendInvite',
+          id: inviteId,
+          fromId: 'leader_beta',
+          toId: DEMO_PLAYER_ID,
+          squadId: 'squad_beta',
+          source: 'friend',
+        },
+        BASE_TIME,
+        mockFakeSquads,
+        mockDirectory
+      );
+
+      assert.equal(res.ok, true);
+      assert.ok(res.patch?.notifications);
+      assert.equal(res.patch.notifications.length, 1);
+
+      const notif = res.patch.notifications[0];
+      assert.equal(notif.type, 'squad_invite');
+      assert.equal(notif.refId, inviteId);
+      assert.equal(notif.actorId, 'leader_beta');
+      assert.equal(notif.squadName, '貝塔力量隊');
+      assert.equal(notif.status, 'pending');
+      assert.equal(notif.createdAt, BASE_TIME);
+      assert.equal(notif.expiresAt, BASE_TIME + 24 * 60 * 60 * 1000);
+
+      // Invite item notificationId links to the notification id
+      const createdInvite = res.patch.squadInvites?.find((i) => i.id === inviteId);
+      assert.ok(createdInvite);
+      assert.equal(createdInvite?.notificationId, notif.id);
+
+      // Sensitive fields check (no health, rest, workout, stamina, coins, xp data)
+      const sensitiveKeys = ['health', 'rest', 'workout', 'stamina', 'coins', 'xp', 'heartRate', 'steps'];
+      for (const key of sensitiveKeys) {
+        assert.equal((notif as any)[key], undefined, `Notification must not contain ${key}`);
+      }
+      for (const key of Object.keys(notif)) {
+        assert.ok(
+          NOTIFICATION_VIEW_WHITELIST.includes(key as any),
+          `Key "${key}" must be strictly in NOTIFICATION_VIEW_WHITELIST`
+        );
+      }
+    });
+
+    it('incoming sendJoinRequest to player squad creates a join_request notification with refId = request id and no sensitive fields', () => {
+      const state = createBaseSnapshot({
+        notifications: [],
+      });
+      const reqId = 'incoming_req_test_1';
+      const res = applySquadSocialAction(
+        state,
+        {
+          type: 'sendJoinRequest',
+          id: reqId,
+          fromId: 'friend_bob',
+          squadId: 'squad_alpha', // Player's squad
+          source: 'code',
+        },
+        BASE_TIME,
+        mockFakeSquads,
+        mockDirectory
+      );
+
+      assert.equal(res.ok, true);
+      assert.ok(res.patch?.notifications);
+      assert.equal(res.patch.notifications.length, 1);
+
+      const notif = res.patch.notifications[0];
+      assert.equal(notif.type, 'join_request');
+      assert.equal(notif.refId, reqId);
+      assert.equal(notif.actorId, 'friend_bob');
+      assert.equal(notif.squadName, '阿爾法戰隊');
+      assert.equal(notif.status, 'pending');
+
+      const createdReq = res.patch.squadInvites?.find((i) => i.id === reqId);
+      assert.equal(createdReq?.notificationId, notif.id);
+
+      for (const key of Object.keys(notif)) {
+        assert.ok(
+          NOTIFICATION_VIEW_WHITELIST.includes(key as any),
+          `Key "${key}" must be strictly in NOTIFICATION_VIEW_WHITELIST`
+        );
+      }
+    });
+
+    it('accept from notification marks that card accepted and other pending squad_invite cards invalid; payload has no health/workout fields', () => {
+      const notifBetaId = 'notif_beta_test';
+      const inviteBetaId = 'inv_beta_test';
+      const notifOtherId = 'notif_other_test';
+      const inviteOtherId = 'inv_other_test';
+
+      const state = createBaseSnapshot({
+        squadMembers: [],
+        squadInvites: [
+          {
+            id: inviteBetaId,
+            kind: 'invite',
+            status: 'pending',
+            fromId: 'leader_beta',
+            toId: DEMO_PLAYER_ID,
+            targetId: DEMO_PLAYER_ID,
+            squadId: 'squad_beta',
+            squadName: '貝塔力量隊',
+            source: 'friend',
+            notificationId: notifBetaId,
+            createdAt: BASE_TIME,
+            expiresAt: BASE_TIME + 86400000,
+          },
+          {
+            id: inviteOtherId,
+            kind: 'invite',
+            status: 'pending',
+            fromId: 'leader_other',
+            toId: DEMO_PLAYER_ID,
+            targetId: DEMO_PLAYER_ID,
+            squadId: 'squad_other',
+            squadName: '其他戰隊',
+            source: 'code',
+            notificationId: notifOtherId,
+            createdAt: BASE_TIME,
+            expiresAt: BASE_TIME + 86400000,
+          },
+        ],
+        notifications: [
+          {
+            id: notifBetaId,
+            type: 'squad_invite',
+            actorId: 'leader_beta',
+            squadName: '貝塔力量隊',
+            createdAt: BASE_TIME,
+            status: 'pending',
+            expiresAt: BASE_TIME + 86400000,
+            refId: inviteBetaId,
+          },
+          {
+            id: notifOtherId,
+            type: 'squad_invite',
+            actorId: 'leader_other',
+            squadName: '其他戰隊',
+            createdAt: BASE_TIME,
+            status: 'pending',
+            expiresAt: BASE_TIME + 86400000,
+            refId: inviteOtherId,
+          },
+        ],
+      });
+
+      const res = applyAcceptInviteFromNotification(
+        state,
+        notifBetaId,
+        BASE_TIME,
+        mockFakeSquads,
+        mockDirectory
+      );
+
+      assert.equal(res.ok, true);
+      assert.ok(res.patch?.notifications);
+
+      const acceptedNotif = res.patch.notifications.find((n) => n.id === notifBetaId);
+      assert.equal(acceptedNotif?.status, 'accepted');
+
+      const invalidNotif = res.patch.notifications.find((n) => n.id === notifOtherId);
+      assert.equal(invalidNotif?.status, 'invalid');
+
+      // Verify no health or workout fields in any notification in the patch
+      const sensitiveKeys = ['health', 'rest', 'workout', 'stamina', 'coins', 'xp', 'heartRate', 'steps'];
+      for (const n of res.patch.notifications) {
+        for (const k of sensitiveKeys) {
+          assert.equal((n as any)[k], undefined, `Notification ${n.id} must not contain ${k}`);
+        }
+        for (const k of Object.keys(n)) {
+          assert.ok(
+            NOTIFICATION_VIEW_WHITELIST.includes(k as any),
+            `Key "${k}" in notification ${n.id} must be strictly in NOTIFICATION_VIEW_WHITELIST`
+          );
+        }
+      }
     });
   });
 });
