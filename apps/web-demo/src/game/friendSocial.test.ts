@@ -722,5 +722,11 @@ describe('FitMon Friend Social Pure Functions (T3-D9)', () => {
       assert.ok(shortText.includes('後可以再換'));
       assert.ok(!shortText.includes('明天'));
     });
+
+    it('canRegeneratePlayerCode returns true when timestamp is null, undefined, or 0', () => {
+      assert.equal(canRegeneratePlayerCode(null, 1700000000000), true);
+      assert.equal(canRegeneratePlayerCode(undefined, 1700000000000), true);
+      assert.equal(canRegeneratePlayerCode(0, 1700000000000), true);
+    });
   });
 });

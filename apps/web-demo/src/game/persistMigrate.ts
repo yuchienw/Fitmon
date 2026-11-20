@@ -88,7 +88,7 @@ export function canRegeneratePlayerCode(
   generatedAt?: number | null,
   now?: number
 ): boolean {
-  if (typeof generatedAt !== 'number' || isNaN(generatedAt) || generatedAt <= 0) {
+  if (typeof generatedAt !== 'number' || !Number.isFinite(generatedAt) || generatedAt <= 0) {
     return true;
   }
   const current = typeof now === 'number' ? now : Date.now();
@@ -106,7 +106,7 @@ export function regeneratePlayerCode<T extends Record<string, unknown>>(
 ): T {
   const current = typeof now === 'number' ? now : Date.now();
   const rec = state as Record<string, unknown>;
-  const lastGen = typeof rec.playerCodeGeneratedAt === 'number' ? rec.playerCodeGeneratedAt : 0;
+  const lastGen = rec.playerCodeGeneratedAt as number | null | undefined;
   if (canRegeneratePlayerCode(lastGen, current)) {
     rec.playerCode = generatePlayerCode(); // 試玩用，第 2 階段由伺服器產生
     rec.playerCodeGeneratedAt = current;
@@ -252,9 +252,13 @@ export function ensureV3Defaults(
   // 2. playerCode（試玩用，第 2 階段由伺服器產生；僅在缺失時生成，已存在絕不覆寫）
   if (typeof state.playerCode !== 'string' || !state.playerCode.trim()) {
     state.playerCode = generatePlayerCode(); // 試玩用，第 2 階段由伺服器產生
-    state.playerCodeGeneratedAt = clockNow;
-  } else if (typeof state.playerCodeGeneratedAt !== 'number' || isNaN(state.playerCodeGeneratedAt)) {
-    state.playerCodeGeneratedAt = clockNow;
+    state.playerCodeGeneratedAt = null;
+  } else if (
+    typeof state.playerCodeGeneratedAt !== 'number' ||
+    !Number.isFinite(state.playerCodeGeneratedAt) ||
+    state.playerCodeGeneratedAt <= 0
+  ) {
+    state.playerCodeGeneratedAt = null;
   }
 
   // 3. 好友邀請／請求佇列

@@ -504,7 +504,7 @@ export interface GameState {
   // V3 Social, Privacy & Progression Fields (T3-D3)
   /** 試玩用，第 2 階段由伺服器產生 */
   playerCode: string;
-  playerCodeGeneratedAt: number;
+  playerCodeGeneratedAt: number | null;
   friendRequests: FriendRequestItem[];
   recentTeammates: RecentTeammateItem[];
   notifications: NotificationItem[];
@@ -1180,7 +1180,7 @@ export const useGameStore = create<GameState>()(
       isSquadLeader: true,
       devMinorTestAccount: false,
       playerCode: generatePlayerCode(), // 試玩用，第 2 階段由伺服器產生
-      playerCodeGeneratedAt: Date.now(),
+      playerCodeGeneratedAt: null,
       friendRequests: [],
       recentTeammates: [],
       notifications: [],

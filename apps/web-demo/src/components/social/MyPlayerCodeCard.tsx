@@ -38,7 +38,10 @@ export const MyPlayerCodeCard: React.FC = () => {
   const now = Date.now();
   const rawCode = store.playerCode || '';
   const canRegen = canRegeneratePlayerCode(store.playerCodeGeneratedAt, now);
-  const countdown = formatRegenLockedCountdown(store.playerCodeGeneratedAt, now);
+  const countdown =
+    !canRegen && store.playerCodeGeneratedAt !== null
+      ? formatRegenLockedCountdown(store.playerCodeGeneratedAt, now)
+      : null;
 
   // 4碼 + 空格 + 4碼 顯示格式
   const displayCode =
@@ -89,7 +92,7 @@ export const MyPlayerCodeCard: React.FC = () => {
         </div>
 
         {/* 24 小時內鎖定提示 (7b-code-regenerate-locked) */}
-        {!canRegen && (
+        {!canRegen && countdown && (
           <div className="flex items-start gap-1.5 bg-[#F4EFE6] border border-[#E5DCCB] rounded-xl p-2 text-xs font-bold text-[#5C4A3E] leading-relaxed">
             <Clock className="w-3.5 h-3.5 text-[#786B63] shrink-0 mt-0.5" />
             <div>
