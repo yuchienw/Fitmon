@@ -1813,7 +1813,6 @@ export const useGameStore = create<GameState>()(
             soundFX.playSetComplete();
             updates.restSecondsLeft = 0;
             updates.isRestRunning = false;
-            state.showToast('⏰ 休息結束！開始下一組');
           } else {
             updates.restSecondsLeft = state.restSecondsLeft - 1;
           }
