@@ -106,3 +106,52 @@ export const DEMO_FAKE_SQUADS: DemoFakeSquad[] = IS_DEMO
       },
     ]
   : [];
+
+export interface DemoSearchablePlayer {
+  id: string;
+  playerCode: string;
+  nickname: string;
+  level: number;
+  isMinor?: boolean;
+  discoverableByCode?: boolean;
+  blockedYou?: boolean;
+}
+
+// 測試用假陌生人搜尋名錄（上線前移除，IS_DEMO 為 false 時整包為空陣列）
+export const DEMO_PLAYER_DIRECTORY: DemoSearchablePlayer[] = IS_DEMO
+  ? [
+      {
+        id: 'user_mika',
+        playerCode: 'K7PM4XQ9',
+        nickname: 'Mika',
+        level: 18,
+        isMinor: false,
+        discoverableByCode: true,
+      },
+      {
+        id: 'user_jun',
+        playerCode: 'R3HW8NTE',
+        nickname: 'Jun',
+        level: 25,
+        isMinor: false,
+        discoverableByCode: true,
+      },
+      {
+        id: 'user_leo',
+        playerCode: 'W9CT2KMF',
+        nickname: 'Leo',
+        level: 22,
+        isMinor: false,
+        discoverableByCode: false, // 隱藏（搜不到）
+      },
+      {
+        id: 'user_tree',
+        playerCode: 'T2MN8XWP',
+        nickname: '小樹',
+        level: 4,
+        isMinor: true, // 未成年（搜不到）
+        discoverableByCode: true,
+      },
+    ]
+  : [];
+

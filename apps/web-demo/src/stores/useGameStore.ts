@@ -52,9 +52,19 @@ import {
   visibleNotifications,
   unreadCount,
   markAllRead,
+  FRIEND_REQUEST_TTL_MS,
   type RecipientNotifyContext,
 } from '../game/notificationCenter';
-import { IS_DEMO } from '../config/demo';
+import {
+  executeSearchWithDelay,
+  sendFriendRequest,
+  cancelFriendRequest,
+  acceptFriendRequest,
+  skipFriendRequest,
+  removeFriend,
+  type PlayerSearchResult,
+} from '../game/friendSocial';
+import { IS_DEMO, DEMO_PLAYER_DIRECTORY } from '../config/demo';
 
 export type {
   FriendRequestItem,
@@ -367,6 +377,9 @@ export interface VictorySettlementData {
   topExerciseName: string;
 }
 
+// In-memory code lookup timestamps log (not persisted to LocalStorage, resets on refresh per constraint)
+let inMemoryCodeLookupLog: number[] = [];
+
 export interface GameState {
   // Navigation & Global Overlays
   activeTab: MainTab;
@@ -628,6 +641,17 @@ export interface GameState {
   submitInviteCode: (code: string) => void;
   expireDue: () => void;
   setDevMinorTestAccount: (on: boolean) => void;
+
+  // Friend Social Actions (T3-D9)
+  searchPlayerCode: (query: string) => Promise<PlayerSearchResult>;
+  sendFriendRequestAction: (toId: string) => { success: boolean; error?: string };
+  cancelFriendRequestAction: (toId: string, requestId?: string) => void;
+  acceptFriendRequestAction: (requestId: string) => void;
+  skipFriendRequestAction: (requestId: string) => void;
+  removeFriendAction: (profileId: string) => void;
+  regeneratePlayerCodeAction: () => boolean;
+  seedIncomingFriendRequest: () => void;
+  seedRecentTeammates: () => void;
 
   // 測試用，上線前移除
   simulateIncomingJoinRequest: (params?: { fromId?: string; source?: SquadSocialSource }) => void;
@@ -1270,6 +1294,26 @@ export const useGameStore = create<GameState>()(
         set((s) => {
           const target = s.notifications.find((n) => n.id === id);
           if (!target) return s;
+
+          if (target.type === 'friend_request') {
+            if (action === 'accept') {
+              const res = acceptFriendRequest(
+                s,
+                { requestId: target.refId, actorId: target.actorId },
+                Date.now()
+              );
+              soundFX.playSetComplete();
+              return res.state;
+            }
+            if (action === 'skip') {
+              const res = skipFriendRequest(
+                s,
+                { requestId: target.refId, actorId: target.actorId },
+                Date.now()
+              );
+              return res.state;
+            }
+          }
 
           let newStatus = target.status || 'info';
           if (action === 'join') newStatus = 'accepted';
@@ -2289,17 +2333,12 @@ export const useGameStore = create<GameState>()(
         const isAlreadyFriend = state.friendIds.some(
           (id) => (resolveFriendProfileId(id) || id) === resolved
         );
-        const target = getFriendProfile(resolved);
         soundFX.playSetComplete();
-        const nextFriendIds = isAlreadyFriend
-          ? state.friendIds.filter((id) => (resolveFriendProfileId(id) || id) !== resolved)
-          : [...state.friendIds, resolved];
-        set({ friendIds: nextFriendIds });
-        state.showToast(
-          isAlreadyFriend
-            ? `已取消與 ${target?.nameZh || '玩家'} 的好友`
-            : `🤝 已與 ${target?.nameZh || '玩家'} 成為好友！`
-        );
+        if (isAlreadyFriend) {
+          get().removeFriendAction(resolved);
+        } else {
+          get().sendFriendRequestAction(resolved);
+        }
       },
 
       tipPost: (postId) => {
@@ -2857,6 +2896,172 @@ export const useGameStore = create<GameState>()(
               },
         }));
         get().showToast(`未成年測試帳號已${on ? '開啟' : '關閉'}`);
+      },
+
+      // Friend Social Actions (T3-D9)
+      searchPlayerCode: async (query: string) => {
+        const state = get();
+        const res = await executeSearchWithDelay({
+          query,
+          selfId: DEMO_PLAYER_ID,
+          selfCode: state.playerCode,
+          selfIsMinor: state.devMinorTestAccount,
+          now: Date.now(),
+          lookupLog: inMemoryCodeLookupLog,
+          directory: DEMO_PLAYER_DIRECTORY,
+          friendIds: state.friendIds,
+          blockedIds: state.blockedIds || [],
+        });
+        inMemoryCodeLookupLog = res.result.nextLookupLog;
+        return res.result;
+      },
+
+      sendFriendRequestAction: (toId: string) => {
+        const now = Date.now();
+        const current = get();
+        const res = sendFriendRequest(current, { fromId: DEMO_PLAYER_ID, toId }, now);
+        if (res.result === 'limit_reached') {
+          get().showToast(res.error || '今天的好友申請次數用完了，明天再來');
+          return { success: false, error: res.error };
+        }
+        if (res.result === 'already_friends') {
+          get().showToast('你們已經是好友了');
+          return { success: false };
+        }
+        if (res.result === 'already_pending') {
+          get().showToast('已送出好友申請');
+          return { success: false };
+        }
+        set(res.state);
+        get().showToast('已送出好友申請');
+
+        // IS_DEMO auto-accept simulation
+        if (IS_DEMO && res.requestId) {
+          const isDemoCharacter =
+            DEMO_PLAYER_DIRECTORY.some((p) => p.id === toId) ||
+            [
+              'user_mika',
+              'demo_mika',
+              'user_jun',
+              'demo_jun',
+              'user_leo',
+              'friend_leo',
+              'friend_akai',
+              'friend_chloe',
+              'friend_alice',
+            ].includes(toId);
+          if (isDemoCharacter) {
+            setTimeout(() => {
+              get().acceptFriendRequestAction(res.requestId!);
+            }, 1500);
+          }
+        }
+        return { success: true };
+      },
+
+      cancelFriendRequestAction: (toId: string, requestId?: string) => {
+        const current = get();
+        const res = cancelFriendRequest(
+          current,
+          { fromId: DEMO_PLAYER_ID, toId, requestId },
+          Date.now()
+        );
+        if (res.result === 'cancelled') {
+          set(res.state);
+          get().showToast('已取消好友申請');
+        }
+      },
+
+      acceptFriendRequestAction: (requestId: string) => {
+        const current = get();
+        const res = acceptFriendRequest(current, { requestId }, Date.now());
+        if (res.result === 'accepted') {
+          set(res.state);
+          soundFX.playSetComplete();
+          const req = current.friendRequests.find((r) => r.id === requestId);
+          const otherId = req
+            ? req.fromId === DEMO_PLAYER_ID
+              ? req.toId
+              : req.fromId
+            : '隊友';
+          const prof = getFriendProfile(otherId);
+          get().showToast(`🤝 你和 ${prof?.nameZh || otherId} 已成為好友！`);
+        }
+      },
+
+      skipFriendRequestAction: (requestId: string) => {
+        const current = get();
+        const res = skipFriendRequest(current, { requestId }, Date.now());
+        if (res.result === 'skipped') {
+          set(res.state);
+          get().showToast('已略過好友申請');
+        }
+      },
+
+      removeFriendAction: (profileId: string) => {
+        const current = get();
+        const target = getFriendProfile(profileId);
+        const res = removeFriend(current, { profileId }, Date.now());
+        set(res.state);
+        get().showToast(`已移除好友 ${target?.nameZh || profileId}`);
+      },
+
+      regeneratePlayerCodeAction: () => {
+        const now = Date.now();
+        const current = get();
+        if (!canRegeneratePlayerCode(current.playerCodeGeneratedAt, now)) {
+          return false;
+        }
+        const updated = regeneratePlayerCode(
+          {
+            playerCode: current.playerCode,
+            playerCodeGeneratedAt: current.playerCodeGeneratedAt,
+          } as Record<string, unknown>,
+          now
+        );
+        set({
+          playerCode: updated.playerCode as string,
+          playerCodeGeneratedAt: updated.playerCodeGeneratedAt as number,
+        });
+        get().showToast('已換成新代碼');
+        return true;
+      },
+
+      seedIncomingFriendRequest: () => {
+        const now = Date.now();
+        const reqId = `freq_seed_${now}`;
+        const newReq: FriendRequestItem = {
+          id: reqId,
+          fromId: 'user_mika',
+          toId: DEMO_PLAYER_ID,
+          status: 'pending',
+          createdAt: now,
+        };
+        const newNotif: NotificationItem = {
+          id: `notif_seed_${now}`,
+          type: 'friend_request',
+          actorId: 'user_mika',
+          createdAt: now,
+          expiresAt: now + FRIEND_REQUEST_TTL_MS,
+          status: 'pending',
+          refId: reqId,
+        };
+        set((s) => ({
+          friendRequests: [...s.friendRequests, newReq],
+          notifications: pruneNotifications([...s.notifications, newNotif], now),
+        }));
+        get().showToast('已塞入 Mika 的好友申請');
+      },
+
+      seedRecentTeammates: () => {
+        const now = Date.now();
+        const sampleTeammates: RecentTeammateItem[] = [
+          { id: 'user_jun', lastTogetherAt: now - 2 * 24 * 60 * 60 * 1000 },
+          { id: 'user_mika', lastTogetherAt: now - 4 * 24 * 60 * 60 * 1000 },
+          { id: 'user_leo', lastTogetherAt: now - 8 * 24 * 60 * 60 * 1000 },
+        ];
+        set({ recentTeammates: sampleTeammates });
+        get().showToast('已塞入最近隊友測試資料');
       },
 
       // 測試用，上線前移除
