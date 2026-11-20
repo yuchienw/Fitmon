@@ -7,6 +7,8 @@
   --ios-fallback-bottom: 0px;
   --safe-top: max(env(safe-area-inset-top, 0px), var(--ios-fallback-top, 0px));
   --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--ios-fallback-bottom, 0px));
+  /* Clearance above raised BottomNav center hero button (uses -mt-5 / ~12-20px overhang) */
+  --nav-hero-clearance: 1.25rem;
   /* UI/UX Pro Max Design System Tokens (Vibrant & Block-based + Tactile Digital) */
   --color-primary: #F97316;
   --color-secondary: #FB923C;
@@ -59,6 +61,10 @@
 
 .safe-bottom-nav {
   padding-bottom: calc(var(--safe-bottom, 0px) + 0.375rem) !important;
+}
+
+.pb-nav-hero-clearance {
+  padding-bottom: var(--nav-hero-clearance, 1.25rem) !important;
 }
 
 .fixed.inset-0 {

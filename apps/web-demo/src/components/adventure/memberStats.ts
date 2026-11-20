@@ -25,6 +25,18 @@ export interface MemberCombatStats {
 }
 
 export function calculateMemberStats(member: SquadMemberState): MemberCombatStats {
+  if (!member) {
+    return {
+      phyAtk: 20,
+      magAtk: 10,
+      supportAtk: 10,
+      mainAtk: 20,
+      mainAtkLabel: '物攻 20',
+      damageDealt: 0,
+      hasWorkedOutToday: false,
+    };
+  }
+
   let phyBonus = 0;
   let magBonus = 0;
   let supportBonus = 0;
