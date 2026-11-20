@@ -26,6 +26,9 @@ import {
 } from '../../game/squadInviteRules';
 import { IS_DEMO, DEMO_REPORT_DISCLAIMER } from '../../config/demo';
 import { getFriendProfile } from '../../config/catalogConfig';
+import { DemoDevTag } from '../social/DemoDevTag';
+import { BlockConfirmModal } from '../social/BlockConfirmModal';
+import { ReportModal } from '../social/ReportModal';
 
 interface NotificationCenterProps {
   resolvedTheme?: 'light' | 'dark';
@@ -39,17 +42,21 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const devRecipientNotifyDemo = useGameStore((s) => s.devRecipientNotifyDemo);
   const devMinorTestAccount = useGameStore((s) => s.devMinorTestAccount);
   const friendIds = useGameStore((s) => s.friendIds);
+  const blockedIds = useGameStore((s) => s.blockedIds);
 
   const [actingId, setActingId] = useState<string | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [blockingTarget, setBlockingTarget] = useState<{ id: string; nickname: string } | null>(null);
+  const [reportingTarget, setReportingTarget] = useState<{ id: string; nickname: string } | null>(null);
 
   const recipientCtx: RecipientNotifyContext = useMemo(
     () => ({
       ...devRecipientNotifyDemo,
       isMinor: devMinorTestAccount,
       friendIds,
+      blockedIds: blockedIds || [],
     }),
-    [devRecipientNotifyDemo, devMinorTestAccount, friendIds]
+    [devRecipientNotifyDemo, devMinorTestAccount, friendIds, blockedIds]
   );
 
   const now = Date.now();
@@ -143,12 +150,18 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     executeJoin(item.id);
   };
 
-  const handleMenuClick = (actionName: 'block' | 'report') => {
+  const handleMenuClick = (
+    actionName: 'block' | 'report',
+    actorId?: string,
+    nickname?: string
+  ) => {
     setActiveMenuId(null);
-    if (IS_DEMO) {
-      store.showToast(DEMO_REPORT_DISCLAIMER);
+    const targetId = actorId || 'user_mika';
+    const targetNick = nickname || '此玩家';
+    if (actionName === 'block') {
+      setBlockingTarget({ id: targetId, nickname: targetNick });
     } else {
-      store.showToast('已送出回報');
+      setReportingTarget({ id: targetId, nickname: targetNick });
     }
   };
 
@@ -224,12 +237,15 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
               {/* 陌生人標籤（不是你的好友：淡藍底中性提示，絕不用紅色警告） */}
               {view.isStranger && view.actorId && view.actorId !== 'self' && (
-                <span
-                  data-testid="notif-stranger-tag"
-                  className="px-1.5 py-0.5 rounded text-[10.5px] font-bold bg-[#EEF4FB] text-[#3B5B7A] dark:bg-[#1E293B] dark:text-[#93C5FD] border border-[#D0E2F5] dark:border-[#2D4560]"
-                >
-                  不是你的好友
-                </span>
+                <>
+                  <span
+                    data-testid="notif-stranger-tag"
+                    className="px-1.5 py-0.5 rounded text-[10.5px] font-bold bg-[#EEF4FB] text-[#3B5B7A] dark:bg-[#1E293B] dark:text-[#93C5FD] border border-[#D0E2F5] dark:border-[#2D4560]"
+                  >
+                    不是你的好友
+                  </span>
+                  <DemoDevTag text="試玩角色" />
+                </>
               )}
             </div>
 
@@ -266,8 +282,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               )}
 
               {view.expiryLabel && (
-                <span className="text-[11px] text-[#786B63] dark:text-[#A89A8C]">
-                  {view.expiryLabel}
+                <span className="text-[11px] text-[#786B63] dark:text-[#A89A8C] inline-flex items-center gap-1">
+                  <span>{view.expiryLabel}</span>
+                  {item.type === 'squad_invite' && <DemoDevTag text="試玩加速" />}
                 </span>
               )}
             </div>
@@ -299,14 +316,16 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             }`}
           >
             <button
-              onClick={() => handleMenuClick('block')}
+              onClick={() => handleMenuClick('block', item.actorId, view.nickname)}
+              data-testid="notif-menu-block"
               className="w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
             >
               <Shield className="w-3.5 h-3.5" />
               <span>封鎖</span>
             </button>
             <button
-              onClick={() => handleMenuClick('report')}
+              onClick={() => handleMenuClick('report', item.actorId, view.nickname)}
+              data-testid="notif-menu-report"
               className="w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
             >
               <Flag className="w-3.5 h-3.5" />
@@ -672,6 +691,30 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 封鎖確認框 */}
+      {blockingTarget && (
+        <BlockConfirmModal
+          isOpen={!!blockingTarget}
+          targetId={blockingTarget.id}
+          targetNickname={blockingTarget.nickname}
+          onCancel={() => setBlockingTarget(null)}
+          onConfirm={() => {
+            store.blockPlayerAction(blockingTarget.id);
+            setBlockingTarget(null);
+          }}
+        />
+      )}
+
+      {/* 檢舉彈窗 */}
+      {reportingTarget && (
+        <ReportModal
+          isOpen={!!reportingTarget}
+          targetId={reportingTarget.id}
+          targetNickname={reportingTarget.nickname}
+          onClose={() => setReportingTarget(null)}
+        />
       )}
     </div>
   );

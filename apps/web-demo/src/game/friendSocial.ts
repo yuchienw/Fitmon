@@ -383,6 +383,22 @@ export function sendFriendRequest<T extends FriendSocialState>(
     return { state, result: 'already_friends' };
   }
 
+  // 1.5 檢查封鎖狀態 (雙向封鎖皆中性失敗，文案一致回傳「對方目前無法加入」)
+  const isBlocked =
+    (state.blockedIds || []).some(
+      (b) =>
+        b === toId ||
+        (toId.startsWith('user_') && b === toId.replace('user_', 'friend_')) ||
+        (toId.startsWith('friend_') && b === toId.replace('friend_', 'user_'))
+    );
+  if (isBlocked) {
+    return {
+      state,
+      result: 'error',
+      error: '對方目前無法加入',
+    };
+  }
+
   // 2. 檢查每日發送上限 (20 則)
   if (!canSendFriendRequest(state, fromId, now)) {
     return {

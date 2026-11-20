@@ -12,6 +12,7 @@ import {
   Activity,
   CalendarDays,
   Users,
+  Shield,
 } from 'lucide-react';
 import { useGameStore, WorkoutSessionRecord, selectStreakDays } from '../../stores/useGameStore';
 
@@ -19,6 +20,7 @@ import { EXERCISE_LIBRARY } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
 import { MyPlayerCodeCard } from '../social/MyPlayerCodeCard';
 import { FriendsView } from '../social/FriendsView';
+import { PrivacySafetyView } from '../social/PrivacySafetyView';
 
 type MeSubTab = 'history' | 'charts' | 'trophies';
 type HistoryViewMode = 'calendar' | 'weekly';
@@ -29,6 +31,7 @@ export const AnalyticsTab: React.FC = () => {
   const streakDays = useGameStore(selectStreakDays);
 
   const [showFriendsView, setShowFriendsView] = useState<boolean>(false);
+  const [showPrivacyView, setShowPrivacyView] = useState<boolean>(false);
   const [subTab, setSubTab] = useState<MeSubTab>('history');
   const [historyMode, setHistoryMode] = useState<HistoryViewMode>('calendar');
   const [calYear, setCalYear] = useState<number>(() => new Date().getFullYear());
@@ -234,9 +237,11 @@ export const AnalyticsTab: React.FC = () => {
 
   return (
     <div className="p-3.5 space-y-3.5 pb-10">
-      {/* 好友子分頁面板 (7a, 7c, 7d, 7e) */}
+      {/* 好友子分頁面板 (7a, 7c, 7d, 7e) 與 隱私安全子分頁面板 (8a, 8b, 8c, 8e) */}
       {showFriendsView ? (
         <FriendsView onBack={() => setShowFriendsView(false)} />
+      ) : showPrivacyView ? (
+        <PrivacySafetyView onBack={() => setShowPrivacyView(false)} />
       ) : (
         <>
           {/* 1. PLAYER PROFILE HEADER CARD */}
@@ -286,6 +291,26 @@ export const AnalyticsTab: React.FC = () => {
                 <span className="px-2 py-0.5 rounded-full bg-[#FFF1E4] text-[#C2410C] border border-[#FED7AA] font-black">
                   {store.friendIds.length} 位
                 </span>
+                <ChevronRight className="w-4 h-4 text-[#A89A8C]" />
+              </div>
+            </div>
+          </div>
+
+          {/* 1.7 隱私與安全入口列 (8a，進入隱私與安全子面板) */}
+          <div
+            data-testid="privacy-entry-button"
+            onClick={() => setShowPrivacyView(true)}
+            className="bg-[#FFFDF8] border border-[#E5DCCB] rounded-2xl p-3 shadow-sm hover:border-[#F3C29A] transition cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#FFF1E4] border border-[#FED7AA] flex items-center justify-center text-[#EA580C]">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-black text-[#29221E]">隱私與安全</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#786B63]">
                 <ChevronRight className="w-4 h-4 text-[#A89A8C]" />
               </div>
             </div>

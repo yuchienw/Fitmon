@@ -52,6 +52,7 @@ export type RecipientNotifyContext = {
   isPaused: boolean;           // 暫停中
   isMinor: boolean;            // devMinorTestAccount 或伺服器未成年判斷
   friendIds: string[];         // 好友 ID 清單
+  blockedIds: string[];        // 封鎖名單 ID 清單 (T3-D10)
 };
 
 /**
@@ -341,13 +342,36 @@ export function isNotificationExpired(
 }
 
 /**
+ * 判斷發送者是否在封鎖名單中 (T3-D10)。
+ */
+export function isActorBlocked(
+  actorId: string | undefined,
+  blockedIds: string[] | undefined
+): boolean {
+  if (!actorId || !Array.isArray(blockedIds) || blockedIds.length === 0) return false;
+  if (blockedIds.includes(actorId)) return true;
+  const cleanId = actorId.replace(/^(user_|friend_|demo_)/, '');
+  return blockedIds.some((b) => {
+    if (b === actorId) return true;
+    const cleanB = b.replace(/^(user_|friend_|demo_)/, '');
+    return Boolean(cleanId && cleanB && cleanId === cleanB);
+  });
+}
+
+/**
  * 1a / 1b: 判斷單一通知項目是否應對收件者靜默隱藏。
+ * T3-D10: 若 item.actorId 在 ctx.blockedIds 中，一律過濾隱藏。
  */
 export function isNotificationHiddenByContext(
   item: NotificationItem,
   ctx: RecipientNotifyContext
 ): boolean {
   if (!item) return true;
+
+  // 封鎖名單過濾 (T3-D10)：若發送者在封鎖名單中，所有通知一律隱藏且不計紅點
+  if (isActorBlocked(item.actorId, ctx.blockedIds)) {
+    return true;
+  }
 
   // 手動標記略過者永遠不顯示
   if (item.status === 'skipped' && item.type === 'nudge') {

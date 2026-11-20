@@ -244,7 +244,7 @@ export const DEMO_FAKE_SQUADS: DemoFakeSquad[] = IS_DEMO
 
 export type SquadSocialSource = 'friend' | 'recent' | 'code' | 'link';
 export type SquadSocialKind = 'invite' | 'request';
-export type SquadSocialStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
+export type SquadSocialStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled' | 'invalid';
 
 export interface SquadInviteItem {
   id: string;
