@@ -87,157 +87,59 @@ export type {
 export type AdventureSportSkillType = 'strength' | 'cardio' | 'bodyweight';
 export type RoomPoseOverride = 'AUTO' | 'IDLE' | 'SQUAT' | 'CURL' | 'WALK';
 
-export interface SquadMemberAvatarCache {
-  bodyStage: AvatarBodyStage;
-  equipped: Partial<Record<EquipSlot, string>>;
-  updatedAt: number;
-}
+import {
+  SQUAD_CAP,
+  INVITE_TTL_MS,
+  DEMO_PLAYER_ID,
+  DEMO_PLAYER_SQUAD_ID,
+  PUBLIC_JOIN_FAILURE,
+  publicJoinFailureMessage,
+  getSquadInviteCode,
+  SquadMemberAvatarCache,
+  SquadMemberState,
+  SQUAD_CANDIDATE_POOL,
+  DEMO_FAKE_SQUADS,
+  DemoFakeSquad,
+  SquadSocialSource,
+  SquadSocialKind,
+  SquadSocialStatus,
+  SquadInviteItem,
+  SquadSocialStateSnapshot,
+  SquadSocialAction,
+  SquadSocialInternalReason,
+  SquadSocialActionResult,
+  SquadSocialResult,
+  applySquadSocialAction,
+  AUTO_REPLY_ACCEPT_RATE,
+} from '../game/squadInviteRules';
 
-export interface SquadMemberState {
-  id: string;
-  nameZh: string;
-  roleType: 'phy' | 'mag' | 'support';
-  roleBadgeZh: string;
-  gearDescZh: string;
-  hasWorkedOutToday: boolean;
-  workoutAuditZh: string;
-  isSuspectedCheater?: boolean;
-  comboSkillAppliedZh?: string;
-  damageDealt: number;
-  nudgedCount: number;
-  bodyStage?: AvatarBodyStage;
-  equipped?: Partial<Record<EquipSlot, string>>;
-  avatarCache?: SquadMemberAvatarCache;
-}
-
-export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
-  {
-    id: 'friend_akai',
-    nameZh: '重訓狂人 · 阿凱',
-    roleType: 'phy',
-    roleBadgeZh: '🥊 物攻專精',
-    gearDescZh: '紅黑競技健力服 + 24K 奧林匹亞金槓',
-    hasWorkedOutToday: true,
-    workoutAuditZh: '✅ 胸背重訓 8組 · 組間計時完整 (38分鐘)',
-    isSuspectedCheater: false,
-    comboSkillAppliedZh: '🔨 連攜技【破甲重擊】：使下位隊友魔攻 ×2.0 倍',
-    damageDealt: 650,
-    nudgedCount: 0,
-    bodyStage: 'powerlifter',
-    equipped: {
-      hair: 'hair_maple_cap',
-      face: 'face_pixel_shades',
-      top: 'top_pump_cover',
-      bottom: 'bottom_camo_joggers',
-      accessory: 'acc_protein_shaker',
-    },
-  },
-  {
-    id: 'friend_alice',
-    nameZh: '有氧女神 · 小愛',
-    roleType: 'mag',
-    roleBadgeZh: '🪄 魔攻破盾',
-    gearDescZh: '綠光泵感寬T + 暗夜迷彩束口褲',
-    hasWorkedOutToday: false,
-    workoutAuditZh: '⚠️ 今日尚未運動打卡（可敲她提醒上線）',
-    isSuspectedCheater: false,
-    comboSkillAppliedZh: '🔥 連攜技【燃脂魔焰】：引爆破甲並融化高糖護盾',
-    damageDealt: 0,
-    nudgedCount: 0,
-    bodyStage: 'aesthetic',
-    equipped: {
-      hair: 'hair_ headband_red',
-      face: 'face_confident_smile',
-      top: 'top_crimson_sbd',
-      bottom: 'bottom_gold_tights',
-      accessory: 'acc_iron_dumbbell',
-    },
-  },
-  {
-    id: 'user_leo',
-    nameZh: '街頭健體 · Leo',
-    roleType: 'phy',
-    roleBadgeZh: '🥊 力量型',
-    gearDescZh: '黑魂訓練吊嘎 + 鑄鐵 20kg 啞鈴',
-    hasWorkedOutToday: true,
-    workoutAuditZh: '🤥 耗時 5 秒狂按 6 組深蹲 (組間休息 0秒 · 疑似空氣健身)',
-    isSuspectedCheater: true,
-    comboSkillAppliedZh: '⚠️ 未通過組間休息驗證（無法觸發連攜技）',
-    damageDealt: 15,
-    nudgedCount: 0,
-    bodyStage: 'aesthetic',
-    equipped: {
-      hair: 'hair_spiky_gold',
-      face: 'face_confident_smile',
-      top: 'top_bare_muscles',
-      bottom: 'bottom_camo_joggers',
-      accessory: 'acc_iron_dumbbell',
-    },
-  },
-  {
-    id: 'celeb_titan_chen',
-    nameZh: '健力金牌 · 陳巨石',
-    roleType: 'phy',
-    roleBadgeZh: '👑 泰坦物攻王',
-    gearDescZh: '斯巴達戰神披風 + 24K 奧林匹亞金槓',
-    hasWorkedOutToday: true,
-    workoutAuditZh: '✅ 大重量深蹲硬舉 10組 · 組間計時完整 (52分鐘)',
-    isSuspectedCheater: false,
-    comboSkillAppliedZh: '🔨 連攜技【泰坦破甲】：全隊物攻與破甲倍率大幅提升',
-    damageDealt: 920,
-    nudgedCount: 0,
-    bodyStage: 'titan',
-    equipped: {
-      hair: 'hair_titan_crown',
-      face: 'face_fierce_grit',
-      top: 'top_bare_muscles',
-      bottom: 'bottom_navy_shorts',
-      accessory: 'acc_gold_barbell',
-    },
-  },
-  {
-    id: 'celeb_aesthetic_lin',
-    nameZh: '古典健體 · 林健美',
-    roleType: 'mag',
-    roleBadgeZh: '✨ 魔攻暴擊手',
-    gearDescZh: '超賽亞金焰髮 + 賽博金邊壓縮褲',
-    hasWorkedOutToday: true,
-    workoutAuditZh: '✅ 肩臂超級組 + 飛輪燃脂 35分鐘 · 組間完整',
-    isSuspectedCheater: false,
-    comboSkillAppliedZh: '🔥 連攜技【燃脂魔焰】：對護盾型 Boss 造成 2.0 倍魔傷',
-    damageDealt: 780,
-    nudgedCount: 0,
-    bodyStage: 'aesthetic',
-    equipped: {
-      hair: 'hair_spiky_gold',
-      face: 'face_pixel_shades',
-      top: 'top_bare_muscles',
-      bottom: 'bottom_gold_tights',
-      accessory: 'acc_protein_shaker',
-    },
-  },
-  {
-    id: 'friend_chloe',
-    nameZh: '核心瑜珈 · 小柔',
-    roleType: 'support',
-    roleBadgeZh: '🛡️ 輔助增益',
-    gearDescZh: '熱血赤紅頭帶 + 翡翠乳清搖搖杯',
-    hasWorkedOutToday: true,
-    workoutAuditZh: '✅ 核心棒式與徒手流瑜珈 6組 · 組間計時完整 (30分鐘)',
-    isSuspectedCheater: false,
-    comboSkillAppliedZh: '🌪️ 連攜技【聚氣暴擊】：全隊掉寶率 ×2 倍、弱點暴擊加成',
-    damageDealt: 540,
-    nudgedCount: 0,
-    bodyStage: 'beginner',
-    equipped: {
-      hair: 'hair_ headband_red',
-      face: 'face_confident_smile',
-      top: 'top_pump_cover',
-      bottom: 'bottom_navy_shorts',
-      accessory: 'acc_protein_shaker',
-    },
-  },
-];
+export {
+  SQUAD_CAP,
+  INVITE_TTL_MS,
+  DEMO_PLAYER_ID,
+  DEMO_PLAYER_SQUAD_ID,
+  PUBLIC_JOIN_FAILURE,
+  publicJoinFailureMessage,
+  getSquadInviteCode,
+  SQUAD_CANDIDATE_POOL,
+  DEMO_FAKE_SQUADS,
+  applySquadSocialAction,
+  AUTO_REPLY_ACCEPT_RATE,
+};
+export type {
+  SquadMemberAvatarCache,
+  SquadMemberState,
+  DemoFakeSquad,
+  SquadSocialSource,
+  SquadSocialKind,
+  SquadSocialStatus,
+  SquadInviteItem,
+  SquadSocialStateSnapshot,
+  SquadSocialAction,
+  SquadSocialInternalReason,
+  SquadSocialActionResult,
+  SquadSocialResult,
+};
 
 export interface ResolvedSquadAvatar {
   status: 'ready' | 'partial' | 'syncing';
@@ -247,17 +149,6 @@ export interface ResolvedSquadAvatar {
 }
 
 export { resolveFriendProfileId, hasFriendProfile, getFriendProfile } from '../config/catalogConfig';
-
-/**
- * QA-07 戰隊邀請碼單一真相來源：依 squadName 雜湊產生 FITxxx，無隊名時為 FIT732
- */
-export function getSquadInviteCode(squadName?: string | null): string {
-  if (!squadName) return 'FIT732';
-  const hash = Math.abs(
-    squadName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 732)
-  );
-  return `FIT${(hash % 900) + 100}`;
-}
 
 export function resolveSquadMemberAvatar(member: SquadMemberState): ResolvedSquadAvatar {
   if (!member) {
@@ -535,6 +426,10 @@ interface GameState {
   squadBossHp: number;
   squadName: string;
   squadMembers: SquadMemberState[];
+  squadInvites: SquadInviteItem[];
+  currentSquadId: string;
+  isSquadLeader: boolean;
+  devMinorTestAccount: boolean;
   personalMaxStage: number;
   squadMaxStage: number;
   personalMaxDamage: number;
@@ -635,6 +530,23 @@ interface GameState {
   kickSquadMember: (memberId: string) => void;
   refreshSquadMemberAvatar: (memberId: string) => boolean;
   setTodaySportType: (sport: AdventureSportSkillType) => void;
+
+  // Squad Social Actions (T3-D3)
+  sendInvite: (toId: string, source?: SquadSocialSource) => void;
+  sendJoinRequest: (squadId: string, source?: SquadSocialSource) => void;
+  acceptInvite: (id: string) => void;
+  acceptRequest: (id: string) => void;
+  declineInvite: (id: string) => void;
+  declineRequest: (id: string) => void;
+  cancelPending: (id: string) => void;
+  submitInviteCode: (code: string) => void;
+  expireDue: () => void;
+  setDevMinorTestAccount: (on: boolean) => void;
+
+  // 測試用，上線前移除
+  simulateIncomingJoinRequest: (params?: { fromId?: string; source?: SquadSocialSource }) => void;
+  simulateIncomingInvite: (params?: { fromSquadId?: string; source?: SquadSocialSource }) => void;
+  resolvePendingAsFake: (params: { id: string; accept: boolean }) => void;
 
   // Biometrics & Demo Cheats
   updateBiometrics: (partial: Partial<GameState['biometrics']>) => void;
@@ -996,6 +908,20 @@ const INITIAL_WORKOUT_HISTORY: WorkoutSessionRecord[] = [
   },
 ];
 
+const getSquadSocialSnapshot = (state: GameState): SquadSocialStateSnapshot => ({
+  playerId: DEMO_PLAYER_ID,
+  currentSquadId: state.currentSquadId,
+  isSquadLeader: state.isSquadLeader,
+  squadName: state.squadName,
+  squadMembers: state.squadMembers,
+  squadInvites: state.squadInvites,
+  friendIds: state.friendIds,
+  devMinorTestAccount: state.devMinorTestAccount,
+});
+
+// 測試用，上線前移除
+const pendingAutoReplyTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
@@ -1132,6 +1058,10 @@ export const useGameStore = create<GameState>()(
       squadBossHp: 1150,
       squadName: '🔥 腿日絕不缺席戰隊',
       squadMembers: [],
+      squadInvites: [],
+      currentSquadId: DEMO_PLAYER_SQUAD_ID,
+      isSquadLeader: true,
+      devMinorTestAccount: false,
       personalMaxStage: 1,
       squadMaxStage: 2,
       personalMaxDamage: 680,
@@ -2373,22 +2303,9 @@ export const useGameStore = create<GameState>()(
         get().showToast(`🛡️ 戰隊名稱已更新為：${trimmed}`);
       },
 
-      recruitSquadMember: (candidate) => {
-        const state = get();
-        const candResolved = resolveFriendProfileId(candidate.id) || candidate.id;
-        if (state.squadMembers.some((m) => (resolveFriendProfileId(m.id) || m.id) === candResolved)) {
-          state.showToast(`⚠️ 【${candidate.nameZh}】已經在你的戰隊中囉！`);
-          return;
-        }
-        if (state.squadMembers.length >= 3) {
-          state.showToast('⚠️ 目前隊伍已滿 4 人！');
-          return;
-        }
-        soundFX.playSetComplete();
-        set({
-          squadMembers: [...state.squadMembers, { ...candidate }],
-        });
-        state.showToast(`🎉 成功招募【${candidate.nameZh}】加入戰隊！`);
+      recruitSquadMember: (_candidate) => {
+        // 安全防護（T3-D3）：此函式已停用，不執行任何成員新增，所有入隊走 applySquadSocialAction
+        get().showToast(PUBLIC_JOIN_FAILURE);
       },
 
       kickSquadMember: (memberId) => {
@@ -2400,6 +2317,359 @@ export const useGameStore = create<GameState>()(
           squadMembers: state.squadMembers.filter((m) => m.id !== memberId),
         });
         state.showToast(`🚪 已將【${target.nameZh}】移出戰隊，可從下方招募新戰友！`);
+      },
+
+      // Squad Social Actions (T3-D3)
+      sendInvite: (toId, source = 'friend') => {
+        const state = get();
+        const id = crypto.randomUUID();
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'sendInvite',
+            id,
+            fromId: DEMO_PLAYER_ID,
+            toId,
+            squadId: state.currentSquadId,
+            source,
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        state.showToast(res.result?.toastMessage || '已送出組隊邀請');
+
+        // 測試用，上線前移除：若對方是假角色，2.5s 後自動以 80% 同意 / 20% 拒絕回應
+        const timer = setTimeout(() => {
+          pendingAutoReplyTimers.delete(id);
+          const current = get().squadInvites.find((i) => i.id === id);
+          if (current && current.status === 'pending') {
+            const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
+            get().resolvePendingAsFake({ id, accept });
+          }
+        }, 2500);
+        pendingAutoReplyTimers.set(id, timer);
+      },
+
+      sendJoinRequest: (squadId, source = 'code') => {
+        const state = get();
+        const id = crypto.randomUUID();
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'sendJoinRequest',
+            id,
+            fromId: DEMO_PLAYER_ID,
+            squadId,
+            source,
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        state.showToast(res.result?.toastMessage || '已送出入隊請求');
+
+        // 測試用，上線前移除
+        const timer = setTimeout(() => {
+          pendingAutoReplyTimers.delete(id);
+          const current = get().squadInvites.find((i) => i.id === id);
+          if (current && current.status === 'pending') {
+            const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
+            get().resolvePendingAsFake({ id, accept });
+          }
+        }, 2500);
+        pendingAutoReplyTimers.set(id, timer);
+      },
+
+      acceptInvite: (id) => {
+        const state = get();
+        const timer = pendingAutoReplyTimers.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          pendingAutoReplyTimers.delete(id);
+        }
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'acceptInvite',
+            id,
+            actorId: DEMO_PLAYER_ID,
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        state.showToast(res.result?.toastMessage || '已加入隊伍');
+      },
+
+      acceptRequest: (id) => {
+        const state = get();
+        const timer = pendingAutoReplyTimers.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          pendingAutoReplyTimers.delete(id);
+        }
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'acceptRequest',
+            id,
+            actorId: DEMO_PLAYER_ID,
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        state.showToast(res.result?.toastMessage || '已同意入隊');
+      },
+
+      declineInvite: (id) => {
+        const state = get();
+        const timer = pendingAutoReplyTimers.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          pendingAutoReplyTimers.delete(id);
+        }
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'declineInvite',
+            id,
+            actorId: DEMO_PLAYER_ID,
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        state.showToast(res.result?.toastMessage || '已拒絕邀請');
+      },
+
+      declineRequest: (id) => {
+        const state = get();
+        const timer = pendingAutoReplyTimers.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          pendingAutoReplyTimers.delete(id);
+        }
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'declineRequest',
+            id,
+            actorId: DEMO_PLAYER_ID,
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        state.showToast(res.result?.toastMessage || '已拒絕請求');
+      },
+
+      cancelPending: (id) => {
+        const state = get();
+        const timer = pendingAutoReplyTimers.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          pendingAutoReplyTimers.delete(id);
+        }
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'cancelPending',
+            id,
+            actorId: DEMO_PLAYER_ID,
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        state.showToast(res.result?.toastMessage || '已取消');
+      },
+
+      submitInviteCode: (code) => {
+        const state = get();
+        const id = crypto.randomUUID();
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'submitInviteCode',
+            id,
+            actorId: DEMO_PLAYER_ID,
+            code,
+            source: 'code',
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        if (res.result?.type === 'joined') {
+          state.showToast(res.result.toastMessage || '🎉 成功加入戰隊！');
+        } else {
+          state.showToast(res.result?.toastMessage || '已送出入隊請求');
+          // 測試用，上線前移除
+          const timer = setTimeout(() => {
+            pendingAutoReplyTimers.delete(id);
+            const current = get().squadInvites.find((i) => i.id === id);
+            if (current && current.status === 'pending') {
+              const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
+              get().resolvePendingAsFake({ id, accept });
+            }
+          }, 2500);
+          pendingAutoReplyTimers.set(id, timer);
+        }
+      },
+
+      expireDue: () => {
+        const state = get();
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          { type: 'expireDue' },
+          Date.now()
+        );
+        if (res.patch) set(res.patch);
+      },
+
+      setDevMinorTestAccount: (on) => {
+        set({ devMinorTestAccount: on });
+        get().showToast(`未成年測試帳號已${on ? '開啟' : '關閉'}`);
+      },
+
+      // 測試用，上線前移除
+      simulateIncomingJoinRequest: (params) => {
+        const state = get();
+        let fromId = params?.fromId;
+        if (!fromId) {
+          const cand = SQUAD_CANDIDATE_POOL.find(
+            (c) =>
+              !state.squadMembers.some((m) => m.id === c.id) &&
+              !state.squadInvites.some(
+                (i) => i.status === 'pending' && (i.fromId === c.id || i.toId === c.id)
+              )
+          );
+          fromId = cand ? cand.id : SQUAD_CANDIDATE_POOL[0].id;
+        }
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'sendJoinRequest',
+            id: crypto.randomUUID(),
+            fromId,
+            squadId: state.currentSquadId,
+            source: params?.source || 'code',
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        const cand = SQUAD_CANDIDATE_POOL.find((c) => c.id === fromId);
+        state.showToast(`📩 收到【${cand?.nameZh || fromId}】的入隊請求！`);
+      },
+
+      // 測試用，上線前移除
+      simulateIncomingInvite: (params) => {
+        const state = get();
+        const squadId = params?.fromSquadId || DEMO_FAKE_SQUADS[0].id;
+        const fakeSquad =
+          DEMO_FAKE_SQUADS.find((s) => s.id === squadId) || DEMO_FAKE_SQUADS[0];
+        const res = applySquadSocialAction(
+          getSquadSocialSnapshot(state),
+          {
+            type: 'sendInvite',
+            id: crypto.randomUUID(),
+            fromId: fakeSquad.leaderId,
+            toId: DEMO_PLAYER_ID,
+            squadId: fakeSquad.id,
+            source: params?.source || 'friend',
+          },
+          Date.now()
+        );
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        state.showToast(`📩 收到來自【${fakeSquad.name}】的組隊邀請！`);
+      },
+
+      // 測試用，上線前移除
+      resolvePendingAsFake: ({ id, accept }) => {
+        const state = get();
+        const item = state.squadInvites.find((i) => i.id === id);
+        if (!item || item.status !== 'pending') return;
+        const timer = pendingAutoReplyTimers.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          pendingAutoReplyTimers.delete(id);
+        }
+
+        let res: SquadSocialResult;
+        if (item.kind === 'invite') {
+          if (accept) {
+            res = applySquadSocialAction(
+              getSquadSocialSnapshot(state),
+              { type: 'acceptInvite', id, actorId: item.toId },
+              Date.now()
+            );
+          } else {
+            res = applySquadSocialAction(
+              getSquadSocialSnapshot(state),
+              { type: 'declineInvite', id, actorId: item.toId },
+              Date.now()
+            );
+          }
+        } else {
+          if (accept) {
+            res = applySquadSocialAction(
+              getSquadSocialSnapshot(state),
+              { type: 'acceptRequest', id, actorId: item.toId },
+              Date.now()
+            );
+          } else {
+            res = applySquadSocialAction(
+              getSquadSocialSnapshot(state),
+              { type: 'declineRequest', id, actorId: item.toId },
+              Date.now()
+            );
+          }
+        }
+
+        if (!res.ok) {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+          return;
+        }
+        if (res.patch) set(res.patch);
+        if (accept) {
+          state.showToast(res.result?.toastMessage || '🎉 對方已同意！');
+        } else {
+          state.showToast(PUBLIC_JOIN_FAILURE);
+        }
       },
 
       refreshSquadMemberAvatar: (memberId) => {
@@ -2527,7 +2797,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'fitmon-mvp-storage-v6',
-      version: 2,
+      version: 3,
       migrate: (persistedState: unknown, version: number) => {
         if (!persistedState || typeof persistedState !== 'object') return persistedState;
         const state = persistedState as Record<string, unknown>;
@@ -2571,10 +2841,20 @@ export const useGameStore = create<GameState>()(
           const existingStamina = typeof state.stamina === 'number' ? state.stamina : STAMINA_MAX;
           state.stamina = Math.min(STAMINA_MAX, Math.max(0, existingStamina));
         }
+        if (version < 3) {
+          state.squadInvites = [];
+          state.currentSquadId = 'squad_self';
+          state.isSquadLeader = true;
+          state.devMinorTestAccount = false;
+        }
         return state;
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        if (!Array.isArray(state.squadInvites)) state.squadInvites = [];
+        if (!state.currentSquadId) state.currentSquadId = 'squad_self';
+        if (typeof state.isSquadLeader !== 'boolean') state.isSquadLeader = true;
+        if (typeof state.devMinorTestAccount !== 'boolean') state.devMinorTestAccount = false;
         if (state.lastCheckinDate === undefined) state.lastCheckinDate = null;
         if (state.lastBossDate === undefined) state.lastBossDate = null;
         if (!Array.isArray(state.checkinDayKeys)) state.checkinDayKeys = [];
@@ -2635,6 +2915,10 @@ export const useGameStore = create<GameState>()(
         squadBossHp: state.squadBossHp,
         squadName: state.squadName,
         squadMembers: state.squadMembers,
+        squadInvites: state.squadInvites,
+        currentSquadId: state.currentSquadId,
+        isSquadLeader: state.isSquadLeader,
+        devMinorTestAccount: state.devMinorTestAccount,
         personalMaxStage: state.personalMaxStage,
         squadMaxStage: state.squadMaxStage,
         personalMaxDamage: state.personalMaxDamage,

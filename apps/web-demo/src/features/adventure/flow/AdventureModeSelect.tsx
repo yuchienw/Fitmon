@@ -292,6 +292,14 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => onOpenSubTab('squad_invite')}
+            className="flex h-7 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-[11px] font-black text-foreground shadow-sm active:scale-95"
+          >
+            <Users className="h-3 w-3 text-emerald-500" />
+            <span>隊伍</span>
+          </button>
+          <button
+            type="button"
             onClick={() => onOpenSubTab('ladder')}
             className="flex h-7 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-[11px] font-black text-foreground shadow-sm active:scale-95"
           >
