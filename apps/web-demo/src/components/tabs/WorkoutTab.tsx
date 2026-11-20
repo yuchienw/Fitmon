@@ -68,6 +68,135 @@ export const WorkoutTab: React.FC = () => {
   const initialRestSecRef = useRef<number>(store.currentRestConfigSec || 60);
   const continueBtnRef = useRef<HTMLButtonElement | null>(null);
 
+  // Focus-mode card input layout & scroll management
+  const focusedCardInputRef = useRef<HTMLInputElement | null>(null);
+  const weightInputRef = useRef<HTMLInputElement | null>(null);
+  const repsInputRef = useRef<HTMLInputElement | null>(null);
+  const scrollTimeoutsRef = useRef<number[]>([]);
+  const scrollRafRef = useRef<number | null>(null);
+
+  const clearScrollTimeouts = () => {
+    if (scrollRafRef.current !== null) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
+    }
+    scrollTimeoutsRef.current.forEach((id) => clearTimeout(id));
+    scrollTimeoutsRef.current = [];
+  };
+
+  const scrollFocusedCardInputIntoView = (targetInput?: HTMLElement | null) => {
+    const target =
+      targetInput ||
+      focusedCardInputRef.current ||
+      (document.activeElement instanceof HTMLInputElement ? document.activeElement : null);
+
+    if (!target || !target.isConnected) return;
+
+    const main = document.querySelector('main');
+    if (!main || !main.contains(target)) return;
+
+    // Keep window/document pinned to (0, 0)
+    if (typeof window !== 'undefined' && (window.scrollX !== 0 || window.scrollY !== 0)) {
+      window.scrollTo(0, 0);
+    }
+
+    const stickyBar = (main.querySelector('[data-testid="focus-sticky-top-bar"]') ||
+      main.querySelector('.sticky.top-0')) as HTMLElement | null;
+
+    const mainRect = main.getBoundingClientRect();
+    const inputRect = target.getBoundingClientRect();
+    const stickyBarRect = stickyBar ? stickyBar.getBoundingClientRect() : null;
+
+    // Top boundary: sticky focus top bar bottom (or mainRect.top + ~72px)
+    const topLimit = stickyBarRect ? stickyBarRect.bottom : mainRect.top + 72;
+
+    // Bottom boundary: top of BottomNav or main bottom
+    const nav = document.querySelector('nav');
+    const navRect = nav ? nav.getBoundingClientRect() : null;
+    const bottomLimit = navRect ? Math.min(mainRect.bottom, navRect.top) : mainRect.bottom;
+
+    const visibleHeight = bottomLimit - topLimit;
+    if (visibleHeight > 0) {
+      const targetCenter = (topLimit + bottomLimit) / 2;
+      const currentCenter = inputRect.top + inputRect.height / 2;
+      const delta = currentCenter - targetCenter;
+
+      if (Math.abs(delta) > 1) {
+        main.scrollTop += delta;
+      }
+    }
+
+    if (typeof window !== 'undefined' && (window.scrollX !== 0 || window.scrollY !== 0)) {
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const scheduleScroll = (target?: HTMLElement | null) => {
+    clearScrollTimeouts();
+    const rafId = requestAnimationFrame(() => {
+      scrollFocusedCardInputIntoView(target);
+    });
+    scrollRafRef.current = rafId;
+
+    const t1 = window.setTimeout(() => scrollFocusedCardInputIntoView(target), 50);
+    const t2 = window.setTimeout(() => scrollFocusedCardInputIntoView(target), 150);
+    const t3 = window.setTimeout(() => scrollFocusedCardInputIntoView(target), 400);
+    scrollTimeoutsRef.current.push(t1, t2, t3);
+  };
+
+  // Scroll into view & handle resize events when card input is focused
+  useEffect(() => {
+    if (!isCardInputFocused) return;
+
+    const handleResize = () => {
+      scrollFocusedCardInputIntoView();
+      requestAnimationFrame(() => {
+        scrollFocusedCardInputIntoView();
+      });
+    };
+
+    scheduleScroll();
+
+    window.addEventListener('resize', handleResize);
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      clearScrollTimeouts();
+      window.removeEventListener('resize', handleResize);
+      if (vv) {
+        vv.removeEventListener('resize', handleResize);
+      }
+    };
+  }, [isCardInputFocused]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      clearScrollTimeouts();
+    };
+  }, []);
+
+  const handleCardInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    focusedCardInputRef.current = e.currentTarget;
+    setIsCardInputFocused(true);
+    scheduleScroll(e.currentTarget);
+  };
+
+  const handleCardInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const related = e.relatedTarget as HTMLElement | null;
+    if (related && (related === weightInputRef.current || related === repsInputRef.current)) {
+      return;
+    }
+    if (focusedCardInputRef.current === e.currentTarget) {
+      focusedCardInputRef.current = null;
+    }
+    setIsCardInputFocused(false);
+    clearScrollTimeouts();
+  };
+
   // Monitor rest transition for natural end flash & vibration
   useEffect(() => {
     if (!prevRestRunningRef.current && store.isRestRunning) {
@@ -228,7 +357,10 @@ export const WorkoutTab: React.FC = () => {
     return (
       <div className="flex-none min-h-full flex flex-col justify-between relative bg-[#171412]">
         {/* 1. FOCUS TOP BAR (Sticky at top) */}
-        <div className="sticky top-0 z-20 shrink-0 p-3 bg-slate-900/95 border-b border-emerald-500/40 backdrop-blur-md flex items-center justify-between gap-2 shadow-md">
+        <div
+          data-testid="focus-sticky-top-bar"
+          className="sticky top-0 z-20 shrink-0 p-3 bg-slate-900/95 border-b border-emerald-500/40 backdrop-blur-md flex items-center justify-between gap-2 shadow-md"
+        >
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -382,7 +514,7 @@ export const WorkoutTab: React.FC = () => {
             <div className="grid grid-cols-2 gap-2.5">
               {/* Weight / Distance / Intensity Input */}
               <div
-                style={{ scrollMarginBottom: '140px' }}
+                style={{ scrollMarginTop: '80px', scrollMarginBottom: '140px' }}
                 className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center"
               >
                 <span className="text-xs text-slate-300 font-black mb-1">
@@ -404,22 +536,18 @@ export const WorkoutTab: React.FC = () => {
                     <Minus className="w-4 h-4" />
                   </button>
                   <input
+                    ref={weightInputRef}
                     type="number"
                     inputMode="decimal"
                     step="any"
                     value={store.currentWeightKg}
-                    onFocus={(e) => {
-                      setIsCardInputFocused(true);
-                      setTimeout(() => {
-                        e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                      }, 100);
-                    }}
-                    onBlur={() => setIsCardInputFocused(false)}
+                    onFocus={handleCardInputFocus}
+                    onBlur={handleCardInputBlur}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
                       store.setCurrentWeight(Number.isNaN(val) ? 0 : val);
                     }}
-                    style={{ scrollMarginBottom: '140px' }}
+                    style={{ scrollMarginTop: '80px', scrollMarginBottom: '140px' }}
                     className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-white outline-none"
                   />
                   <button
@@ -437,7 +565,7 @@ export const WorkoutTab: React.FC = () => {
 
               {/* Reps / Minutes Input */}
               <div
-                style={{ scrollMarginBottom: '140px' }}
+                style={{ scrollMarginTop: '80px', scrollMarginBottom: '140px' }}
                 className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center"
               >
                 <span className="text-xs text-slate-300 font-black mb-1">
@@ -451,21 +579,17 @@ export const WorkoutTab: React.FC = () => {
                     <Minus className="w-4 h-4" />
                   </button>
                   <input
+                    ref={repsInputRef}
                     type="number"
                     inputMode="numeric"
                     value={store.currentReps}
-                    onFocus={(e) => {
-                      setIsCardInputFocused(true);
-                      setTimeout(() => {
-                        e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                      }, 100);
-                    }}
-                    onBlur={() => setIsCardInputFocused(false)}
+                    onFocus={handleCardInputFocus}
+                    onBlur={handleCardInputBlur}
                     onChange={(e) => {
                       const val = parseInt(e.target.value, 10);
                       store.setCurrentReps(Number.isNaN(val) ? 1 : Math.max(1, val));
                     }}
-                    style={{ scrollMarginBottom: '140px' }}
+                    style={{ scrollMarginTop: '80px', scrollMarginBottom: '140px' }}
                     className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-emerald-400 outline-none"
                   />
                   <button
