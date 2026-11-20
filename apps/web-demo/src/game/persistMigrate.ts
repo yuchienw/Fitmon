@@ -284,7 +284,7 @@ export function ensureV3Defaults(
   } else {
     const notifCutoff = clockNow - NOTIFICATIONS_KEEP_MS;
     state.notifications = (state.notifications as NotificationItem[])
-      .filter((n) => n && typeof n.createdAt === 'number' && n.createdAt >= notifCutoff)
+      .filter((n) => n && typeof n.createdAt === 'number' && Number.isFinite(n.createdAt) && n.createdAt >= notifCutoff)
       .sort((a, b) => (b.createdAt - a.createdAt) || (b.id || '').localeCompare(a.id || ''))
       .slice(0, NOTIFICATIONS_CAP);
   }
@@ -295,7 +295,7 @@ export function ensureV3Defaults(
   } else {
     const logCutoff = clockNow - INVITE_SEND_LOG_KEEP_MS;
     state.inviteSendLog = (state.inviteSendLog as InviteSendLogItem[])
-      .filter((item) => item && typeof item.sentAt === 'number' && item.sentAt >= logCutoff)
+      .filter((item) => item && typeof item.sentAt === 'number' && Number.isFinite(item.sentAt) && item.sentAt >= logCutoff)
       .sort((a, b) => (b.sentAt - a.sentAt) || (b.targetId || '').localeCompare(a.targetId || ''));
   }
 
@@ -347,7 +347,7 @@ export function ensureV3Defaults(
   }
 
   // 12. 運動解鎖天數進度（只增不減）
-  if (typeof state.unlockCheckinDays !== 'number' || isNaN(state.unlockCheckinDays)) {
+  if (typeof state.unlockCheckinDays !== 'number' || !Number.isFinite(state.unlockCheckinDays)) {
     state.unlockCheckinDays = calculateSeedUnlockCheckinDays(state);
   } else {
     state.unlockCheckinDays = Math.max(0, state.unlockCheckinDays);

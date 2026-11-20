@@ -221,6 +221,51 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
       ensureV3Defaults(state, now);
       assert.equal(JSON.stringify(state.inviteSendLog), snapshot);
     });
+
+    test('notification missing createdAt, non-numeric, NaN, or non-finite is dropped during prune without throwing', () => {
+      const now = 1700000000000;
+      const state: Record<string, unknown> = {
+        notifications: [
+          { id: 'valid_1', type: 'invite', createdAt: now - 1000 },
+          { id: 'no_created', type: 'invite' },
+          { id: 'nan_created', type: 'invite', createdAt: NaN },
+          { id: 'inf_created', type: 'invite', createdAt: Infinity },
+          { id: 'neginf_created', type: 'invite', createdAt: -Infinity },
+          { id: 'str_created', type: 'invite', createdAt: '1700000000000' as any },
+          null as any,
+          undefined as any,
+          { id: 'valid_2', type: 'invite', createdAt: now - 500 },
+        ],
+      };
+
+      assert.doesNotThrow(() => ensureV3Defaults(state, now));
+      const pruned = state.notifications as NotificationItem[];
+      assert.equal(pruned.length, 2);
+      assert.equal(pruned[0].id, 'valid_2');
+      assert.equal(pruned[1].id, 'valid_1');
+    });
+
+    test('inviteSendLog item missing sentAt, non-numeric, NaN, or non-finite is dropped during prune without throwing', () => {
+      const now = 1700000000000;
+      const state: Record<string, unknown> = {
+        inviteSendLog: [
+          { targetId: 'valid_1', sentAt: now - 1000 },
+          { targetId: 'no_sent' } as any,
+          { targetId: 'nan_sent', sentAt: NaN },
+          { targetId: 'inf_sent', sentAt: Infinity },
+          { targetId: 'neginf_sent', sentAt: -Infinity },
+          { targetId: 'str_sent', sentAt: '1700000000000' as any },
+          null as any,
+          { targetId: 'valid_2', sentAt: now - 200 },
+        ],
+      };
+
+      assert.doesNotThrow(() => ensureV3Defaults(state, now));
+      const pruned = state.inviteSendLog as InviteSendLogItem[];
+      assert.equal(pruned.length, 2);
+      assert.equal(pruned[0].targetId, 'valid_2');
+      assert.equal(pruned[1].targetId, 'valid_1');
+    });
   });
 
   describe('ensureV3Defaults & Idempotency', () => {
@@ -289,6 +334,39 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
       });
       assert.equal(state.privacy.inviteFrom, 'friends');
       assert.equal(state.privacy.discoverableByCode, false);
+    });
+
+    test('unlockCheckinDays non-finite (Infinity, -Infinity, NaN) re-seeds from check-in records or 0, while finite values are preserved', () => {
+      // With check-in records and Infinity
+      const stateWithCheckins: Record<string, unknown> = {
+        unlockCheckinDays: Infinity,
+        checkinDayKeys: ['2026-11-01', '2026-11-02'],
+      };
+      ensureV3Defaults(stateWithCheckins);
+      assert.equal(stateWithCheckins.unlockCheckinDays, 2);
+
+      // With -Infinity
+      const stateNegInf: Record<string, unknown> = {
+        unlockCheckinDays: -Infinity,
+        checkinDayKeys: ['2026-11-01'],
+      };
+      ensureV3Defaults(stateNegInf);
+      assert.equal(stateNegInf.unlockCheckinDays, 1);
+
+      // With NaN and no records -> 0
+      const stateNaN: Record<string, unknown> = {
+        unlockCheckinDays: NaN,
+      };
+      ensureV3Defaults(stateNaN);
+      assert.equal(stateNaN.unlockCheckinDays, 0);
+
+      // Already-persisted finite valid count is preserved and not shrunk
+      const stateFinite: Record<string, unknown> = {
+        unlockCheckinDays: 14,
+        checkinDayKeys: ['2026-11-01'],
+      };
+      ensureV3Defaults(stateFinite);
+      assert.equal(stateFinite.unlockCheckinDays, 14);
     });
 
     test('first-D3 partial v3 save gets new fields without requiring version 4', () => {

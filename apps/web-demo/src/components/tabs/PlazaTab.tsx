@@ -673,20 +673,23 @@ export const PlazaTab: React.FC = () => {
                   </div>
                   <div className="text-xs font-mono font-black text-amber-300">{squadInviteCode}</div>
                 </div>
-                <button
-                  onClick={() => {
-                    if (navigator.clipboard) {
-                      navigator.clipboard.writeText(
-                        `🛡️ 隊長【${store.nickname}】邀請你加入 FitMon 固定戰隊【${store.squadName}】！我們正在共同討伐 Stage ${store.squadStage}【${squadBossTemplate.nameZh}】（剩餘 ${squadCurrentHp} HP），輸入邀請碼 ${squadInviteCode} 加入同隊一起消磨血量：https://yuchienw.github.io/Fitmon/`
-                      );
-                    }
-                    store.showToast(`📲 已複製隊長邀請連結與邀請碼 ${squadInviteCode}！傳給朋友送出申請，同意後即可同打一隻王！`);
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-[11px] font-black flex items-center gap-1 shrink-0 shadow"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>複製邀請給朋友</span>
-                </button>
+                {!store.devMinorTestAccount && (
+                  <button
+                    data-testid="copy-invite-to-friends"
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(
+                          `🛡️ 隊長【${store.nickname}】邀請你加入 FitMon 固定戰隊【${store.squadName}】！我們正在共同討伐 Stage ${store.squadStage}【${squadBossTemplate.nameZh}】（剩餘 ${squadCurrentHp} HP），輸入邀請碼 ${squadInviteCode} 加入同隊一起消磨血量：https://yuchienw.github.io/Fitmon/`
+                        );
+                      }
+                      store.showToast(`📲 已複製隊長邀請連結與邀請碼 ${squadInviteCode}！傳給朋友送出申請，同意後即可同打一隻王！`);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-[11px] font-black flex items-center gap-1 shrink-0 shadow"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>複製邀請給朋友</span>
+                  </button>
+                )}
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-col gap-1.5">
@@ -787,50 +790,52 @@ export const PlazaTab: React.FC = () => {
                 </div>
 
                 {/* A. 邀請健友名單（隊長發送邀請） */}
-                <div className="space-y-1.5">
-                  <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-                    <span>👥 健友候選名單（隊長可發送邀請）</span>
-                    <span className="text-[10px] text-slate-400">
-                      剩餘邀請名額：{Math.max(0, SQUAD_CAP - 1 - store.squadMembers.length - pendingOutgoingInvitesCount)}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {candidatePoolAvailable.map((candidate) => {
-                      const isPending = pendingInviteTargetIds.has(candidate.id);
-                      const canSend =
-                        store.isSquadLeader &&
-                        1 + store.squadMembers.length < SQUAD_CAP &&
-                        pendingOutgoingInvitesCount < SQUAD_CAP - 1 - store.squadMembers.length &&
-                        !isPending;
+                {IS_DEMO && candidatePoolAvailable.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                      <span>👥 健友候選名單（隊長可發送邀請）</span>
+                      <span className="text-[10px] text-slate-400">
+                        剩餘邀請名額：{Math.max(0, SQUAD_CAP - 1 - store.squadMembers.length - pendingOutgoingInvitesCount)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {candidatePoolAvailable.map((candidate) => {
+                        const isPending = pendingInviteTargetIds.has(candidate.id);
+                        const canSend =
+                          store.isSquadLeader &&
+                          1 + store.squadMembers.length < SQUAD_CAP &&
+                          pendingOutgoingInvitesCount < SQUAD_CAP - 1 - store.squadMembers.length &&
+                          !isPending;
 
-                      return (
-                        <div
-                          key={candidate.id}
-                          className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2"
-                        >
-                          <div className="min-w-0">
-                            <div className="text-xs font-black text-white truncate">{candidate.nameZh}</div>
-                            <div className="text-[10px] text-slate-400">{candidate.roleBadgeZh}</div>
-                          </div>
-                          <button
-                            data-testid={`send-invite-${candidate.id}`}
-                            disabled={!canSend}
-                            onClick={() => store.sendInvite(candidate.id, 'friend')}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-black shrink-0 transition ${
-                              isPending
-                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                                : canSend
-                                ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
-                                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                            }`}
+                        return (
+                          <div
+                            key={candidate.id}
+                            className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2"
                           >
-                            {isPending ? '已邀請' : '邀請'}
-                          </button>
-                        </div>
-                      );
-                    })}
+                            <div className="min-w-0">
+                              <div className="text-xs font-black text-white truncate">{candidate.nameZh}</div>
+                              <div className="text-[10px] text-slate-400">{candidate.roleBadgeZh}</div>
+                            </div>
+                            <button
+                              data-testid={`send-invite-${candidate.id}`}
+                              disabled={!canSend}
+                              onClick={() => store.sendInvite(candidate.id, 'friend')}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-black shrink-0 transition ${
+                                isPending
+                                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                  : canSend
+                                  ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
+                                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                              }`}
+                            >
+                              {isPending ? '已邀請' : '邀請'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* B. 收到的組隊邀請（玩家為受邀者） */}
                 {incomingInvites.length > 0 && (
@@ -1054,7 +1059,9 @@ export const PlazaTab: React.FC = () => {
                             隊友空位 #{slotIdx + 2}（等待朋友接受邀請）
                           </div>
                           <div className="text-[11px] text-slate-400">
-                            點擊上方【複製邀請給朋友】或在下方發送邀請，對方同意後即可加入同隊！
+                            {store.devMinorTestAccount
+                              ? '可在下方發送邀請，對方同意後即可加入同隊！'
+                              : '點擊上方【複製邀請給朋友】或在下方發送邀請，對方同意後即可加入同隊！'}
                           </div>
                         </div>
                       </div>

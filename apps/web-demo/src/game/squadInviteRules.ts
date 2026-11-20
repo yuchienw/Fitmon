@@ -72,7 +72,8 @@ export interface SquadMemberState {
 
 // 假角色候選池（測試用）
 // 資安規定：假角色不得使用真實個資（無真實姓名、電話、Email 或真人照片）。
-export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
+export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = IS_DEMO
+  ? [
   {
     id: 'friend_akai',
     nameZh: '重訓狂人 · 阿凱',
@@ -199,7 +200,7 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
       accessory: 'acc_protein_shaker',
     },
   },
-];
+] : [];
 
 // 測試用，上線前移除
 export type { DemoFakeSquad };
