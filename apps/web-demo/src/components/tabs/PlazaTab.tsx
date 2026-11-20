@@ -23,7 +23,11 @@ import {
   SQUAD_CANDIDATE_POOL,
   getSquadInviteCode,
   selectStreakDays,
+  DEMO_FAKE_SQUADS,
+  SQUAD_CAP,
+  DEMO_PLAYER_ID,
 } from '../../stores/useGameStore';
+import { IS_DEMO } from '../../config/demo';
 
 import {
   ADVENTURE_BOSS_CATALOG,
@@ -31,6 +35,7 @@ import {
   FRIEND_PROFILES,
   hasFriendProfile,
   resolveFriendProfileId,
+  getFriendProfile,
 } from '../../config/catalogConfig';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { bossSpriteUrl } from '../../game/pixelSpriteDrawer';
@@ -630,7 +635,7 @@ export const PlazaTab: React.FC = () => {
 
             <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] text-slate-300 leading-relaxed">
               💡 <strong className="text-amber-300">共鬥規則：</strong>
-              組隊由隊長發送邀請連結給現實朋友加入。同一隊伍裡所有人看到的
+              組隊由隊長發送邀請給朋友，或朋友輸入邀請碼提出申請，雙方同意後入隊。同一隊伍裡所有人看到的
               <strong className="text-emerald-300">
                 「當前關卡 (Stage {store.squadStage})」與「Boss 剩餘血量 ({squadCurrentHp.toLocaleString()} HP)」完全相同
               </strong>
@@ -638,83 +643,363 @@ export const PlazaTab: React.FC = () => {
             </div>
 
             {/* Captain Rename Squad */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Edit3 className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  value={squadNameInput}
-                  onChange={(e) => setSquadNameInput(e.target.value)}
-                  placeholder="隊長修改隊伍名稱..."
-                  className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white outline-none focus:border-cyan-400"
-                />
+            {store.isSquadLeader && (
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Edit3 className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={squadNameInput}
+                    onChange={(e) => setSquadNameInput(e.target.value)}
+                    placeholder="隊長修改隊伍名稱..."
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-white outline-none focus:border-cyan-400"
+                  />
+                </div>
+                <button
+                  onClick={() => store.setSquadName(squadNameInput)}
+                  className="px-3 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black shrink-0"
+                >
+                  改隊名
+                </button>
               </div>
-              <button
-                onClick={() => store.setSquadName(squadNameInput)}
-                className="px-3 py-2 rounded-xl bg-amber-400 text-slate-950 text-xs font-black shrink-0"
-              >
-                改隊名
-              </button>
-            </div>
+            )}
 
             {/* Captain Invite Link / Code & Join Friend's Squad */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-800">
               <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-[10px] text-slate-400 font-bold">隊長專屬邀請碼</div>
+                  <div className="text-[10px] text-slate-400 font-bold">
+                    {store.isSquadLeader ? '隊長專屬邀請碼' : '隊伍邀請碼'}
+                  </div>
                   <div className="text-xs font-mono font-black text-amber-300">{squadInviteCode}</div>
                 </div>
-                <button
-                  onClick={() => {
-                    if (navigator.clipboard) {
-                      navigator.clipboard.writeText(
-                        `🛡️ 隊長【${store.nickname}】邀請你加入 FitMon 固定戰隊【${store.squadName}】！我們正在共同討伐 Stage ${store.squadStage}【${squadBossTemplate.nameZh}】（剩餘 ${squadCurrentHp} HP），輸入邀請碼 ${squadInviteCode} 加入同隊一起消磨血量：https://yuchienw.github.io/Fitmon/`
-                      );
-                    }
-                    store.showToast(`📲 已複製隊長邀請連結與邀請碼 ${squadInviteCode}！傳給朋友即可入隊同打一隻王！`);
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-[11px] font-black flex items-center gap-1 shrink-0 shadow"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>複製邀請給朋友</span>
-                </button>
+                {!store.devMinorTestAccount && (
+                  <button
+                    data-testid="copy-invite-to-friends"
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(
+                          `🛡️ 隊長【${store.nickname}】邀請你加入 FitMon 固定戰隊【${store.squadName}】！我們正在共同討伐 Stage ${store.squadStage}【${squadBossTemplate.nameZh}】（剩餘 ${squadCurrentHp} HP），輸入邀請碼 ${squadInviteCode} 加入同隊一起消磨血量：https://yuchienw.github.io/Fitmon/`
+                        );
+                      }
+                      store.showToast(`📲 已複製隊長邀請連結與邀請碼 ${squadInviteCode}！傳給朋友送出申請，同意後即可同打一隻王！`);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-[11px] font-black flex items-center gap-1 shrink-0 shadow"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>複製邀請給朋友</span>
+                  </button>
+                )}
               </div>
 
-              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-1.5">
-                <input
-                  type="text"
-                  value={inviteCodeInput}
-                  onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase())}
-                  placeholder="輸入朋友隊伍邀請碼"
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-mono text-white outline-none focus:border-emerald-400"
-                />
-                <button
-                  onClick={() => {
-                    if (!inviteCodeInput.trim()) {
-                      store.showToast('⚠️ 請輸入朋友給你的隊伍邀請碼！');
-                      return;
-                    }
-                    if (store.squadMembers.length >= 3) {
-                      store.showToast('⚠️ 目前隊伍已滿 4 人！');
-                      return;
-                    }
-                    const nextFriend =
-                      SQUAD_CANDIDATE_POOL.find(
-                        (c) =>
-                          !store.squadMembers.some(
-                            (m) => (resolveFriendProfileId(m.id) || m.id) === c.id
-                          )
-                      ) || SQUAD_CANDIDATE_POOL[3];
-                    store.recruitSquadMember(nextFriend);
-                    setInviteCodeInput('');
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-[11px] font-black shrink-0"
-                >
-                  入隊
-                </button>
+              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <input
+                    data-testid="invite-code-input"
+                    type="text"
+                    value={inviteCodeInput}
+                    onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase())}
+                    placeholder="輸入朋友隊伍邀請碼"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-mono text-white outline-none focus:border-emerald-400"
+                  />
+                  <button
+                    data-testid="invite-code-submit"
+                    onClick={() => {
+                      if (!inviteCodeInput.trim()) {
+                        store.showToast('⚠️ 請輸入朋友給你的隊伍邀請碼！');
+                        return;
+                      }
+                      store.submitInviteCode(inviteCodeInput.trim());
+                      setInviteCodeInput('');
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-[11px] font-black shrink-0"
+                  >
+                    送出請求
+                  </button>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  輸入邀請碼將對該隊伍送出入隊請求，需經該隊隊長同意（若該隊已邀請你，輸入將直接同意入隊）。
+                </div>
+                {IS_DEMO && DEMO_FAKE_SQUADS.length > 0 && (
+                  <div className="text-[10px] text-amber-300/80 font-mono">
+                    測試用代碼（上線前移除）：{DEMO_FAKE_SQUADS.map((s) => `${s.name} ${s.inviteCode}`).join(' · ')}
+                  </div>
+                )}
               </div>
             </div>
           </div>
+
+          {/* 1.5. SQUAD INVITES & JOIN REQUESTS (DEMO) */}
+          {(() => {
+            const nowTs = Date.now();
+            const incomingInvites = store.squadInvites.filter(
+              (i) => i.status === 'pending' && i.kind === 'invite' && i.toId === DEMO_PLAYER_ID
+            );
+            const incomingRequests = store.squadInvites.filter(
+              (i) => i.status === 'pending' && i.kind === 'request' && i.toId === DEMO_PLAYER_ID
+            );
+            const outgoingPending = store.squadInvites.filter(
+              (i) => i.status === 'pending' && i.fromId === DEMO_PLAYER_ID
+            );
+            const pendingOutgoingInvitesCount = store.squadInvites.filter(
+              (i) => i.status === 'pending' && i.kind === 'invite' && i.squadId === store.currentSquadId
+            ).length;
+            const pendingInviteTargetIds = new Set(
+              store.squadInvites
+                .filter(
+                  (i) =>
+                    i.status === 'pending' &&
+                    i.kind === 'invite' &&
+                    i.squadId === store.currentSquadId
+                )
+                .map((i) => i.toId)
+            );
+            const candidatePoolAvailable = SQUAD_CANDIDATE_POOL.filter(
+              (c) =>
+                !store.squadMembers.some(
+                  (m) => m.id === c.id || (resolveFriendProfileId(m.id) || m.id) === c.id
+                )
+            );
+
+            return (
+              <div data-testid="squad-invite-section" className="retro-box rounded-2xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap border-b border-slate-800 pb-2">
+                  <span className="text-xs font-black text-white flex items-center gap-1.5">
+                    <Bell className="w-4 h-4 text-cyan-400" />
+                    組隊邀請與請求
+                    {IS_DEMO && <span className="text-[10px] text-slate-400 font-normal">（測試用，上線前移除）</span>}
+                  </span>
+                  {IS_DEMO && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        data-testid="dev-simulate-request"
+                        onClick={() => store.simulateIncomingJoinRequest()}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700"
+                      >
+                        模擬一筆入隊請求
+                      </button>
+                      <button
+                        data-testid="dev-simulate-invite"
+                        onClick={() => store.simulateIncomingInvite()}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700"
+                      >
+                        模擬一則組隊邀請
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* A. 邀請健友名單（隊長發送邀請） */}
+                {IS_DEMO && candidatePoolAvailable.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                      <span>👥 健友候選名單（隊長可發送邀請）</span>
+                      <span className="text-[10px] text-slate-400">
+                        剩餘邀請名額：{Math.max(0, SQUAD_CAP - 1 - store.squadMembers.length - pendingOutgoingInvitesCount)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {candidatePoolAvailable.map((candidate) => {
+                        const isPending = pendingInviteTargetIds.has(candidate.id);
+                        const canSend =
+                          store.isSquadLeader &&
+                          1 + store.squadMembers.length < SQUAD_CAP &&
+                          pendingOutgoingInvitesCount < SQUAD_CAP - 1 - store.squadMembers.length &&
+                          !isPending;
+
+                        return (
+                          <div
+                            key={candidate.id}
+                            className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="text-xs font-black text-white truncate">{candidate.nameZh}</div>
+                              <div className="text-[10px] text-slate-400">{candidate.roleBadgeZh}</div>
+                            </div>
+                            <button
+                              data-testid={`send-invite-${candidate.id}`}
+                              disabled={!canSend}
+                              onClick={() => store.sendInvite(candidate.id, 'friend')}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-black shrink-0 transition ${
+                                isPending
+                                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                  : canSend
+                                  ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
+                                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                              }`}
+                            >
+                              {isPending ? '已邀請' : '邀請'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* B. 收到的組隊邀請（玩家為受邀者） */}
+                {incomingInvites.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                    <div className="text-[11px] font-bold text-cyan-300">
+                      📥 收到的組隊邀請（{incomingInvites.length}）
+                    </div>
+                    <div className="space-y-1.5">
+                      {incomingInvites.map((item) => {
+                        const remainingHours = Math.max(0, Math.ceil((item.expiresAt - nowTs) / 3600000));
+                        return (
+                          <div
+                            key={item.id}
+                            data-testid={`pending-item-${item.id}`}
+                            className="p-2.5 rounded-xl bg-slate-900 border border-cyan-500/40 flex items-center justify-between gap-2 flex-wrap"
+                          >
+                            <div>
+                              <div className="text-xs font-black text-white">
+                                戰隊【{item.squadName}】邀請你加入
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                剩餘時間：{remainingHours} 小時
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                data-testid={`accept-pending-${item.id}`}
+                                onClick={() => store.acceptInvite(item.id)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[11px] font-black hover:bg-emerald-400"
+                              >
+                                加入
+                              </button>
+                              <button
+                                data-testid={`decline-pending-${item.id}`}
+                                onClick={() => store.declineInvite(item.id)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-black hover:bg-slate-700"
+                              >
+                                拒絕
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* C. 收到的入隊請求（玩家為隊長） */}
+                {incomingRequests.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                    <div className="text-[11px] font-bold text-emerald-300">
+                      📥 收到的入隊請求（{incomingRequests.length}）
+                    </div>
+                    <div className="space-y-1.5">
+                      {incomingRequests.map((item) => {
+                        const candidate =
+                          SQUAD_CANDIDATE_POOL.find((c) => c.id === item.fromId) ||
+                          getFriendProfile(item.fromId);
+                        const name = candidate?.nameZh || item.fromId;
+                        const remainingHours = Math.max(0, Math.ceil((item.expiresAt - nowTs) / 3600000));
+                        return (
+                          <div
+                            key={item.id}
+                            data-testid={`pending-item-${item.id}`}
+                            className="p-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 flex items-center justify-between gap-2 flex-wrap"
+                          >
+                            <div>
+                              <div className="text-xs font-black text-white">
+                                【{name}】申請加入你的戰隊
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                剩餘時間：{remainingHours} 小時
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                data-testid={`accept-pending-${item.id}`}
+                                onClick={() => store.acceptRequest(item.id)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 text-[11px] font-black hover:bg-emerald-400"
+                              >
+                                同意
+                              </button>
+                              <button
+                                data-testid={`decline-pending-${item.id}`}
+                                onClick={() => store.declineRequest(item.id)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-black hover:bg-slate-700"
+                              >
+                                拒絕
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* D. 等候回應的邀請／請求（玩家送出） */}
+                {outgoingPending.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                    <div className="text-[11px] font-bold text-amber-300">
+                      📤 等候回應的邀請／請求（{outgoingPending.length}）
+                    </div>
+                    <div className="space-y-1.5">
+                      {outgoingPending.map((item) => {
+                        let targetName = item.squadName;
+                        if (item.kind === 'invite') {
+                          const cand =
+                            SQUAD_CANDIDATE_POOL.find((c) => c.id === item.toId) ||
+                            getFriendProfile(item.toId);
+                          targetName = cand?.nameZh || item.toId;
+                        }
+                        const remainingHours = Math.max(0, Math.ceil((item.expiresAt - nowTs) / 3600000));
+                        return (
+                          <div
+                            key={item.id}
+                            data-testid={`pending-item-${item.id}`}
+                            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2 flex-wrap"
+                          >
+                            <div>
+                              <div className="text-xs font-bold text-slate-200">
+                                {item.kind === 'invite' ? '邀請：' : '申請加入：'}
+                                <span className="font-black text-white">{targetName}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                剩餘時間：{remainingHours} 小時
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                data-testid={`cancel-pending-${item.id}`}
+                                onClick={() => store.cancelPending(item.id)}
+                                className="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[10px] font-bold"
+                              >
+                                取消
+                              </button>
+                              {IS_DEMO && (
+                                <>
+                                  <button
+                                    data-testid={`dev-sim-accept-${item.id}`}
+                                    onClick={() => store.resolvePendingAsFake({ id: item.id, accept: true })}
+                                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[10px] font-bold border border-slate-700"
+                                  >
+                                    模擬同意
+                                  </button>
+                                  <button
+                                    data-testid={`dev-sim-decline-${item.id}`}
+                                    onClick={() => store.resolvePendingAsFake({ id: item.id, accept: false })}
+                                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-300 text-[10px] font-bold border border-slate-700"
+                                  >
+                                    模擬拒絕
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 2. SHARED SQUAD ROSTER & DAMAGE CONTRIBUTION ON CURRENT BOSS */}
           <div className="retro-box rounded-2xl p-3.5 space-y-2.5">
@@ -738,7 +1023,7 @@ export const PlazaTab: React.FC = () => {
                   <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 text-[10px] font-black">
-                        隊長 · 你
+                        {store.isSquadLeader ? '隊長 · 你' : '隊員 · 你'}
                       </span>
                       <span className="text-xs font-black text-white break-words">
                         {store.nickname}
@@ -774,7 +1059,9 @@ export const PlazaTab: React.FC = () => {
                             隊友空位 #{slotIdx + 2}（等待朋友接受邀請）
                           </div>
                           <div className="text-[11px] text-slate-400">
-                            點擊上方【複製邀請給朋友】傳至 LINE 群組，朋友點連結即可加入同隊！
+                            {store.devMinorTestAccount
+                              ? '可在下方發送邀請，對方同意後即可加入同隊！'
+                              : '點擊上方【複製邀請給朋友】或在下方發送邀請，對方同意後即可加入同隊！'}
                           </div>
                         </div>
                       </div>

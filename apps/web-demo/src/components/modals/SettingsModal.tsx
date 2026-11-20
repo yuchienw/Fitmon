@@ -14,6 +14,7 @@ import {
   Footprints,
 } from 'lucide-react';
 import { useGameStore, RoomPoseOverride } from '../../stores/useGameStore';
+import { IS_DEMO } from '../../config/demo';
 
 export const SettingsModal: React.FC = () => {
   const store = useGameStore();
@@ -26,6 +27,7 @@ export const SettingsModal: React.FC = () => {
           <h3 className="text-sm font-black text-white">⚙️ 系統設定與 MVP 測試控制台</h3>
           <button
             onClick={() => store.setSettingsOpen(false)}
+            aria-label="關閉"
             className="p-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
           >
             <X className="w-4 h-4" />
@@ -178,6 +180,32 @@ export const SettingsModal: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* 組隊試玩開關（測試用，上線前移除） */}
+        {IS_DEMO && (
+          <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-3 space-y-2">
+            <div className="text-xs font-black text-cyan-300">
+              組隊試玩開關（測試用，上線前移除）
+            </div>
+            <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+              <div>
+                <div className="text-xs font-bold text-slate-200">未成年測試帳號</div>
+                <div className="text-[10px] text-slate-400">開啟後不會收到路人／陌生人的入隊請求</div>
+              </div>
+              <button
+                data-testid="dev-minor-toggle"
+                onClick={() => store.setDevMinorTestAccount(!store.devMinorTestAccount)}
+                className={`px-3 py-1 rounded-lg text-xs font-black ${
+                  store.devMinorTestAccount
+                    ? 'bg-amber-400 text-slate-950'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                {store.devMinorTestAccount ? '開啟 ON' : '關閉 OFF'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Reset LocalStorage */}
         <button

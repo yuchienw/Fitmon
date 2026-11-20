@@ -123,3 +123,93 @@ export const GACHA_TICKET_COIN_PRICE = 120;
 /** 單次發放金幣上限，防止異常數值注入 */
 export const MAX_SINGLE_GRANT = 500;
 
+
+// ============================================================================
+// D) 社群隱私、解鎖門檻與速率限制配置 (T3-D3 資安 11/20)
+// ============================================================================
+
+/** 成人預設好友／組隊邀請來源：'everyone' | 'friends'；YuChien may change this default */
+export const DEFAULT_ADULT_INVITE_FROM = 'everyone' as const; // 「所有人（知道我玩家代碼的人）」; YuChien may change this default
+
+/** 成人預設是否能以玩家代碼被搜尋 */
+export const DEFAULT_ADULT_DISCOVERABLE_BY_CODE = true;
+
+/** 未成年帳號鎖定隱私設定：僅限好友、不可被代碼搜尋 */
+export const MINOR_PRIVACY = {
+  inviteFrom: 'friends' as const,
+  discoverableByCode: false,
+} as const;
+
+/** 新帳號判定時間窗口：7 天（毫秒） */
+export const NEW_ACCOUNT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * 資安 11/20 社群邀請與搜尋速率限制設定 (SOCIAL_RATE_LIMITS)
+ * 注意：僅作設定項常數配置，試玩版暫不強制阻擋（試玩版目前未實作帳號年齡，後續正式版再行執法）。
+ */
+export const SOCIAL_RATE_LIMITS = {
+  /** 新帳號判定窗口（7 天，毫秒） */
+  newAccountWindowMs: NEW_ACCOUNT_WINDOW_MS,
+
+  /** 組隊邀請限制：每日 20 則（其中非好友 10 則）；單人冷卻 72 小時且 7 天內最多 3 次 */
+  squadInvite: {
+    maxPerDay: 20,
+    maxNonFriendPerDay: 10,
+    perPersonCooldownMs: 72 * 60 * 60 * 1000,
+    maxPerPersonPer7Days: 3,
+    window7DaysMs: 7 * 24 * 60 * 60 * 1000,
+  },
+
+  /** 好友請求限制：每日 20 則；略過後冷卻 7 天 */
+  friendRequest: {
+    maxPerDay: 20,
+    skipCooldownMs: 7 * 24 * 60 * 60 * 1000,
+  },
+
+  /** 代碼搜尋限制：每分鐘 5 次、每日 30 次 */
+  codeLookup: {
+    maxPerMinute: 5,
+    maxPerDay: 30,
+    minuteWindowMs: 60 * 1000,
+    dayWindowMs: 24 * 60 * 60 * 1000,
+  },
+
+  /** 新帳號（7 天內）每日限額：組隊 3、好友 5、代碼搜尋 10 */
+  newAccount: {
+    squadInviteDailyMax: 3,
+    friendRequestDailyMax: 5,
+    codeLookupDailyMax: 10,
+  },
+} as const;
+
+export interface UnlockThreshold {
+  id: string;
+  days: number;
+}
+
+/** 動作解鎖門檻（固定：3, 7, 14 天） */
+export const POSE_UNLOCK_THRESHOLDS: readonly UnlockThreshold[] = [
+  { id: 'pose_unlock_3d', days: 3 },
+  { id: 'pose_unlock_7d', days: 7 },
+  { id: 'pose_unlock_14d', days: 14 },
+];
+
+/** 套裝解鎖門檻（固定：5, 15, 30 天） */
+export const OUTFIT_UNLOCK_THRESHOLDS: readonly UnlockThreshold[] = [
+  { id: 'outfit_unlock_5d', days: 5 },
+  { id: 'outfit_unlock_15d', days: 15 },
+  { id: 'outfit_unlock_30d', days: 30 },
+];
+
+/** 根據有效打卡天數計算符合解鎖資格之項目清單 */
+export function unlockedIdsForDays(
+  thresholds: readonly UnlockThreshold[],
+  days: number
+): string[] {
+  if (typeof days !== 'number' || days <= 0) return [];
+  return thresholds
+    .filter((t) => days >= t.days)
+    .map((t) => t.id);
+}
+
+
