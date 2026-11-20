@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dumbbell,
   Flame,
@@ -32,6 +32,7 @@ import {
   WorkoutTemplate,
 } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
+import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 
 type RoutineCategoryTab = 'favorite' | 'my_custom' | 'referenced' | 'recommended';
 
@@ -55,6 +56,102 @@ export const WorkoutTab: React.FC = () => {
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [swapSportFilter, setSwapSportFilter] = useState<'all' | SportType>('all');
   const [swapSearch, setSwapSearch] = useState('');
+
+  // Focus mode derived & UI states
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [restMenuOpen, setRestMenuOpen] = useState(false);
+  const [showGoldFlash, setShowGoldFlash] = useState(false);
+  const [isCardInputFocused, setIsCardInputFocused] = useState(false);
+  const [floatingPlusOnes, setFloatingPlusOnes] = useState<{ id: number }[]>([]);
+  const wasSkippedRef = useRef<boolean>(false);
+  const prevRestRunningRef = useRef<boolean>(store.isRestRunning);
+  const initialRestSecRef = useRef<number>(store.currentRestConfigSec || 60);
+  const continueBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Monitor rest transition for natural end flash & vibration
+  useEffect(() => {
+    if (!prevRestRunningRef.current && store.isRestRunning) {
+      wasSkippedRef.current = false;
+      setShowGoldFlash(false);
+      initialRestSecRef.current = Math.max(store.restSecondsLeft, store.currentRestConfigSec || 60);
+    } else if (prevRestRunningRef.current && !store.isRestRunning) {
+      if (!wasSkippedRef.current) {
+        setShowGoldFlash(true);
+        try {
+          navigator.vibrate?.([100, 50, 100]);
+        } catch (_) {}
+      } else {
+        wasSkippedRef.current = false;
+      }
+    }
+    prevRestRunningRef.current = store.isRestRunning;
+  }, [store.isRestRunning, store.restSecondsLeft, store.currentRestConfigSec]);
+
+  // Auto-dismiss gold flash after 1500ms
+  useEffect(() => {
+    if (!showGoldFlash) return;
+    const timer = setTimeout(() => {
+      setShowGoldFlash(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [showGoldFlash]);
+
+  // Keep restMenuOpen closed on Escape key
+  useEffect(() => {
+    if (!restMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setRestMenuOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [restMenuOpen]);
+
+  // Focus cancel continue button when confirm dialog opens
+  useEffect(() => {
+    if (showCancelConfirm) {
+      const focusBtn = () => continueBtnRef.current?.focus();
+      focusBtn();
+      const t1 = setTimeout(focusBtn, 50);
+      const t2 = setTimeout(focusBtn, 150);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [showCancelConfirm]);
+
+  const handlePlus30 = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = store.restSecondsLeft + 30;
+    initialRestSecRef.current = Math.max(initialRestSecRef.current, next);
+    store.setRestTimer(next);
+  };
+
+  const handleSkipRest = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    wasSkippedRef.current = true;
+    store.setRestTimer(0);
+  };
+
+  const handleLogWorkoutSet = () => {
+    if (store.isRestRunning) {
+      wasSkippedRef.current = true;
+    }
+    store.logWorkoutSet();
+    const id = Date.now();
+    setFloatingPlusOnes((prev) => [...prev, { id }]);
+    setTimeout(() => {
+      setFloatingPlusOnes((prev) => prev.filter((p) => p.id !== id));
+    }, 800);
+  };
+
+  const handleCancelWorkout = () => {
+    if (store.sessionSets.length === 0) {
+      store.discardWorkoutSession();
+    } else {
+      setShowCancelConfirm(true);
+    }
+  };
 
   const selectedExercise: ExerciseItem =
     EXERCISE_LIBRARY.find((e) => e.id === store.selectedExerciseId) || EXERCISE_LIBRARY[0];
@@ -119,10 +216,19 @@ export const WorkoutTab: React.FC = () => {
   // MODE A: ACTIVE WORKOUT FOCUS MODE (專注訓練模式 V2-02, V2-06, V2-14, V2-15)
   // ============================================================================
   if (store.isWorkoutFocusActive) {
+    const progressPct = Math.min(
+      100,
+      Math.max(
+        0,
+        (store.restSecondsLeft / (initialRestSecRef.current || store.currentRestConfigSec || 60)) * 100
+      )
+    );
+    const isLast10 = store.restSecondsLeft <= 10;
+
     return (
-      <div className="p-3.5 space-y-3.5 pb-10">
-        {/* 1. FOCUS TOP BAR */}
-        <div className="retro-box rounded-2xl p-3 bg-gradient-to-r from-emerald-950/90 via-slate-900 to-slate-900 border-emerald-500/50 flex items-center justify-between gap-2">
+      <div className="flex-none min-h-full flex flex-col justify-between relative bg-[#171412]">
+        {/* 1. FOCUS TOP BAR (Sticky at top) */}
+        <div className="sticky top-0 z-20 shrink-0 p-3 bg-slate-900/95 border-b border-emerald-500/40 backdrop-blur-md flex items-center justify-between gap-2 shadow-md">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -137,17 +243,20 @@ export const WorkoutTab: React.FC = () => {
 
           <div className="flex items-center gap-1.5 shrink-0">
             <button
-              onClick={() => store.discardWorkoutSession()}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 text-xs font-bold"
+              type="button"
+              data-testid="focus-cancel"
+              onClick={handleCancelWorkout}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold transition"
             >
-              退出
+              取消
             </button>
             <button
+              type="button"
               onClick={() => store.finishWorkoutSession()}
               disabled={store.sessionSets.length === 0}
-              className={`retro-btn px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 ${
+              className={`retro-btn px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 transition ${
                 store.sessionSets.length > 0
-                  ? 'bg-amber-400 text-slate-950 shadow-md'
+                  ? 'bg-amber-400 text-slate-950 shadow-md active:scale-95'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >
@@ -157,335 +266,530 @@ export const WorkoutTab: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. ROUTINE EXERCISE QUEUE + MID-WORKOUT ADD / SWAP */}
-        {store.templateQueue.length > 0 && (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between px-0.5">
-              <span className="text-xs font-black text-slate-300">課表動作</span>
-              <div className="flex items-center gap-1.5">
+        {/* Scrollable Middle Content */}
+        <div className="flex-1 p-3.5 space-y-3.5 pb-36">
+          {/* 2. ROUTINE EXERCISE QUEUE + MID-WORKOUT ADD / SWAP */}
+          {store.templateQueue.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-xs font-black text-slate-300">課表動作</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setSwapModalOpen(true)}
+                    className="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-[11px] font-black text-cyan-300 flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3 stroke-[3px]" />
+                    <span>新增 / 換動作</span>
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                {store.templateQueue.map((q, qIdx) => {
+                  const ex = EXERCISE_LIBRARY.find((e) => e.id === q.exerciseId);
+                  if (!ex) return null;
+                  const isCurrent = store.selectedQueueItemId
+                    ? store.selectedQueueItemId === q.id
+                    : store.selectedExerciseId === q.exerciseId && qIdx === 0;
+                  const isDone = q.completedSets >= q.targetSets;
+                  return (
+                    <button
+                      key={q.id || `${q.exerciseId}_${qIdx}`}
+                      onClick={() => store.selectQueueItem(q.id)}
+                      className={`p-2 rounded-xl border text-left shrink-0 flex items-center gap-2 transition ${
+                        isDone
+                          ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300'
+                          : isCurrent
+                          ? 'bg-cyan-950/80 border-cyan-400 text-white ring-1 ring-cyan-400/50 shadow-md shadow-cyan-950/50'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <ExerciseThumbnail exercise={ex} size={34} />
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-black whitespace-nowrap">{ex.nameZh}</span>
+                          <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">
+                            #{qIdx + 1}
+                          </span>
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-300">
+                          {q.completedSets}/{q.targetSets}組 · {q.weightKg}{ex.unitLabel}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
                 <button
                   onClick={() => setSwapModalOpen(true)}
-                  className="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-[11px] font-black text-cyan-300 flex items-center gap-1"
+                  className="px-3 py-2.5 rounded-xl border border-dashed border-cyan-500/50 bg-slate-900/70 text-cyan-300 text-xs font-black shrink-0 flex items-center gap-1 hover:bg-slate-800"
                 >
-                  <Plus className="w-3 h-3 stroke-[3px]" />
-                  <span>新增 / 換動作</span>
+                  <Plus className="w-3.5 h-3.5 stroke-[3px]" />
+                  <span>新增</span>
                 </button>
               </div>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              {store.templateQueue.map((q, qIdx) => {
-                const ex = EXERCISE_LIBRARY.find((e) => e.id === q.exerciseId);
-                if (!ex) return null;
-                const isCurrent = store.selectedQueueItemId
-                  ? store.selectedQueueItemId === q.id
-                  : store.selectedExerciseId === q.exerciseId && qIdx === 0;
-                const isDone = q.completedSets >= q.targetSets;
-                return (
-                  <button
-                    key={q.id || `${q.exerciseId}_${qIdx}`}
-                    onClick={() => store.selectQueueItem(q.id)}
-                    className={`p-2 rounded-xl border text-left shrink-0 flex items-center gap-2 transition ${
-                      isDone
-                        ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300'
-                        : isCurrent
-                        ? 'bg-cyan-950/80 border-cyan-400 text-white ring-1 ring-cyan-400/50 shadow-md shadow-cyan-950/50'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
-                    }`}
-                  >
-                    <ExerciseThumbnail exercise={ex} size={34} />
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-black whitespace-nowrap">{ex.nameZh}</span>
-                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-400">
-                          #{qIdx + 1}
-                        </span>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-300">
-                        {q.completedSets}/{q.targetSets}組 · {q.weightKg}{ex.unitLabel}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setSwapModalOpen(true)}
-                className="px-3 py-2.5 rounded-xl border border-dashed border-cyan-500/50 bg-slate-900/70 text-cyan-300 text-xs font-black shrink-0 flex items-center gap-1 hover:bg-slate-800"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[3px]" />
-                <span>新增</span>
-              </button>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* 3. ACTIVE REST TIMER BANNER */}
-        {store.restSecondsLeft > 0 && (
-          <div className="retro-box rounded-2xl p-3 bg-cyan-950/60 border-cyan-400/60 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Timer className="w-5 h-5 text-cyan-400 animate-spin" />
-              <div>
-                <div className="text-xs font-black text-cyan-200">休息倒數</div>
-                <div className="text-lg font-mono font-black text-white">
-                  {formatMMSS(store.restSecondsLeft)}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => store.setRestTimer(store.restSecondsLeft + 30)}
-                className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-cyan-300 text-xs font-bold border border-cyan-500/30"
+          {/* 3. CURRENT EXERCISE VISUAL CARD + DIRECT NUMBER INPUTS */}
+          <div className="retro-box rounded-2xl p-3.5 space-y-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div
+                onClick={() => store.setInspectedExerciseId(selectedExercise.id)}
+                className="flex items-center gap-3 min-w-0 cursor-pointer group"
               >
-                +30s
-              </button>
-              <button
-                onClick={() => store.setRestTimer(0)}
-                className="px-2.5 py-1.5 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/30"
-              >
-                跳過
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 4. CURRENT EXERCISE VISUAL CARD + DIRECT NUMBER INPUTS */}
-        <div className="retro-box rounded-2xl p-3.5 space-y-3.5">
-          <div className="flex items-center justify-between gap-2">
-            <div
-              onClick={() => store.setInspectedExerciseId(selectedExercise.id)}
-              className="flex items-center gap-3 min-w-0 cursor-pointer group"
-            >
-              <ExerciseThumbnail exercise={selectedExercise} size={54} />
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black">
-                    {selectedExercise.muscleLabelZh}
-                  </span>
-                  {currentPR > 0 && (
-                    <span className="text-[10px] font-mono text-amber-300 font-bold">
-                      🏆 PR {currentPR} {selectedExercise.unitLabel}
+                <ExerciseThumbnail exercise={selectedExercise} size={54} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black">
+                      {selectedExercise.muscleLabelZh}
                     </span>
+                    {currentPR > 0 && (
+                      <span className="text-[10px] font-mono text-amber-300 font-bold">
+                        🏆 PR {currentPR} {selectedExercise.unitLabel}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-base font-black text-white group-hover:text-cyan-300 transition mt-0.5 break-words leading-snug flex items-center gap-1 flex-wrap">
+                    <span>{selectedExercise.nameZh}</span>
+                    <BookOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  </h3>
+                  {selectedExercise.primaryMusclesZh && (
+                    <p className="text-[11px] text-slate-400 break-words leading-snug">
+                      🎯 {selectedExercise.primaryMusclesZh}
+                    </p>
                   )}
                 </div>
-                <h3 className="text-base font-black text-white group-hover:text-cyan-300 transition mt-0.5 break-words leading-snug flex items-center gap-1 flex-wrap">
-                  <span>{selectedExercise.nameZh}</span>
-                  <BookOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                </h3>
-                {selectedExercise.primaryMusclesZh && (
-                  <p className="text-[11px] text-slate-400 break-words leading-snug">
-                    🎯 {selectedExercise.primaryMusclesZh}
-                  </p>
-                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => store.setInspectedExerciseId(selectedExercise.id)}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 text-xs font-black flex items-center gap-1"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>說明</span>
+                </button>
+                <button
+                  onClick={() => setSwapModalOpen(true)}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-black flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>換動作</span>
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => store.setInspectedExerciseId(selectedExercise.id)}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 text-xs font-black flex items-center gap-1"
+            {/* Direct Keyboard Input + Stepper for Weight/Distance & Reps/Duration */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* Weight / Distance / Intensity Input */}
+              <div
+                style={{ scrollMarginBottom: '140px' }}
+                className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center"
               >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>說明</span>
-              </button>
-              <button
-                onClick={() => setSwapModalOpen(true)}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-black flex items-center gap-1"
+                <span className="text-xs text-slate-300 font-black mb-1">
+                  {selectedExercise.unitLabel === 'kg'
+                    ? '重量 kg'
+                    : selectedExercise.unitLabel === 'km'
+                    ? '距離 km'
+                    : `數值 ${selectedExercise.unitLabel}`}
+                </span>
+                <div className="flex items-center justify-between w-full gap-1">
+                  <button
+                    onClick={() =>
+                      store.setCurrentWeight(
+                        Math.max(0, Number((store.currentWeightKg - (selectedExercise.unitLabel === 'km' ? 0.5 : 2.5)).toFixed(1)))
+                      )
+                    }
+                    className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    value={store.currentWeightKg}
+                    onFocus={(e) => {
+                      setIsCardInputFocused(true);
+                      setTimeout(() => {
+                        e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      }, 100);
+                    }}
+                    onBlur={() => setIsCardInputFocused(false)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      store.setCurrentWeight(Number.isNaN(val) ? 0 : val);
+                    }}
+                    style={{ scrollMarginBottom: '140px' }}
+                    className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-white outline-none"
+                  />
+                  <button
+                    onClick={() =>
+                      store.setCurrentWeight(
+                        Number((store.currentWeightKg + (selectedExercise.unitLabel === 'km' ? 0.5 : 2.5)).toFixed(1))
+                      )
+                    }
+                    className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Reps / Minutes Input */}
+              <div
+                style={{ scrollMarginBottom: '140px' }}
+                className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>換動作</span>
-              </button>
+                <span className="text-xs text-slate-300 font-black mb-1">
+                  {selectedExercise.sportType === 'cardio' ? '趟數 / 組數' : '次數 Reps'}
+                </span>
+                <div className="flex items-center justify-between w-full gap-1">
+                  <button
+                    onClick={() => store.setCurrentReps(Math.max(1, store.currentReps - 1))}
+                    className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={store.currentReps}
+                    onFocus={(e) => {
+                      setIsCardInputFocused(true);
+                      setTimeout(() => {
+                        e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      }, 100);
+                    }}
+                    onBlur={() => setIsCardInputFocused(false)}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      store.setCurrentReps(Number.isNaN(val) ? 1 : Math.max(1, val));
+                    }}
+                    style={{ scrollMarginBottom: '140px' }}
+                    className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-emerald-400 outline-none"
+                  />
+                  <button
+                    onClick={() => store.setCurrentReps(store.currentReps + 1)}
+                    className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Direct Keyboard Input + Stepper for Weight/Distance & Reps/Duration */}
-          <div className="grid grid-cols-2 gap-2.5">
-            {/* Weight / Distance / Intensity Input */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center">
-              <span className="text-xs text-slate-300 font-black mb-1">
-                {selectedExercise.unitLabel === 'kg'
-                  ? '重量 kg'
-                  : selectedExercise.unitLabel === 'km'
-                  ? '距離 km'
-                  : `數值 ${selectedExercise.unitLabel}`}
+          {/* 4. COMPLETED SETS LOG LIST WITH VISUAL EXERCISE THUMBNAILS */}
+          <div className="retro-box rounded-2xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-white flex items-center gap-1.5">
+                <Flame className="w-4 h-4 text-amber-400" />
+                已完成 {store.sessionSets.length} 組
               </span>
-              <div className="flex items-center justify-between w-full gap-1">
-                <button
-                  onClick={() =>
-                    store.setCurrentWeight(
-                      Math.max(0, Number((store.currentWeightKg - (selectedExercise.unitLabel === 'km' ? 0.5 : 2.5)).toFixed(1)))
-                    )
-                  }
-                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  value={store.currentWeightKg}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    store.setCurrentWeight(Number.isNaN(val) ? 0 : val);
-                  }}
-                  className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-white outline-none"
-                />
-                <button
-                  onClick={() =>
-                    store.setCurrentWeight(
-                      Number((store.currentWeightKg + (selectedExercise.unitLabel === 'km' ? 0.5 : 2.5)).toFixed(1))
-                    )
-                  }
-                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+              {store.sessionSets.length > 0 && (
+                <span className="text-[11px] font-mono text-emerald-400 font-bold">
+                  總量{' '}
+                  {store.sessionSets
+                    .reduce((acc, s) => acc + s.weightKg * s.reps, 0)
+                    .toLocaleString()}{' '}
+                  kg
+                </span>
+              )}
             </div>
 
-            {/* Reps / Minutes Input */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center">
-              <span className="text-xs text-slate-300 font-black mb-1">
-                {selectedExercise.sportType === 'cardio' ? '趟數 / 組數' : '次數 Reps'}
-              </span>
-              <div className="flex items-center justify-between w-full gap-1">
-                <button
-                  onClick={() => store.setCurrentReps(Math.max(1, store.currentReps - 1))}
-                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={store.currentReps}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    store.setCurrentReps(Number.isNaN(val) ? 1 : Math.max(1, val));
-                  }}
-                  className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-emerald-400 outline-none"
-                />
-                <button
-                  onClick={() => store.setCurrentReps(store.currentReps + 1)}
-                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+            {store.sessionSets.length === 0 ? (
+              <div className="text-center py-5 text-xs text-slate-500">
+                點擊下方「完成本組」開始紀錄
               </div>
-            </div>
+            ) : (
+              <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                {store.sessionSets.map((s, idx) => {
+                  const exObj =
+                    EXERCISE_LIBRARY.find((e) => e.id === s.exerciseId) || EXERCISE_LIBRARY[0];
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => store.setInspectedExerciseId(exObj.id)}
+                      className="px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-cyan-500/40 flex items-center justify-between text-xs gap-2 cursor-pointer transition"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <ExerciseThumbnail exercise={exObj} size={36} />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
+                              #{idx + 1}
+                            </span>
+                            <span className="font-black text-white break-words">
+                              {s.exerciseNameZh}
+                            </span>
+                            <span className="text-[10px] text-cyan-400 font-bold">📖</span>
+                            {s.isPR && (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black">
+                                🏆 PR
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] font-mono text-cyan-300 font-bold mt-0.5">
+                            {s.weightKg} {s.unitLabel} × {s.reps}次{' '}
+                            <span className="text-slate-500">· 休{s.restSec}s</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className="font-mono text-amber-300 font-black shrink-0">
+                        +{s.coinsEarned}🪙
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
+        </div>
 
-          {/* Per-Exercise Rest Timer Setting */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <Timer className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span className="text-xs font-bold text-slate-300">組間休息</span>
-            </div>
-            <div className="flex items-center gap-1">
-              {[60, 90, 120, 180].map((sec) => (
-                <button
-                  key={sec}
-                  onClick={() => store.setCurrentRestConfigSec(sec)}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-mono font-bold transition ${
-                    store.currentRestConfigSec === sec
-                      ? 'bg-cyan-500 text-slate-950 font-black'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
+        {/* 5. PINNED BOTTOM ACTION AREA (Total height 112px, Row 1 = 36px, Row 2 = 56px) */}
+        <div
+          data-testid="focus-action-area"
+          style={{ display: isCardInputFocused ? 'none' : undefined }}
+          className="sticky bottom-0 z-20 shrink-0 w-full h-[112px] min-h-[112px] max-h-[112px] bg-[#171412]/95 backdrop-blur-md border-t border-slate-800/80 p-2 flex flex-col justify-between box-border mt-auto select-none"
+        >
+          {/* Rest Menu Popover */}
+          {restMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-30 bg-black/40"
+                onClick={() => setRestMenuOpen(false)}
+              />
+              <div
+                role="dialog"
+                aria-label="組間休息設定"
+                className="absolute bottom-[116px] left-3 right-3 z-40 bg-slate-900 border border-slate-700/80 rounded-2xl p-3 shadow-2xl space-y-2"
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-slate-300 px-1">
+                  <span>組間休息時間</span>
+                  <button
+                    type="button"
+                    onClick={() => setRestMenuOpen(false)}
+                    className="text-slate-400 hover:text-white p-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5 justify-center">
+                  {[60, 90, 120, 180].map((sec) => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => {
+                        store.setCurrentRestConfigSec(sec);
+                        setRestMenuOpen(false);
+                      }}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-mono font-bold transition ${
+                        store.currentRestConfigSec === sec
+                          ? 'bg-cyan-500 text-slate-950 font-black shadow-sm'
+                          : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                      }`}
+                    >
+                      {sec}s
+                    </button>
+                  ))}
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={store.currentRestConfigSec}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      store.setCurrentRestConfigSec(Number.isNaN(val) ? 60 : Math.max(10, val));
+                    }}
+                    className="w-14 text-center bg-slate-950 border border-slate-700 rounded-lg py-1.5 text-xs font-mono font-black text-cyan-300 outline-none focus:border-cyan-400"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Row 1: Rest Row (36px) */}
+          <div
+            data-testid="focus-rest-row"
+            className="h-[36px] min-h-[36px] max-h-[36px] w-full relative"
+          >
+            {showGoldFlash ? (
+              <div
+                style={{ backgroundColor: '#FBBF24' }}
+                className="w-full h-full rounded-xl text-slate-950 font-black text-xs flex items-center justify-center shadow-md animate-pulse border border-amber-300"
+              >
+                休息好了！下一組 💪
+              </div>
+            ) : store.isRestRunning ? (
+              <div
+                className={`w-full h-full rounded-xl border relative overflow-hidden flex items-center justify-between px-2.5 transition-colors ${
+                  isLast10
+                    ? 'bg-orange-950/40 border-orange-500/50'
+                    : 'bg-cyan-950/40 border-cyan-500/40'
+                }`}
+              >
+                {/* Draining progress bar */}
+                <div
+                  className="absolute inset-y-0 left-0 transition-all duration-300 pointer-events-none rounded-xl"
+                  style={{
+                    width: `${progressPct}%`,
+                    backgroundColor: isLast10 ? 'rgba(249, 115, 22, 0.45)' : 'rgba(6, 182, 212, 0.35)',
+                  }}
+                />
+
+                {/* Left: 休息中 MM:SS */}
+                <div
+                  className={`relative z-10 text-xs font-mono font-bold flex items-center gap-1.5 ${
+                    isLast10 ? 'text-amber-300' : 'text-cyan-300'
                   }`}
                 >
-                  {sec}s
-                </button>
-              ))}
-              <input
-                type="number"
-                inputMode="numeric"
-                value={store.currentRestConfigSec}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  store.setCurrentRestConfigSec(Number.isNaN(val) ? 60 : Math.max(10, val));
-                }}
-                className="w-14 text-center bg-slate-950 border border-slate-700 rounded-lg py-1 text-xs font-mono font-black text-cyan-300"
-              />
-            </div>
+                  <Timer className={`w-3.5 h-3.5 ${isLast10 ? 'text-amber-400 animate-pulse' : 'text-cyan-400 animate-spin'}`} />
+                  <span>休息中 {formatMMSS(store.restSecondsLeft)}</span>
+                </div>
+
+                {/* Right: +30s and 跳過 pills */}
+                <div className="relative z-10 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handlePlus30}
+                    className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 active:scale-95 transition"
+                  >
+                    +30s
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSkipRest}
+                    className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 active:scale-95 transition"
+                  >
+                    跳過
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRestMenuOpen((v) => !v)}
+                className="w-full h-full rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 text-xs font-mono font-bold text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition select-none"
+              >
+                <span>⏱ 組間休息 {store.currentRestConfigSec}s ▾</span>
+              </button>
+            )}
           </div>
 
-          {/* Primary Log Set Action Button */}
+          {/* Row 2: Main Log Set Button (56px) */}
           <button
-            onClick={() => store.logWorkoutSet()}
-            className="w-full retro-btn py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
+            type="button"
+            data-testid="focus-log-set"
+            onClick={handleLogWorkoutSet}
+            className="h-[56px] min-h-[56px] max-h-[56px] w-full retro-btn rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.96] transition-transform relative select-none"
           >
             <Check className="w-5 h-5 stroke-[3px]" />
             <span>
               完成本組 · {store.currentWeightKg}
               {selectedExercise.unitLabel} × {store.currentReps}
             </span>
+            {floatingPlusOnes.map((item) => (
+              <span
+                key={item.id}
+                style={{
+                  animation: 'adv-float 0.8s ease-out forwards',
+                  left: '50%',
+                }}
+                className="absolute -top-3 pointer-events-none text-xs font-black text-emerald-300 bg-emerald-950/95 border border-emerald-400/80 px-2 py-0.5 rounded-full shadow-xl"
+              >
+                +1 組
+              </span>
+            ))}
           </button>
         </div>
 
-        {/* 5. COMPLETED SETS LOG LIST WITH VISUAL EXERCISE THUMBNAILS */}
-        <div className="retro-box rounded-2xl p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-white flex items-center gap-1.5">
-              <Flame className="w-4 h-4 text-amber-400" />
-              已完成 {store.sessionSets.length} 組
-            </span>
-            {store.sessionSets.length > 0 && (
-              <span className="text-[11px] font-mono text-emerald-400 font-bold">
-                總量{' '}
-                {store.sessionSets
-                  .reduce((acc, s) => acc + s.weightKg * s.reps, 0)
-                  .toLocaleString()}{' '}
-                kg
-              </span>
-            )}
+        {/* 6. CANCEL CONFIRM MODAL (Card 320 wide, radius 20, cream with wood frame, 64px chibi hero with 😅) */}
+        {showCancelConfirm && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowCancelConfirm(false);
+              }
+            }}
+          >
+            <div
+              data-testid="focus-cancel-dialog"
+              style={{
+                background: 'linear-gradient(180deg, #FFFDF8 0%, #F5E6C8 100%)',
+                borderColor: '#8B5A2B',
+                boxShadow: '0 6px 0 #5C3A21, 0 16px 32px rgba(0,0,0,0.3)',
+              }}
+              className="relative w-[320px] max-w-[90vw] rounded-[20px] border-2 p-5 text-[#29221E] flex flex-col items-center text-center space-y-3.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 64px Chibi hero with sweat 😅 */}
+              <div className="relative w-16 h-16 flex items-center justify-center">
+                <AvatarPortraitCanvas
+                  bodyStage={store.bodyStage}
+                  equipped={store.equipped}
+                  size={64}
+                />
+                <span className="absolute -top-1.5 -right-1.5 text-xl select-none filter drop-shadow">
+                  😅
+                </span>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-base font-black text-[#29221E]">
+                要取消這次訓練嗎？
+              </h3>
+
+              {/* Body */}
+              <p className="text-xs font-bold text-[#786B63] leading-relaxed">
+                已完成的 {store.sessionSets.length} 組會全部刪除，不會算進今天的運動，也拿不到經驗值和遊戲幣。
+              </p>
+
+              {/* Buttons: top to bottom */}
+              <div className="w-full space-y-2 pt-1">
+                {/* 1. 繼續訓練 (Green primary, autoFocus) */}
+                <button
+                  ref={continueBtnRef}
+                  type="button"
+                  data-testid="focus-cancel-continue"
+                  autoFocus
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-md active:scale-95 transition"
+                >
+                  繼續訓練
+                </button>
+
+                {/* 2. 先結算這 {n} 組 (Gold outline) */}
+                <button
+                  type="button"
+                  data-testid="focus-cancel-settle"
+                  onClick={() => {
+                    setShowCancelConfirm(false);
+                    store.finishWorkoutSession();
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl border-2 border-amber-500 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 font-black text-sm active:scale-95 transition"
+                >
+                  先結算這 {store.sessionSets.length} 組
+                </button>
+
+                {/* 3. 取消並刪除紀錄 (Red text button, no solid red) */}
+                <button
+                  type="button"
+                  data-testid="focus-cancel-delete"
+                  onClick={() => {
+                    setShowCancelConfirm(false);
+                    store.discardWorkoutSession();
+                  }}
+                  className="w-full py-2 px-3 text-rose-600 hover:text-rose-700 hover:bg-rose-50/60 font-bold text-xs rounded-lg active:scale-95 transition"
+                >
+                  取消並刪除紀錄
+                </button>
+              </div>
+            </div>
           </div>
-
-          {store.sessionSets.length === 0 ? (
-            <div className="text-center py-5 text-xs text-slate-500">
-              點擊上方「完成本組」開始紀錄
-            </div>
-          ) : (
-            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-              {store.sessionSets.map((s, idx) => {
-                const exObj =
-                  EXERCISE_LIBRARY.find((e) => e.id === s.exerciseId) || EXERCISE_LIBRARY[0];
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => store.setInspectedExerciseId(exObj.id)}
-                    className="px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-cyan-500/40 flex items-center justify-between text-xs gap-2 cursor-pointer transition"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <ExerciseThumbnail exercise={exObj} size={36} />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
-                            #{idx + 1}
-                          </span>
-                          <span className="font-black text-white break-words">
-                            {s.exerciseNameZh}
-                          </span>
-                          <span className="text-[10px] text-cyan-400 font-bold">📖</span>
-                          {s.isPR && (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black">
-                              🏆 PR
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] font-mono text-cyan-300 font-bold mt-0.5">
-                          {s.weightKg} {s.unitLabel} × {s.reps}次{' '}
-                          <span className="text-slate-500">· 休{s.restSec}s</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <span className="font-mono text-amber-300 font-black shrink-0">
-                      +{s.coinsEarned}🪙
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        )}
 
         {/* MID-WORKOUT ADD OR SWAP EXERCISE MODAL (Item 1 Fixed: Distinct 替換 vs ＋新增 buttons!) */}
         {swapModalOpen && (
