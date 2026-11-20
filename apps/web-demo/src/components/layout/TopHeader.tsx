@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Settings,
   Flame,
@@ -9,8 +9,15 @@ import {
   ArrowRight,
   Sun,
   Moon,
+  Bell,
 } from 'lucide-react';
 import { useGameStore, selectStreakDays } from '../../stores/useGameStore';
+import {
+  visibleNotifications,
+  unreadCount,
+  getUnreadBadgeText,
+  type RecipientNotifyContext,
+} from '../../game/notificationCenter';
 
 import { BRAND_CONFIG } from '../../config/economyConfig';
 
@@ -33,7 +40,27 @@ interface TopHeaderProps {
 export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' }) => {
   const store = useGameStore();
   const streakDays = useGameStore(selectStreakDays);
+  const notifications = useGameStore((s) => s.notifications);
+  const notificationsOpen = useGameStore((s) => s.notificationsOpen);
+  const devRecipientNotifyDemo = useGameStore((s) => s.devRecipientNotifyDemo);
+  const devMinorTestAccount = useGameStore((s) => s.devMinorTestAccount);
+  const friendIds = useGameStore((s) => s.friendIds);
 
+  const recipientCtx: RecipientNotifyContext = useMemo(
+    () => ({
+      ...devRecipientNotifyDemo,
+      isMinor: devMinorTestAccount,
+      friendIds,
+    }),
+    [devRecipientNotifyDemo, devMinorTestAccount, friendIds]
+  );
+
+  const unreadCountNum = useMemo(() => {
+    const visible = visibleNotifications(notifications, recipientCtx, Date.now()).all;
+    return unreadCount(visible);
+  }, [notifications, recipientCtx]);
+
+  const unreadBadgeText = getUnreadBadgeText(unreadCountNum);
 
   const showFloatingWorkoutBanner =
     (store.isWorkoutFocusActive || store.isRestRunning) && store.activeTab !== 'workout';
@@ -52,11 +79,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
           onClick={() => store.setActiveTab('home')}
           className="cursor-pointer flex items-center gap-1.5 shrink-0"
         >
-          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm border border-amber-600/30 shrink-0">
+          <div
+            aria-label="FitMon"
+            className="w-7 h-7 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm border border-amber-600/30 shrink-0"
+          >
             <span className="font-pixel text-[10px] text-white font-black">FM</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="font-black tracking-tight text-sm text-white">
+            <span className="font-black tracking-tight text-sm text-slate-900 dark:text-white hidden min-[390px]:inline">
               {BRAND_CONFIG.appName}
             </span>
             <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -65,7 +95,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
           </div>
         </div>
 
-        {/* Right: Overflow-Protected Resource Pills + Theme Toggle + Locked [⚙️] Button (V2-11) */}
+        {/* Right: Overflow-Protected Resource Pills + Theme Toggle + Bell + Locked [⚙️] Button (V2-11) */}
         <div className="flex items-center gap-1 min-w-0 justify-end">
           {/* Streak Pill */}
           <button
@@ -104,8 +134,35 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
             )}
           </button>
 
+          {/* Bell Button (常駐鈴鐺，介於主題切換與設定按鈕之間) */}
+          <button
+            data-testid="notif-bell"
+            onClick={() => store.toggleNotifications()}
+            aria-label={unreadCountNum > 0 ? `通知，${unreadBadgeText} 則未讀` : '通知'}
+            className={`p-1.5 min-h-[32px] min-w-[32px] rounded-[10px] shrink-0 relative flex items-center justify-center active:scale-95 transition ${
+              notificationsOpen
+                ? resolvedTheme === 'dark'
+                  ? 'bg-amber-950/80 border border-amber-500 ring-2 ring-amber-400/40 text-amber-300'
+                  : 'bg-[#FFF1E4] border border-[#FB923C] ring-2 ring-[#FED7AA] text-[#C2410C]'
+                : resolvedTheme === 'dark'
+                ? 'bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white'
+                : 'bg-white border border-[#E5DCCB] text-[#5C4A3E] hover:bg-[#FAF6F0]'
+            }`}
+          >
+            <Bell className="w-4 h-4" aria-hidden="true" />
+            {unreadCountNum > 0 && (
+              <span
+                data-testid="notif-badge"
+                className="absolute -top-[5px] -right-[3px] h-[17px] min-w-[17px] px-1 rounded-full bg-[#E5484D] text-white text-[10px] font-black leading-none flex items-center justify-center border-2 border-[#fffcf7] dark:border-[#26211e] pointer-events-none"
+              >
+                {unreadBadgeText}
+              </span>
+            )}
+          </button>
+
           {/* Settings Button [⚙️] - Strictly shrink-0 so never pushed off screen */}
           <button
+            data-testid="header-settings"
             onClick={() => store.setSettingsOpen(true)}
             aria-label="系統設定"
             className="p-1.5 min-h-[32px] min-w-[32px] flex items-center justify-center rounded-lg bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white active:scale-95 transition shrink-0"
