@@ -106,6 +106,9 @@ import {
   roomInteractReward as roomInteractRewardRule,
   quizReward as quizRewardRule,
   grantUncappedCoins as grantUncappedCoinsRule,
+  getBossRewardWeekKey,
+  hasClaimedSquadBossRewardThisWeek,
+  getSquadBossMaxHp,
   CheckinAnnotation,
   CheckinLogEntry,
   CheckinResultData,
@@ -113,6 +116,15 @@ import {
   BossAttackResult,
   CoinSource,
 } from '../game/economyRules';
+import {
+  applySquadMembershipAction,
+  previewLeaveSquad,
+  YOU_LEFT_SQUAD_MESSAGE,
+  KICKED_MEMBER_LEFT_TOAST,
+  DEFAULT_EMPTY_SQUAD_NAME,
+  upsertRecentTeammates,
+  type SquadMembershipStateSnapshot,
+} from '../game/squadMembershipRules';
 import {
   AVATAR_ITEMS,
   ROOM_ITEMS,
@@ -627,6 +639,12 @@ export interface GameState {
   setSquadName: (name: string) => void;
   recruitSquadMember: (candidate: SquadMemberState) => void;
   kickSquadMember: (memberId: string) => void;
+  leaveSquad: () => void;
+  transferLeadership: (toMemberId?: string) => void;
+  seedSquadMembers: () => void;
+  joinFakeSquadAsMember: () => void;
+  simulateKicked: () => void;
+  claimBossRewardWeek: () => void;
   refreshSquadMemberAvatar: (memberId: string) => boolean;
   setTodaySportType: (sport: AdventureSportSkillType) => void;
 
@@ -1027,6 +1045,23 @@ const getSquadSocialSnapshot = (state: GameState): SquadSocialStateSnapshot => (
   squadInvites: state.squadInvites,
   friendIds: state.friendIds,
   devMinorTestAccount: state.devMinorTestAccount,
+  squadJoinOrder: state.squadJoinOrder,
+  recentTeammates: state.recentTeammates,
+});
+
+const getSquadMembershipSnapshot = (state: GameState): SquadMembershipStateSnapshot => ({
+  playerId: DEMO_PLAYER_ID,
+  currentSquadId: state.currentSquadId,
+  isSquadLeader: state.isSquadLeader,
+  squadName: state.squadName,
+  squadMembers: state.squadMembers,
+  squadInvites: state.squadInvites,
+  squadJoinOrder: state.squadJoinOrder,
+  recentTeammates: state.recentTeammates,
+  notifications: state.notifications,
+  squadStage: state.squadStage,
+  squadBossHp: state.squadBossHp,
+  bossRewardClaimedWeekKey: state.bossRewardClaimedWeekKey,
 });
 
 // 測試用，上線前移除
@@ -2483,9 +2518,10 @@ export const useGameStore = create<GameState>()(
 
         if (result.defeated) {
           soundFX.playVictory();
+          const bountyText = result.coinsGranted > 0 ? `（賞金 +${result.coinsGranted} 🪙）` : '';
           const defeatMsg = result.droppedLootName
-            ? `🎁 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關（賞金 +${result.coinsGranted} 🪙）並爆出隱藏神裝【${result.droppedLootName}】！`
-            : `🎉 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關（賞金 +${result.coinsGranted} 🪙）`;
+            ? `🎁 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關${bountyText}並爆出隱藏神裝【${result.droppedLootName}】！`
+            : `🎉 擊破【${boss.nameZh}】！晉升第 ${stageNum + 1} 關${bountyText}`;
           state.showToast(defeatMsg);
         } else {
           soundFX.playPRFanfare();
@@ -2642,13 +2678,129 @@ export const useGameStore = create<GameState>()(
 
       kickSquadMember: (memberId) => {
         const state = get();
-        const target = state.squadMembers.find((m) => m.id === memberId);
-        if (!target) return;
+        const res = applySquadMembershipAction(
+          getSquadMembershipSnapshot(state),
+          {
+            type: 'kick',
+            actorId: DEMO_PLAYER_ID,
+            memberId,
+          },
+          Date.now()
+        );
+        if (!res.ok) return;
         soundFX.playBlip();
+        if (res.patch) set(res.patch);
+        if (res.result?.toastMessage) {
+          state.showToast(res.result.toastMessage);
+        }
+      },
+
+      leaveSquad: () => {
+        const state = get();
+        const now = Date.now();
+        const newSquadId = `squad_${now}`;
+        const res = applySquadMembershipAction(
+          getSquadMembershipSnapshot(state),
+          {
+            type: 'leave',
+            actorId: DEMO_PLAYER_ID,
+            newSquadId,
+          },
+          now
+        );
+        if (!res.ok) return;
+        soundFX.playBlip();
+        if (res.patch) set(res.patch);
+        if (res.result?.toastMessage) {
+          state.showToast(res.result.toastMessage);
+        }
+      },
+
+      transferLeadership: (toMemberId) => {
+        const state = get();
+        const now = Date.now();
+        const res = applySquadMembershipAction(
+          getSquadMembershipSnapshot(state),
+          {
+            type: 'transfer',
+            actorId: DEMO_PLAYER_ID,
+            toMemberId,
+          },
+          now
+        );
+        if (!res.ok) return;
+        if (res.patch) set(res.patch);
+        if (res.result?.toastMessage) {
+          state.showToast(res.result.toastMessage);
+        }
+      },
+
+      seedSquadMembers: () => {
+        const state = get();
+        const c1 = SQUAD_CANDIDATE_POOL[0];
+        const c2 = SQUAD_CANDIDATE_POOL[1];
+        if (!c1 || !c2) return;
+        const now = Date.now();
+        const newMembers = [{ ...c1 }, { ...c2 }];
+        const newJoinOrder = [DEMO_PLAYER_ID, c1.id, c2.id];
+        const newRecent = upsertRecentTeammates(state.recentTeammates, [c1.id, c2.id], now);
         set({
-          squadMembers: state.squadMembers.filter((m) => m.id !== memberId),
+          isSquadLeader: true,
+          squadMembers: newMembers,
+          squadJoinOrder: newJoinOrder,
+          recentTeammates: newRecent,
         });
-        state.showToast(`🚪 已將【${target.nameZh}】移出戰隊，可從下方招募新戰友！`);
+        get().showToast('已加入假隊員');
+      },
+
+      joinFakeSquadAsMember: () => {
+        const state = get();
+        const fake = DEMO_FAKE_SQUADS[0];
+        if (!fake) return;
+        const now = Date.now();
+        const fakeMemberIds = fake.members
+          .map((m) => m.id)
+          .filter((id) => id !== DEMO_PLAYER_ID);
+        const newJoinOrder = Array.from(new Set([fake.leaderId, ...fakeMemberIds, DEMO_PLAYER_ID]));
+        const newRecent = upsertRecentTeammates(
+          state.recentTeammates,
+          Array.from(new Set([fake.leaderId, ...fakeMemberIds])),
+          now
+        );
+        set({
+          currentSquadId: fake.id,
+          isSquadLeader: false,
+          squadName: fake.name,
+          squadMembers: fake.members.map((m) => ({ ...m })),
+          squadJoinOrder: newJoinOrder,
+          recentTeammates: newRecent,
+        });
+        get().showToast(`已加入【${fake.name}】（身分：隊員）`);
+      },
+
+      simulateKicked: () => {
+        const state = get();
+        const now = Date.now();
+        const res = applySquadMembershipAction(
+          getSquadMembershipSnapshot(state),
+          {
+            type: 'kick',
+            actorId: 'fake_leader',
+            memberId: DEMO_PLAYER_ID,
+            newSquadId: `squad_${now}`,
+          },
+          now
+        );
+        if (res.ok && res.patch) {
+          set(res.patch);
+          state.showToast(res.result?.toastMessage || YOU_LEFT_SQUAD_MESSAGE);
+        }
+      },
+
+      claimBossRewardWeek: () => {
+        const currentWeekKey = getBossRewardWeekKey(Date.now());
+        set({ bossRewardClaimedWeekKey: currentWeekKey });
+        get().showToast('已標記本週 Boss 獎勵已領取');
       },
 
       // Squad Social Actions (T3-D3)

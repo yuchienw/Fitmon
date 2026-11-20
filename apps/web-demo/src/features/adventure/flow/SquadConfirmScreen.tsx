@@ -13,6 +13,9 @@ import { FRIEND_PROFILES, hasFriendProfile } from '../../../config/catalogConfig
 import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { TeammateStatusChip } from '../../../components/adventure/TeammateStatusChip';
 import { TeammateHitRect } from '../../../components/adventure/memberStats';
+import { LeaveConfirmDialog } from '../../../components/adventure/SquadMembershipDialog';
+import { previewLeaveSquad } from '../../../game/squadMembershipRules';
+import { DEMO_PLAYER_ID } from '../../../game/squadInviteRules';
 
 interface SquadConfirmScreenProps {
   onBack: () => void;
@@ -29,6 +32,7 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
 }) => {
   const store = useGameStore();
   const [copied, setCopied] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const inviteCode = getSquadInviteCode(store.squadName);
@@ -254,7 +258,14 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
           <span>確認隊伍</span>
           <span className="text-primary">🍁</span>
         </h1>
-        <div className="w-8" />
+        <button
+          type="button"
+          data-testid="leave-squad-button"
+          onClick={() => setLeaveConfirmOpen(true)}
+          className="px-2.5 py-1 rounded-xl text-xs font-black text-rose-700 bg-rose-50 border border-rose-300 hover:bg-rose-100 active:scale-95 transition"
+        >
+          退出
+        </button>
       </div>
 
       {/* Main Chibi Canvas & Hit Areas */}
@@ -356,7 +367,7 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
               className="inline-flex max-w-full items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-800 whitespace-nowrap overflow-hidden text-ellipsis"
             >
               <CheckCircle2 className="h-3 w-3 shrink-0" />
-              <span className="truncate min-w-0">隊長</span>
+              <span className="truncate min-w-0">{store.isSquadLeader ? '隊長' : '隊員'}</span>
             </div>
           </div>
         </div>
@@ -477,6 +488,39 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
+
+      {/* T3-D4 退出隊伍確認彈窗 */}
+      {(() => {
+        const preview = previewLeaveSquad(
+          {
+            playerId: DEMO_PLAYER_ID,
+            currentSquadId: store.currentSquadId,
+            isSquadLeader: store.isSquadLeader,
+            squadName: store.squadName,
+            squadMembers: store.squadMembers,
+            squadInvites: store.squadInvites,
+            squadJoinOrder: store.squadJoinOrder,
+            recentTeammates: store.recentTeammates,
+            notifications: store.notifications,
+            squadStage: store.squadStage,
+            squadBossHp: store.squadBossHp,
+            bossRewardClaimedWeekKey: store.bossRewardClaimedWeekKey,
+          },
+          Date.now()
+        );
+        return (
+          <LeaveConfirmDialog
+            isOpen={leaveConfirmOpen}
+            confirmText={preview.confirmText}
+            claimedNote={preview.claimedNote}
+            onClose={() => setLeaveConfirmOpen(false)}
+            onConfirm={() => {
+              store.leaveSquad();
+              setLeaveConfirmOpen(false);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };

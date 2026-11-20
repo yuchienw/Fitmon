@@ -354,6 +354,46 @@ export const SettingsModal: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* 隊伍變動與每週獎勵測試 (T3-D4 測試用，上線前移除) */}
+            <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
+              <div className="text-xs font-bold text-slate-200">
+                隊伍變動與每週獎勵（測試用，上線前移除）
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                <button
+                  data-testid="dev-seed-squad-members"
+                  onClick={() => store.seedSquadMembers()}
+                  className="py-1.5 px-2 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold"
+                >
+                  加入假隊員
+                </button>
+
+                <button
+                  data-testid="dev-join-fake-squad-as-member"
+                  onClick={() => store.joinFakeSquadAsMember()}
+                  className="py-1.5 px-2 rounded-lg bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/40 text-indigo-300 text-xs font-bold"
+                >
+                  加入假隊伍當隊員
+                </button>
+
+                <button
+                  data-testid="dev-simulate-kicked"
+                  onClick={() => store.simulateKicked()}
+                  className="py-1.5 px-2 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 text-xs font-bold"
+                >
+                  模擬被請離
+                </button>
+
+                <button
+                  data-testid="dev-claim-boss-reward-week"
+                  onClick={() => store.claimBossRewardWeek()}
+                  className="py-1.5 px-2 rounded-lg bg-amber-950/50 hover:bg-amber-900/60 border border-amber-500/40 text-amber-300 text-xs font-bold"
+                >
+                  標記本週 Boss 獎勵已領
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
