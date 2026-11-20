@@ -963,7 +963,7 @@ export const WorkoutTab: React.FC = () => {
 
               {/* Body */}
               <p className="text-xs font-bold text-[#786B63] leading-relaxed">
-                已完成的 {store.sessionSets.length} 組這次的紀錄會刪除，不會拿到經驗值；已經拿到的遊戲幣會保留。
+                已完成的 {store.sessionSets.length} 組紀錄會刪除，不會拿到經驗值；已經拿到的遊戲幣會保留。
               </p>
 
               {/* Buttons: top to bottom */}
