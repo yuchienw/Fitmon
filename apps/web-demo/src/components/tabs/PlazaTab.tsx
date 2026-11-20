@@ -37,6 +37,7 @@ import {
   resolveFriendProfileId,
   getFriendProfile,
 } from '../../config/catalogConfig';
+import { formatSquadShareText } from '../../game/squadInviteRules';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { bossSpriteUrl } from '../../game/pixelSpriteDrawer';
 import { AdventureRaidPane } from '../../features/adventure/battle/AdventureRaidPane';
@@ -697,10 +698,10 @@ export const PlazaTab: React.FC = () => {
                     onClick={() => {
                       if (navigator.clipboard) {
                         navigator.clipboard.writeText(
-                          `🛡️ 隊長【${store.nickname}】邀請你加入 FitMon 固定戰隊【${store.squadName}】！我們正在共同討伐 Stage ${store.squadStage}【${squadBossTemplate.nameZh}】（剩餘 ${squadCurrentHp} HP），輸入邀請碼 ${squadInviteCode} 加入同隊一起消磨血量：https://yuchienw.github.io/Fitmon/`
+                          formatSquadShareText(store.nickname, store.squadName, squadInviteCode)
                         );
                       }
-                      store.showToast(`📲 已複製隊長邀請連結與邀請碼 ${squadInviteCode}！傳給朋友送出申請，同意後即可同打一隻王！`);
+                      store.showToast('已複製邀請連結');
                     }}
                     className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-[11px] font-black flex items-center gap-1 shrink-0 shadow"
                   >

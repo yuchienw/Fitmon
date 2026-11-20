@@ -15,6 +15,7 @@ import {
   COOLDOWN_MESSAGE,
   SQUAD_CAP,
   DEMO_PLAYER_ID,
+  formatSquadShareText,
   type SquadSocialStateSnapshot,
   type SquadInviteItem,
   type DemoFakeSquad,
@@ -1014,7 +1015,7 @@ describe('T3-D8 Squad Invite Rules & Invite Panel Logic', () => {
       const preview = previewSwitchSquadFromInvite(state, 'notif_beta', BASE_TIME, mockFakeSquads, mockDirectory);
       assert.equal(preview.kind, 'confirm_5c');
       assert.equal(preview.pendingInvitesCount, 2);
-      assert.ok(preview.confirmBody?.includes('你送出的 2 個組隊邀請都會取消'));
+      assert.ok(preview.confirmBody?.includes('你送出的 2 個邀請會取消。'));
     });
 
     it('boss reward gate: preview stacks exact claimed note when bossRewardClaimedWeekKey === current week key; omits when not claimed', () => {
@@ -1138,6 +1139,20 @@ describe('T3-D8 Squad Invite Rules & Invite Panel Logic', () => {
       // Marked notification invalid
       const notif = res.patch?.notifications?.find((n) => n.id === 'notif_gamma');
       assert.equal(notif?.status, 'invalid');
+    });
+  });
+
+  describe('6. Off-platform share copy (PM Q23)', () => {
+    it('formats exact Q23 share text without remaining HP or boss damage', () => {
+      const text = formatSquadShareText('小明', '百岳登山隊', 'FIT123');
+      assert.equal(
+        text,
+        '小明 邀你加入 FitMon 隊伍「百岳登山隊」，一起打這週的 Boss！輸入邀請碼 FIT123，或點連結：https://yuchienw.github.io/Fitmon/'
+      );
+      assert.ok(!text.includes('剩餘'));
+      assert.ok(!text.includes('HP'));
+      assert.ok(!text.includes('消磨血量'));
+      assert.ok(!text.includes('fitmon.app'));
     });
   });
 });

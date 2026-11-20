@@ -578,6 +578,15 @@ export function getSquadInviteRowState(
   return 'can_invite';
 }
 
+/**
+ * PM Q23 Share Copy
+ * 站外分享文字格式：
+ * {nickname} 邀你加入 FitMon 隊伍「{squadName}」，一起打這週的 Boss！輸入邀請碼 {code}，或點連結：https://yuchienw.github.io/Fitmon/
+ */
+export function formatSquadShareText(nickname: string, squadName: string, code: string): string {
+  return `${nickname} 邀你加入 FitMon 隊伍「${squadName}」，一起打這週的 Boss！輸入邀請碼 ${code}，或點連結：https://yuchienw.github.io/Fitmon/`;
+}
+
 export interface PreviewSwitchSquadResult {
   kind: 'expired' | 'invalid' | 'confirm_5b' | 'confirm_5c' | 'join_immediately';
   targetSquadName?: string;
@@ -715,7 +724,7 @@ export function previewSwitchSquadFromInvite(
   if (pendingOutgoing.length > 0) {
     // 5c Light Confirm
     const confirmTitle = `要加入『${fakeSquad.name}』嗎？`;
-    const confirmBody = `加入後，你送出的 ${pendingOutgoing.length} 個組隊邀請都會取消。`;
+    const confirmBody = `你送出的 ${pendingOutgoing.length} 個邀請會取消。`;
     const footerText = '個人金幣、XP、打卡和紀錄都不受影響。';
     return {
       kind: 'confirm_5c',

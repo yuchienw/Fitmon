@@ -8,6 +8,7 @@ import {
   isDailySquadInviteCapReached,
   type SquadSocialStateSnapshot,
   SQUAD_CANDIDATE_POOL,
+  formatSquadShareText,
 } from '../../game/squadInviteRules';
 import { searchPlayerByCode } from '../../game/friendSocial';
 import { DEMO_PLAYER_DIRECTORY } from '../../config/demo';
@@ -153,12 +154,12 @@ export const InvitePanel: React.FC = () => {
 
   const handleCopyLink = () => {
     // PM Q23 Share Copy
-    const shareText = `【FitMon 組隊邀請】${store.nickname} 邀請你加入「${store.squadName}」（${currentCount}/4 人），一起打這週的 Boss！點擊連結加入：https://fitmon.app/join/${squadCode}`;
+    const shareText = formatSquadShareText(store.nickname, store.squadName, squadCode);
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(shareText).catch(() => {});
     }
     setLinkCopied(true);
-    store.showToast('試玩版連結與代碼僅供示範，複製成功！');
+    store.showToast('已複製邀請連結');
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
@@ -167,7 +168,7 @@ export const InvitePanel: React.FC = () => {
       navigator.clipboard.writeText(squadCode).catch(() => {});
     }
     setCodeCopied(true);
-    store.showToast('試玩版連結與代碼僅供示範，複製成功！');
+    store.showToast('已複製');
     setTimeout(() => setCodeCopied(false), 2000);
   };
 
@@ -175,14 +176,6 @@ export const InvitePanel: React.FC = () => {
     if (e) e.preventDefault();
     const trimmed = searchInput.trim();
     if (!trimmed) return;
-
-    const normalizedQuery = trimmed.toUpperCase().replace(/[-\s]/g, '');
-    const normalizedSelf = (store.playerCode || '').toUpperCase().replace(/[-\s]/g, '');
-    if (normalizedQuery === normalizedSelf) {
-      setSearchError('這是你自己的代碼');
-      setSearchResult(null);
-      return;
-    }
 
     setIsSearching(true);
     setSearchError(null);
@@ -660,7 +653,7 @@ export const InvitePanel: React.FC = () => {
               </div>
 
               <div className="text-center text-[10.5px] text-[#A89A8E]">
-                試玩版連結與代碼僅供示範，複製成功！
+                試玩版連結與代碼僅供示範
               </div>
             </div>
           )}
