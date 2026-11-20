@@ -7,7 +7,7 @@ import {
   shouldShowPlayerCode,
 } from '../../game/friendSocial';
 
-export const MyPlayerCodeCard: React.FC = () => {
+export const MyPlayerCodeCard: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const store = useGameStore();
   const [copied, setCopied] = useState(false);
   const [showRegenConfirm, setShowRegenConfirm] = useState(false);
@@ -62,6 +62,94 @@ export const MyPlayerCodeCard: React.FC = () => {
     const ok = store.regeneratePlayerCodeAction();
     setShowRegenConfirm(false);
   };
+
+  if (compact) {
+    return (
+      <>
+        <div className="bg-[#FFFDF8] border border-[#F3C29A] rounded-xl px-3 py-2 flex items-center justify-between gap-2 text-[#5C4A3E]">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[11px] font-black text-[#786B63] shrink-0">我的代碼</span>
+            <span className="font-mono font-black text-sm tracking-wider text-[#29221E] select-all truncate">
+              {displayCode}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleCopy}
+              data-testid="player-code-copy"
+              className="flex items-center gap-1 px-2 py-0.5 rounded-lg border border-[#EA580C] bg-[#FFF1E4] text-[#C2410C] text-[11px] font-black hover:bg-[#FED7AA] active:scale-95 transition"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  <span>已複製</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3 text-[#C2410C]" />
+                  <span>複製</span>
+                </>
+              )}
+            </button>
+            {canRegen ? (
+              <button
+                onClick={() => setShowRegenConfirm(true)}
+                data-testid="player-code-regen"
+                title="重新產生代碼"
+                className="p-1 text-[#786B63] hover:text-[#EA580C] transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-[#786B63]" />
+              </button>
+            ) : (
+              <span
+                title={countdown?.shortText || '24 小時內鎖定'}
+                className="p-1 text-[#B5A898] cursor-not-allowed select-none"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-[#B5A898]" />
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 重新產生確認框 (7b-code-regenerate) */}
+        {showRegenConfirm && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="w-full max-w-xs retro-box rounded-2xl p-4 bg-[#FFFCF7] border-2 border-[#F3C29A] text-center space-y-3 shadow-2xl">
+              <div className="flex justify-center">
+                <div className="w-12 h-12 rounded-full bg-[#FFF1E4] border border-[#FED7AA] flex items-center justify-center text-[#EA580C]">
+                  <RefreshCw className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="text-base font-black text-[#29221E]">重新產生玩家代碼？</div>
+
+              <div className="text-xs text-[#5C4A3E] leading-relaxed space-y-1">
+                <p>舊代碼會失效，拿到舊代碼的人就找不到你。</p>
+                <p>現在的好友不受影響。</p>
+                <p className="text-[11px] text-[#786B63] pt-1">每天可以換一次。</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  onClick={() => setShowRegenConfirm(false)}
+                  className="py-2 rounded-xl bg-white border border-[#E5DCCB] text-[#5C4A3E] text-xs font-black hover:bg-slate-100 transition"
+                >
+                  先不要
+                </button>
+                <button
+                  onClick={handleConfirmRegen}
+                  data-testid="player-code-regen-confirm"
+                  className="py-2 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white text-xs font-black shadow transition"
+                >
+                  重新產生
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <>

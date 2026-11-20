@@ -419,7 +419,7 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
             <div
               key={`empty_slot_${idx}`}
               data-testid="copy-invite-empty-slot"
-              onClick={copyInviteCode}
+              onClick={() => store.setInvitePanelOpen(true)}
               role="button"
               tabIndex={0}
               className="flex min-w-0 overflow-hidden cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 px-1 py-1.5 text-muted-foreground hover:bg-muted active:scale-95"

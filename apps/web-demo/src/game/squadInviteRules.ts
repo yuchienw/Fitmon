@@ -21,9 +21,31 @@ import {
   type EquipSlot,
   resolveFriendProfileId,
 } from '../config/catalogConfig.ts';
-import { IS_DEMO, DEMO_FAKE_SQUADS as DEMO_FAKE_SQUADS_RAW, type DemoFakeSquad } from '../config/demo.ts';
-import type { RecentTeammateItem } from './persistMigrate.ts';
-import { upsertRecentTeammates } from './squadMembershipRules.ts';
+import {
+  IS_DEMO,
+  DEMO_FAKE_SQUADS as DEMO_FAKE_SQUADS_RAW,
+  type DemoFakeSquad,
+  DEMO_PLAYER_DIRECTORY,
+  type DemoSearchablePlayer,
+} from '../config/demo.ts';
+import { SOCIAL_RATE_LIMITS } from '../config/economy.ts';
+import type {
+  RecentTeammateItem,
+  NotificationItem,
+  InviteSendLogItem,
+  PlayerPrivacySettings,
+} from './persistMigrate.ts';
+import { isSameTaipeiDay, pruneNotifications } from './notificationCenter.ts';
+import {
+  getEarliestSuccessor,
+  upsertRecentTeammates,
+  BOSS_REWARD_ALREADY_CLAIMED_NOTE,
+  DEFAULT_EMPTY_SQUAD_NAME,
+} from './squadMembershipRules.ts';
+import {
+  hasClaimedSquadBossRewardThisWeek,
+  getSquadBossMaxHp,
+} from './economyRules.ts';
 
 export const SQUAD_CAP = 4;
 export const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -31,6 +53,11 @@ export const DEMO_PLAYER_ID = 'self';
 export const DEMO_PLAYER_SQUAD_ID = 'squad_self';
 export const PUBLIC_JOIN_FAILURE = '對方目前無法加入';
 export const AUTO_REPLY_ACCEPT_RATE = 0.8;
+
+export const DAILY_INVITE_CAP_REACHED_MESSAGE = '今天的邀請次數用完了，明天再來';
+export const COOLDOWN_MESSAGE = '稍後再邀請這位玩家';
+export const INVITE_CANCELLED_TOAST = '已取消邀請';
+export const SQUAD_FULL_INVITE_MESSAGE = '隊伍已滿，暫時不能再邀請。';
 
 export function publicJoinFailureMessage(_reason?: string): string {
   return PUBLIC_JOIN_FAILURE;
@@ -70,6 +97,7 @@ export interface SquadMemberState {
   equipped?: Partial<Record<EquipSlot, string>>;
   avatarCache?: SquadMemberAvatarCache;
   currentSquadId?: string;
+  isMinor?: boolean;
 }
 
 // 假角色候選池（測試用）
@@ -245,6 +273,13 @@ export interface SquadSocialStateSnapshot {
   devMinorTestAccount: boolean;
   squadJoinOrder?: string[];
   recentTeammates?: RecentTeammateItem[];
+  inviteSendLog?: InviteSendLogItem[];
+  privacy?: PlayerPrivacySettings;
+  blockedIds?: string[];
+  bossRewardClaimedWeekKey?: string | null;
+  notifications?: NotificationItem[];
+  squadStage?: number;
+  squadBossHp?: number;
 }
 
 export type SquadSocialAction =
@@ -317,7 +352,17 @@ export type SquadSocialInternalReason =
   | 'no_consent'
   | 'not_leader'
   | 'not_pending'
-  | 'empty';
+  | 'empty'
+  | 'daily_cap_reached'
+  | 'non_friend_daily_cap_reached'
+  | 'cooldown'
+  | '7day_limit_reached'
+  | 'blocked'
+  | 'minor_sender_non_friend'
+  | 'target_minor_non_friend'
+  | 'squad_has_minor'
+  | 'privacy_friends_only'
+  | 'code_hidden';
 
 export interface SquadSocialActionResult {
   type?: string;
@@ -387,6 +432,459 @@ function pruneExcessOutgoingInvites(
   return invites.map((i) => (toExpireIds.has(i.id) ? { ...i, status: 'expired' as const } : i));
 }
 
+export function pruneInviteSendLog(
+  log: InviteSendLogItem[] | undefined | null,
+  now: number
+): InviteSendLogItem[] {
+  const cutoff = now - SOCIAL_RATE_LIMITS.squadInvite.window7DaysMs;
+  return (Array.isArray(log) ? log : []).filter((entry) => entry && entry.sentAt >= cutoff);
+}
+
+export function getTodaySquadInviteCount(
+  log: InviteSendLogItem[] | undefined | null,
+  now: number
+): number {
+  return (Array.isArray(log) ? log : []).filter(
+    (entry) => entry && typeof entry.sentAt === 'number' && isSameTaipeiDay(entry.sentAt, now)
+  ).length;
+}
+
+export function getTodayNonFriendSquadInviteCount(
+  log: InviteSendLogItem[] | undefined | null,
+  friendIds: string[] | undefined | null,
+  now: number
+): number {
+  const currentFriends = Array.isArray(friendIds) ? friendIds : [];
+  return (Array.isArray(log) ? log : []).filter((entry) => {
+    if (!entry || typeof entry.sentAt !== 'number') return false;
+    if (!isSameTaipeiDay(entry.sentAt, now)) return false;
+    if (entry.outcome === 'non_friend') return true;
+    if (entry.outcome === 'friend') return false;
+    return !currentFriends.some((f) => isSameMember(f, entry.targetId));
+  }).length;
+}
+
+export function get7DaySquadInviteCountForPerson(
+  log: InviteSendLogItem[] | undefined | null,
+  targetId: string,
+  now: number
+): number {
+  const cutoff = now - SOCIAL_RATE_LIMITS.squadInvite.window7DaysMs;
+  return (Array.isArray(log) ? log : []).filter(
+    (entry) =>
+      entry &&
+      typeof entry.sentAt === 'number' &&
+      entry.sentAt >= cutoff &&
+      isSameMember(entry.targetId, targetId)
+  ).length;
+}
+
+export function isPersonInSquadInviteCooldown(
+  invites: SquadInviteItem[] | undefined | null,
+  targetId: string,
+  now: number
+): boolean {
+  if (!Array.isArray(invites)) return false;
+  const pastInvites = invites.filter(
+    (i) =>
+      (isSameMember(i.targetId, targetId) || isSameMember(i.toId, targetId)) &&
+      (i.status === 'declined' || i.status === 'cancelled' || i.status === 'expired')
+  );
+  if (pastInvites.length === 0) return false;
+  for (const inv of pastInvites) {
+    const eventTime = inv.expiresAt;
+    if (now - eventTime < SOCIAL_RATE_LIMITS.squadInvite.perPersonCooldownMs) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isDailySquadInviteCapReached(
+  log: InviteSendLogItem[] | undefined | null,
+  now: number
+): boolean {
+  return getTodaySquadInviteCount(log, now) >= SOCIAL_RATE_LIMITS.squadInvite.maxPerDay;
+}
+
+export function isNonFriendDailySquadInviteCapReached(
+  log: InviteSendLogItem[] | undefined | null,
+  friendIds: string[] | undefined | null,
+  now: number
+): boolean {
+  return (
+    getTodayNonFriendSquadInviteCount(log, friendIds, now) >=
+    SOCIAL_RATE_LIMITS.squadInvite.maxNonFriendPerDay
+  );
+}
+
+export type SquadInviteRowButtonState =
+  | 'in_squad'
+  | 'pending'
+  | 'cooldown'
+  | 'squad_full'
+  | 'daily_limit'
+  | 'open_slots_exhausted'
+  | 'can_invite';
+
+export function getSquadInviteRowState(
+  state: SquadSocialStateSnapshot,
+  targetId: string,
+  now: number
+): SquadInviteRowButtonState {
+  if (
+    isSameMember(targetId, state.playerId) ||
+    state.squadMembers.some((m) => isSameMember(m.id, targetId))
+  ) {
+    return 'in_squad';
+  }
+  const pending = (state.squadInvites || []).some(
+    (i) =>
+      i.status === 'pending' &&
+      i.kind === 'invite' &&
+      i.squadId === state.currentSquadId &&
+      isSameMember(i.targetId, targetId)
+  );
+  if (pending) {
+    return 'pending';
+  }
+  if (
+    isPersonInSquadInviteCooldown(state.squadInvites || [], targetId, now) ||
+    get7DaySquadInviteCountForPerson(state.inviteSendLog || [], targetId, now) >=
+      SOCIAL_RATE_LIMITS.squadInvite.maxPerPersonPer7Days
+  ) {
+    return 'cooldown';
+  }
+  if (1 + state.squadMembers.length >= SQUAD_CAP) {
+    return 'squad_full';
+  }
+  if (isDailySquadInviteCapReached(state.inviteSendLog || [], now)) {
+    return 'daily_limit';
+  }
+  const isFriend = state.friendIds.some((f) => isSameMember(f, targetId));
+  if (
+    !isFriend &&
+    isNonFriendDailySquadInviteCapReached(state.inviteSendLog || [], state.friendIds, now)
+  ) {
+    return 'daily_limit';
+  }
+  const openSlots = SQUAD_CAP - (1 + state.squadMembers.length);
+  const pendingOutgoing = (state.squadInvites || []).filter(
+    (i) => i.status === 'pending' && i.kind === 'invite' && i.squadId === state.currentSquadId
+  );
+  if (pendingOutgoing.length >= openSlots) {
+    return 'open_slots_exhausted';
+  }
+  return 'can_invite';
+}
+
+export interface PreviewSwitchSquadResult {
+  kind: 'expired' | 'invalid' | 'confirm_5b' | 'confirm_5c' | 'join_immediately';
+  targetSquadName?: string;
+  targetSquadId?: string;
+  currentSquadName?: string;
+  successorName?: string;
+  alreadyClaimedThisWeek?: boolean;
+  claimedNote?: string;
+  pendingInvitesCount?: number;
+  confirmTitle?: string;
+  confirmBody?: string;
+  footerText?: string;
+  message?: string;
+}
+
+export function previewSwitchSquadFromInvite(
+  state: SquadSocialStateSnapshot,
+  inviteOrNotifId: string,
+  now: number,
+  fakeSquads: DemoFakeSquad[] = DEMO_FAKE_SQUADS,
+  playerDirectory: DemoSearchablePlayer[] = IS_DEMO ? DEMO_PLAYER_DIRECTORY : []
+): PreviewSwitchSquadResult {
+  const invite = (state.squadInvites || []).find(
+    (i) =>
+      i.id === inviteOrNotifId ||
+      i.notificationId === inviteOrNotifId ||
+      i.squadId === inviteOrNotifId
+  );
+  const notif = (state.notifications || []).find(
+    (n) => n.id === inviteOrNotifId || n.refId === inviteOrNotifId
+  );
+
+  const targetSquadId =
+    invite?.squadId || notif?.refId || fakeSquads.find((s) => s.name === notif?.squadName)?.id;
+  const fakeSquad = fakeSquads.find(
+    (s) => s.id === targetSquadId || s.name === notif?.squadName
+  );
+
+  const isExpired =
+    (invite && (invite.status === 'expired' || invite.expiresAt <= now)) ||
+    (notif && (notif.status === 'expired' || (typeof notif.expiresAt === 'number' && notif.expiresAt <= now)));
+
+  if (isExpired) {
+    return { kind: 'expired', message: '這個邀請已過期' };
+  }
+
+  if (
+    invite?.status === 'cancelled' ||
+    invite?.status === 'declined' ||
+    notif?.status === 'invalid' ||
+    notif?.status === 'declined' ||
+    !fakeSquad
+  ) {
+    return { kind: 'invalid', message: '這個邀請已失效' };
+  }
+
+  // Target squad full check
+  if (fakeSquad.members.length + 1 >= SQUAD_CAP) {
+    return { kind: 'invalid', message: '這個邀請已失效' };
+  }
+
+  // Blocked check
+  const isBlocked =
+    (state.blockedIds || []).includes(fakeSquad.leaderId) ||
+    playerDirectory.find((d) => d.id === fakeSquad.leaderId)?.blockedYou === true;
+  if (isBlocked) {
+    return { kind: 'invalid', message: '這個邀請已失效' };
+  }
+
+  // Target squad has minor check
+  const fakeSquadHasMinor =
+    fakeSquad.members.some(
+      (m) => m.isMinor || playerDirectory.find((d) => d.id === m.id || isSameMember(d.id, m.id))?.isMinor === true
+    ) || playerDirectory.find((d) => d.id === fakeSquad.leaderId)?.isMinor === true;
+  if (fakeSquadHasMinor) {
+    const isFriendOfMinor = state.friendIds.some(
+      (f) =>
+        fakeSquad.members.some((m) => isSameMember(f, m.id)) ||
+        isSameMember(f, fakeSquad.leaderId)
+    );
+    if (!isFriendOfMinor) {
+      return { kind: 'invalid', message: '這個邀請已失效' };
+    }
+  }
+
+  if (state.currentSquadId === fakeSquad.id) {
+    return { kind: 'invalid', message: '這個邀請已失效' };
+  }
+
+  // Squad switch situation
+  if (state.squadMembers.length > 0) {
+    // 5b Confirm: Already in a squad with other members
+    const alreadyClaimedThisWeek = hasClaimedSquadBossRewardThisWeek(
+      state.bossRewardClaimedWeekKey,
+      now
+    );
+    const claimedNote = alreadyClaimedThisWeek ? BOSS_REWARD_ALREADY_CLAIMED_NOTE : undefined;
+    let successorName: string | undefined;
+    if (state.isSquadLeader) {
+      const remainingMembers = state.squadMembers.filter((m) => m.id !== state.playerId);
+      const successor = getEarliestSuccessor(
+        state.squadJoinOrder,
+        remainingMembers.map((m) => m.id),
+        remainingMembers
+      );
+      successorName = successor?.name;
+    }
+    const confirmTitle = `要加入『${fakeSquad.name}』嗎？`;
+    let confirmBody = `加入後會離開『${state.squadName}』。`;
+    if (state.isSquadLeader && successorName) {
+      confirmBody += `你離開後，${successorName} 會成為隊長。`;
+    }
+    const footerText = '個人金幣、XP、打卡和紀錄都不受影響。';
+    return {
+      kind: 'confirm_5b',
+      targetSquadName: fakeSquad.name,
+      targetSquadId: fakeSquad.id,
+      currentSquadName: state.squadName,
+      successorName,
+      alreadyClaimedThisWeek,
+      claimedNote,
+      confirmTitle,
+      confirmBody,
+      footerText,
+    };
+  }
+
+  // 1/4 Empty squad check
+  const pendingOutgoing = (state.squadInvites || []).filter(
+    (i) =>
+      i.status === 'pending' &&
+      i.kind === 'invite' &&
+      i.squadId === state.currentSquadId
+  );
+  if (pendingOutgoing.length > 0) {
+    // 5c Light Confirm
+    const confirmTitle = `要加入『${fakeSquad.name}』嗎？`;
+    const confirmBody = `加入後，你送出的 ${pendingOutgoing.length} 個組隊邀請都會取消。`;
+    const footerText = '個人金幣、XP、打卡和紀錄都不受影響。';
+    return {
+      kind: 'confirm_5c',
+      targetSquadName: fakeSquad.name,
+      targetSquadId: fakeSquad.id,
+      pendingInvitesCount: pendingOutgoing.length,
+      confirmTitle,
+      confirmBody,
+      footerText,
+    };
+  }
+
+  // Empty squad with no pending outgoing invites: join immediately
+  return {
+    kind: 'join_immediately',
+    targetSquadName: fakeSquad.name,
+    targetSquadId: fakeSquad.id,
+  };
+}
+
+export function applyAcceptInviteFromNotification(
+  state: SquadSocialStateSnapshot,
+  inviteOrNotifId: string,
+  now: number,
+  fakeSquads: DemoFakeSquad[] = DEMO_FAKE_SQUADS,
+  playerDirectory: DemoSearchablePlayer[] = IS_DEMO ? DEMO_PLAYER_DIRECTORY : []
+): SquadSocialResult {
+  const preview = previewSwitchSquadFromInvite(
+    state,
+    inviteOrNotifId,
+    now,
+    fakeSquads,
+    playerDirectory
+  );
+
+  if (preview.kind === 'expired') {
+    const updatedInvites = (state.squadInvites || []).map((i) =>
+      i.id === inviteOrNotifId || i.notificationId === inviteOrNotifId
+        ? { ...i, status: 'expired' as const }
+        : i
+    );
+    const updatedNotifs = (state.notifications || []).map((n) =>
+      n.id === inviteOrNotifId || n.refId === inviteOrNotifId
+        ? { ...n, status: 'expired' }
+        : n
+    );
+    return {
+      ok: false,
+      reason: 'expired',
+      patch: {
+        squadInvites: updatedInvites,
+        ...(state.notifications ? { notifications: updatedNotifs } : {}),
+      },
+      result: { publicMessage: '這個邀請已過期' },
+    };
+  }
+
+  if (preview.kind === 'invalid') {
+    const updatedInvites = (state.squadInvites || []).map((i) =>
+      i.id === inviteOrNotifId || i.notificationId === inviteOrNotifId
+        ? { ...i, status: 'cancelled' as const }
+        : i
+    );
+    const updatedNotifs = (state.notifications || []).map((n) =>
+      n.id === inviteOrNotifId || n.refId === inviteOrNotifId
+        ? { ...n, status: 'invalid' }
+        : n
+    );
+    return {
+      ok: false,
+      reason: 'rejected',
+      patch: {
+        squadInvites: updatedInvites,
+        ...(state.notifications ? { notifications: updatedNotifs } : {}),
+      },
+      result: { publicMessage: '這個邀請已失效' },
+    };
+  }
+
+  const targetSquad = fakeSquads.find(
+    (s) => s.id === preview.targetSquadId || s.name === preview.targetSquadName
+  );
+  if (!targetSquad) {
+    return {
+      ok: false,
+      reason: 'not_found',
+      result: { publicMessage: PUBLIC_JOIN_FAILURE },
+    };
+  }
+
+  // 1. Leave old squad via D4 leave logic: upsert former teammates into recentTeammates
+  const formerTeammateIds = state.squadMembers
+    .map((m) => m.id)
+    .filter((id) => id !== state.playerId);
+  const updatedRecent = upsertRecentTeammates(
+    state.recentTeammates,
+    formerTeammateIds,
+    now
+  );
+
+  // 2. Target squad members & join order
+  const targetMembers = targetSquad.members.filter((m) => m.id !== state.playerId);
+  const targetMemberIds = targetMembers.map((m) => m.id);
+  const newJoinOrder = Array.from(
+    new Set([targetSquad.leaderId, ...targetMemberIds, state.playerId])
+  );
+
+  // 3. Invites patch:
+  // - Accepted invite becomes 'accepted'
+  // - All other pending invites where player is recipient or sender, or for old squad, become 'cancelled'
+  const updatedInvites = (state.squadInvites || []).map((inv) => {
+    if (
+      inv.id === inviteOrNotifId ||
+      inv.notificationId === inviteOrNotifId ||
+      (inv.squadId === targetSquad.id && isSameMember(inv.toId, state.playerId))
+    ) {
+      return { ...inv, status: 'accepted' as const };
+    }
+    if (
+      inv.status === 'pending' &&
+      (isSameMember(inv.toId, state.playerId) ||
+        isSameMember(inv.fromId, state.playerId) ||
+        inv.squadId === state.currentSquadId)
+    ) {
+      return { ...inv, status: 'cancelled' as const };
+    }
+    return inv;
+  });
+
+  // 4. Notifications patch:
+  // - Notification for this invite becomes 'accepted'
+  // - All other pending squad_invite notifications become 'invalid'
+  let updatedNotifications = state.notifications;
+  if (state.notifications) {
+    updatedNotifications = state.notifications.map((n) => {
+      if (n.id === inviteOrNotifId || n.refId === inviteOrNotifId) {
+        return { ...n, status: 'accepted' };
+      }
+      if (n.type === 'squad_invite' && (!n.status || n.status === 'pending')) {
+        return { ...n, status: 'invalid' };
+      }
+      return n;
+    });
+  }
+
+  return {
+    ok: true,
+    patch: {
+      currentSquadId: targetSquad.id,
+      isSquadLeader: false,
+      squadName: targetSquad.name,
+      squadMembers: targetMembers,
+      squadJoinOrder: newJoinOrder,
+      recentTeammates: updatedRecent,
+      squadInvites: updatedInvites,
+      ...(updatedNotifications ? { notifications: updatedNotifications } : {}),
+      squadStage: (targetSquad as any).stage ?? state.squadStage ?? 1,
+      squadBossHp:
+        (targetSquad as any).bossHp ??
+        getSquadBossMaxHp((targetSquad as any).stage ?? state.squadStage ?? 1),
+    },
+    result: {
+      type: 'joined',
+      squadName: targetSquad.name,
+      toastMessage: `歡迎加入『${targetSquad.name}』！`,
+    },
+  };
+}
+
 /**
  * Pure state reducer for squad invites and join requests.
  * All mutations pass through this single function.
@@ -395,10 +893,11 @@ export function applySquadSocialAction(
   state: SquadSocialStateSnapshot,
   action: SquadSocialAction,
   now: number,
-  fakeSquads: DemoFakeSquad[] = DEMO_FAKE_SQUADS
+  fakeSquads: DemoFakeSquad[] = DEMO_FAKE_SQUADS,
+  playerDirectory: DemoSearchablePlayer[] = IS_DEMO ? DEMO_PLAYER_DIRECTORY : []
 ): SquadSocialResult {
   // 1. Expire any pending items due at `now`
-  let invites = state.squadInvites.map((item) => {
+  let invites = (state.squadInvites || []).map((item) => {
     if (item.status === 'pending' && item.expiresAt <= now) {
       return { ...item, status: 'expired' as const };
     }
@@ -413,11 +912,12 @@ export function applySquadSocialAction(
   const currentRecentTeammates = Array.isArray(state.recentTeammates)
     ? state.recentTeammates
     : [];
+  const inviteSendLog = pruneInviteSendLog(state.inviteSendLog || [], now);
 
   if (action.type === 'expireDue') {
     return {
       ok: true,
-      patch: { squadInvites: invites },
+      patch: { squadInvites: invites, inviteSendLog },
       result: { type: 'expire_due' },
     };
   }
@@ -469,6 +969,180 @@ export function applySquadSocialAction(
             result: { publicMessage: PUBLIC_JOIN_FAILURE },
           };
         }
+
+        // Duplicate pending item check
+        const duplicate = invites.find(
+          (i) =>
+            i.status === 'pending' &&
+            i.squadId === squadId &&
+            (isSameMember(i.targetId, toId) ||
+              isSameMember(i.fromId, toId) ||
+              isSameMember(i.toId, toId))
+        );
+        if (duplicate) {
+          return {
+            ok: false,
+            reason: 'already_pending',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+
+        const isTargetFriend = (state.friendIds || []).some((f) => isSameMember(f, toId));
+
+        // Sender-side rate limit caps (do NOT append to log when already capped or in cooldown)
+        if (isDailySquadInviteCapReached(inviteSendLog, now)) {
+          return {
+            ok: false,
+            reason: 'daily_cap_reached',
+            result: { publicMessage: DAILY_INVITE_CAP_REACHED_MESSAGE },
+          };
+        }
+        if (
+          !isTargetFriend &&
+          isNonFriendDailySquadInviteCapReached(inviteSendLog, state.friendIds, now)
+        ) {
+          return {
+            ok: false,
+            reason: 'non_friend_daily_cap_reached',
+            result: { publicMessage: DAILY_INVITE_CAP_REACHED_MESSAGE },
+          };
+        }
+        if (isPersonInSquadInviteCooldown(invites, toId, now)) {
+          return {
+            ok: false,
+            reason: 'cooldown',
+            result: { publicMessage: COOLDOWN_MESSAGE },
+          };
+        }
+        if (
+          get7DaySquadInviteCountForPerson(inviteSendLog, toId, now) >=
+          SOCIAL_RATE_LIMITS.squadInvite.maxPerPersonPer7Days
+        ) {
+          return {
+            ok: false,
+            reason: '7day_limit_reached',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+
+        // Target-side checks (Q25: target-side failures still COUNT toward daily / non-friend / 7-day limits!)
+        const targetPlayer = playerDirectory.find((p) => isSameMember(p.id, toId));
+        const newLogOnTargetFailure: InviteSendLogItem[] = [
+          ...inviteSendLog,
+          {
+            targetId: toId,
+            sentAt: now,
+            outcome: isTargetFriend ? 'friend' : 'non_friend',
+          },
+        ];
+
+        // 1. Blocked check
+        const isBlocked =
+          (state.blockedIds || []).some((b) => isSameMember(b, toId)) ||
+          targetPlayer?.blockedYou === true;
+        if (isBlocked) {
+          return {
+            ok: false,
+            reason: 'blocked',
+            patch: { inviteSendLog: newLogOnTargetFailure },
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+
+        // 2. Minor sender check
+        const isSenderMinor = state.devMinorTestAccount === true;
+        if (isSenderMinor && !isTargetFriend) {
+          return {
+            ok: false,
+            reason: 'minor_sender_non_friend',
+            patch: { inviteSendLog: newLogOnTargetFailure },
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+
+        // 3. Squad with a minor member check
+        const squadHasMinorMember = state.squadMembers.some(
+          (m) => m.isMinor || playerDirectory.find((p) => isSameMember(p.id, m.id))?.isMinor
+        );
+        if (squadHasMinorMember && !isTargetFriend) {
+          return {
+            ok: false,
+            reason: 'squad_has_minor',
+            patch: { inviteSendLog: newLogOnTargetFailure },
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+
+        // 4. Target privacy checks
+        if (targetPlayer) {
+          if (targetPlayer.isMinor && !isTargetFriend) {
+            return {
+              ok: false,
+              reason: 'target_minor_non_friend',
+              patch: { inviteSendLog: newLogOnTargetFailure },
+              result: { publicMessage: PUBLIC_JOIN_FAILURE },
+            };
+          }
+          if (
+            (targetPlayer.inviteFrom === 'friends' || targetPlayer.privacy?.inviteFrom === 'friends') &&
+            !isTargetFriend
+          ) {
+            return {
+              ok: false,
+              reason: 'privacy_friends_only',
+              patch: { inviteSendLog: newLogOnTargetFailure },
+              result: { publicMessage: PUBLIC_JOIN_FAILURE },
+            };
+          }
+          if (
+            source === 'code' &&
+            (targetPlayer.discoverableByCode === false || targetPlayer.privacy?.discoverableByCode === false)
+          ) {
+            return {
+              ok: false,
+              reason: 'code_hidden',
+              patch: { inviteSendLog: newLogOnTargetFailure },
+              result: { publicMessage: PUBLIC_JOIN_FAILURE },
+            };
+          }
+        }
+
+        // All checks passed!
+        const newLog: InviteSendLogItem[] = [
+          ...inviteSendLog,
+          {
+            targetId: toId,
+            sentAt: now,
+            outcome: isTargetFriend ? 'friend' : 'non_friend',
+          },
+        ];
+        const newItem: SquadInviteItem = {
+          id,
+          kind: 'invite',
+          status: 'pending',
+          fromId,
+          toId,
+          targetId: toId,
+          squadId,
+          squadName: state.squadName,
+          source,
+          notificationId: null,
+          createdAt: now,
+          expiresAt: now + INVITE_TTL_MS,
+        };
+
+        return {
+          ok: true,
+          patch: {
+            squadInvites: [...invites, newItem],
+            inviteSendLog: newLog,
+          },
+          result: {
+            type: 'invite_sent',
+            invite: newItem,
+            toastMessage: '已送出組隊邀請',
+          },
+        };
       }
 
       // If player is the invitee (incoming invite simulation)
@@ -480,20 +1154,38 @@ export function applySquadSocialAction(
             result: { publicMessage: PUBLIC_JOIN_FAILURE },
           };
         }
-        if (state.devMinorTestAccount) {
-          const isFriend =
-            source === 'friend' && state.friendIds.some((f) => isSameMember(f, fromId));
-          if (!isFriend) {
-            return {
-              ok: false,
-              reason: 'minor_blocked',
-              result: { publicMessage: PUBLIC_JOIN_FAILURE },
-            };
-          }
+        if ((state.blockedIds || []).some((b) => isSameMember(b, fromId))) {
+          return {
+            ok: false,
+            reason: 'blocked',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+        const isSenderFriend = (state.friendIds || []).some((f) => isSameMember(f, fromId));
+        if (state.devMinorTestAccount && !isSenderFriend) {
+          return {
+            ok: false,
+            reason: 'minor_blocked',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+        if (state.privacy?.inviteFrom === 'friends' && !isSenderFriend) {
+          return {
+            ok: false,
+            reason: 'privacy_friends_only',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+        if (source === 'code' && state.privacy?.discoverableByCode === false) {
+          return {
+            ok: false,
+            reason: 'code_hidden',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
         }
       }
 
-      // Only one pending item per person per squad (either direction)
+      // Non-player sender duplicate check
       const duplicate = invites.find(
         (i) =>
           i.status === 'pending' &&
@@ -559,16 +1251,30 @@ export function applySquadSocialAction(
       // If requesting to join player's squad
       if (squadId === state.currentSquadId) {
         toId = state.playerId;
-        if (state.devMinorTestAccount) {
-          const isFriend =
-            source === 'friend' && state.friendIds.some((f) => isSameMember(f, fromId));
-          if (!isFriend) {
-            return {
-              ok: false,
-              reason: 'minor_blocked',
-              result: { publicMessage: PUBLIC_JOIN_FAILURE },
-            };
-          }
+        if ((state.blockedIds || []).some((b) => isSameMember(b, fromId))) {
+          return {
+            ok: false,
+            reason: 'blocked',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+        const isFriend = (state.friendIds || []).some((f) => isSameMember(f, fromId));
+        if (state.devMinorTestAccount && !isFriend) {
+          return {
+            ok: false,
+            reason: 'minor_blocked',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
+        }
+        const squadHasMinorMember = state.squadMembers.some(
+          (m) => m.isMinor || playerDirectory.find((p) => isSameMember(p.id, m.id))?.isMinor
+        );
+        if (squadHasMinorMember && !isFriend) {
+          return {
+            ok: false,
+            reason: 'squad_has_minor',
+            result: { publicMessage: PUBLIC_JOIN_FAILURE },
+          };
         }
         if (1 + state.squadMembers.length >= SQUAD_CAP) {
           return {
@@ -709,78 +1415,7 @@ export function applySquadSocialAction(
 
       // Case 1: Player is the joiner
       if (isSameMember(joinerId, state.playerId)) {
-        if (joinerSquadId && joinerSquadId !== item.squadId) {
-          return {
-            ok: false,
-            reason: 'in_other_squad',
-            result: { publicMessage: PUBLIC_JOIN_FAILURE },
-          };
-        }
-        const fakeSquad = fakeSquads.find((s) => s.id === item.squadId);
-        if (!fakeSquad) {
-          return {
-            ok: false,
-            reason: 'not_found',
-            result: { publicMessage: PUBLIC_JOIN_FAILURE },
-          };
-        }
-        if (fakeSquad.members.length + 1 > SQUAD_CAP) {
-          return {
-            ok: false,
-            reason: 'full',
-            result: { publicMessage: PUBLIC_JOIN_FAILURE },
-          };
-        }
-        if (state.currentSquadId === fakeSquad.id) {
-          return {
-            ok: false,
-            reason: 'already_member',
-            result: { publicMessage: PUBLIC_JOIN_FAILURE },
-          };
-        }
-
-        const updatedInvites = invites.map((inv) => {
-          if (inv.id === item.id) {
-            return { ...inv, status: 'accepted' as const };
-          }
-          if (
-            inv.status === 'pending' &&
-            (isSameMember(inv.toId, state.playerId) || isSameMember(inv.fromId, state.playerId))
-          ) {
-            return { ...inv, status: 'cancelled' as const };
-          }
-          return inv;
-        });
-
-        const fakeMemberIds = fakeSquad.members
-          .map((m) => m.id)
-          .filter((id) => id !== state.playerId);
-        const newJoinOrder = Array.from(
-          new Set([fakeSquad.leaderId, ...fakeMemberIds, state.playerId])
-        );
-        const newRecentTeammates = upsertRecentTeammates(
-          currentRecentTeammates,
-          Array.from(new Set([fakeSquad.leaderId, ...fakeMemberIds])),
-          now
-        );
-
-        return {
-          ok: true,
-          patch: {
-            currentSquadId: fakeSquad.id,
-            isSquadLeader: false,
-            squadName: fakeSquad.name,
-            squadMembers: fakeSquad.members,
-            squadInvites: updatedInvites,
-            squadJoinOrder: newJoinOrder,
-            recentTeammates: newRecentTeammates,
-          },
-          result: {
-            type: 'joined',
-            squadName: fakeSquad.name,
-            toastMessage: `🎉 已加入【${fakeSquad.name}】！`,
-          },
-        };
+        return applyAcceptInviteFromNotification(state, item.id, now, fakeSquads, playerDirectory);
       }
 
       // Case 2: Candidate is joining player's squad
@@ -805,6 +1440,26 @@ export function applySquadSocialAction(
           result: { publicMessage: PUBLIC_JOIN_FAILURE },
         };
       }
+      // Minor check if squad has minor: joiner must be friend
+      const isFriend = (state.friendIds || []).some((f) => isSameMember(f, joinerId));
+      if (state.devMinorTestAccount && !isFriend) {
+        return {
+          ok: false,
+          reason: 'minor_blocked',
+          result: { publicMessage: PUBLIC_JOIN_FAILURE },
+        };
+      }
+      const squadHasMinorMember = state.squadMembers.some(
+        (m) => m.isMinor || playerDirectory.find((p) => isSameMember(p.id, m.id))?.isMinor
+      );
+      if (squadHasMinorMember && !isFriend) {
+        return {
+          ok: false,
+          reason: 'squad_has_minor',
+          result: { publicMessage: PUBLIC_JOIN_FAILURE },
+        };
+      }
+
       if (isJoinerInOtherSquad(joinerId, state.currentSquadId, fakeSquads, joinerSquadId)) {
         return {
           ok: false,
@@ -1005,6 +1660,26 @@ export function applySquadSocialAction(
           result: { publicMessage: PUBLIC_JOIN_FAILURE },
         };
       }
+      // Minor check if squad has minor: joiner must be friend
+      const isFriend = (state.friendIds || []).some((f) => isSameMember(f, joinerId));
+      if (state.devMinorTestAccount && !isFriend) {
+        return {
+          ok: false,
+          reason: 'minor_blocked',
+          result: { publicMessage: PUBLIC_JOIN_FAILURE },
+        };
+      }
+      const squadHasMinorMember = state.squadMembers.some(
+        (m) => m.isMinor || playerDirectory.find((p) => isSameMember(p.id, m.id))?.isMinor
+      );
+      if (squadHasMinorMember && !isFriend) {
+        return {
+          ok: false,
+          reason: 'squad_has_minor',
+          result: { publicMessage: PUBLIC_JOIN_FAILURE },
+        };
+      }
+
       if (isJoinerInOtherSquad(joinerId, state.currentSquadId, fakeSquads, joinerSquadId)) {
         return {
           ok: false,
@@ -1081,7 +1756,7 @@ export function applySquadSocialAction(
         };
       }
       const updatedInvites = invites.map((inv) =>
-        inv.id === id ? { ...inv, status: 'declined' as const } : inv
+        inv.id === id ? { ...inv, status: 'declined' as const, expiresAt: now } : inv
       );
       return {
         ok: true,
@@ -1118,7 +1793,7 @@ export function applySquadSocialAction(
         };
       }
       const updatedInvites = invites.map((inv) =>
-        inv.id === id ? { ...inv, status: 'declined' as const } : inv
+        inv.id === id ? { ...inv, status: 'declined' as const, expiresAt: now } : inv
       );
       return {
         ok: true,
@@ -1155,7 +1830,7 @@ export function applySquadSocialAction(
         };
       }
       const updatedInvites = invites.map((inv) =>
-        inv.id === id ? { ...inv, status: 'cancelled' as const } : inv
+        inv.id === id ? { ...inv, status: 'cancelled' as const, expiresAt: now } : inv
       );
       return {
         ok: true,
