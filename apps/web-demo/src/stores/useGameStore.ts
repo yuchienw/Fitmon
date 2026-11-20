@@ -2031,7 +2031,6 @@ export const useGameStore = create<GameState>()(
             soundFX.playSetComplete();
             updates.restSecondsLeft = 0;
             updates.isRestRunning = false;
-            state.showToast('⏰ 休息結束！開始下一組');
           } else {
             updates.restSecondsLeft = state.restSecondsLeft - 1;
           }
@@ -2848,11 +2847,14 @@ export const useGameStore = create<GameState>()(
       },
 
       setDevMinorTestAccount: (on) => {
-        set((s) => ({
+        set(() => ({
           devMinorTestAccount: on,
           privacy: on
             ? { ...MINOR_PRIVACY }
-            : s.privacy,
+            : {
+                inviteFrom: DEFAULT_ADULT_INVITE_FROM,
+                discoverableByCode: DEFAULT_ADULT_DISCOVERABLE_BY_CODE,
+              },
         }));
         get().showToast(`未成年測試帳號已${on ? '開啟' : '關閉'}`);
       },
@@ -2869,7 +2871,7 @@ export const useGameStore = create<GameState>()(
                 (i) => i.status === 'pending' && (i.fromId === c.id || i.toId === c.id)
               )
           );
-          fromId = cand ? cand.id : SQUAD_CANDIDATE_POOL[0].id;
+          fromId = cand ? cand.id : (SQUAD_CANDIDATE_POOL[0]?.id || 'friend_akai');
         }
         const res = applySquadSocialAction(
           getSquadSocialSnapshot(state),

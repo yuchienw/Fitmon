@@ -70,6 +70,7 @@ export const WorkoutTab: React.FC = () => {
 
   // Focus-mode card input layout & scroll management
   const focusedCardInputRef = useRef<HTMLInputElement | null>(null);
+  const currentSetRowRef = useRef<HTMLDivElement | null>(null);
   const weightInputRef = useRef<HTMLInputElement | null>(null);
   const repsInputRef = useRef<HTMLInputElement | null>(null);
   const scrollTimeoutsRef = useRef<number[]>([]);
@@ -82,6 +83,41 @@ export const WorkoutTab: React.FC = () => {
     }
     scrollTimeoutsRef.current.forEach((id) => clearTimeout(id));
     scrollTimeoutsRef.current = [];
+  };
+
+  const scrollCurrentSetIntoView = () => {
+    if (isCardInputFocused) return;
+
+    const row =
+      currentSetRowRef.current ||
+      document.querySelector<HTMLElement>('[data-testid="focus-current-set-row"]');
+    if (!row || !row.isConnected) return;
+
+    const main = document.querySelector('main');
+    if (!main || !main.contains(row)) return;
+
+    if (typeof window !== 'undefined' && (window.scrollX !== 0 || window.scrollY !== 0)) {
+      window.scrollTo(0, 0);
+    }
+
+    const stickyBar = main.querySelector<HTMLElement>('[data-testid="focus-sticky-top-bar"]');
+    const actionArea = main.querySelector<HTMLElement>('[data-testid="focus-action-area"]');
+
+    const mainRect = main.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const stickyBarRect = stickyBar ? stickyBar.getBoundingClientRect() : null;
+    const actionAreaRect = actionArea ? actionArea.getBoundingClientRect() : null;
+
+    const topLimit = stickyBarRect ? stickyBarRect.bottom + 8 : mainRect.top + 68;
+    const bottomLimit = actionAreaRect ? actionAreaRect.top - 8 : mainRect.bottom - 120;
+
+    if (rowRect.bottom > bottomLimit) {
+      const delta = rowRect.bottom - bottomLimit;
+      main.scrollTop += delta;
+    } else if (rowRect.top < topLimit) {
+      const delta = rowRect.top - topLimit;
+      main.scrollTop += delta;
+    }
   };
 
   const scrollFocusedCardInputIntoView = (targetInput?: HTMLElement | null) => {
@@ -195,7 +231,59 @@ export const WorkoutTab: React.FC = () => {
     }
     setIsCardInputFocused(false);
     clearScrollTimeouts();
+    setTimeout(() => {
+      scrollCurrentSetIntoView();
+    }, 50);
   };
+
+  // Measure sticky focus top bar height for CSS variable
+  useEffect(() => {
+    if (!store.isWorkoutFocusActive) return;
+    const updateBarHeight = () => {
+      const bar = document.querySelector<HTMLElement>('[data-testid="focus-sticky-top-bar"]');
+      if (bar) {
+        document.documentElement.style.setProperty('--focus-sticky-bar-height', `${bar.offsetHeight}px`);
+      }
+    };
+    updateBarHeight();
+    window.addEventListener('resize', updateBarHeight);
+    return () => {
+      window.removeEventListener('resize', updateBarHeight);
+      document.documentElement.style.removeProperty('--focus-sticky-bar-height');
+    };
+  }, [store.isWorkoutFocusActive]);
+
+  // Scroll current set row fully into view on entry or exercise switch
+  useEffect(() => {
+    if (!store.isWorkoutFocusActive) return;
+
+    const runScroll = () => {
+      scrollCurrentSetIntoView();
+    };
+
+    const rafId = requestAnimationFrame(runScroll);
+    const t1 = window.setTimeout(runScroll, 50);
+    const t2 = window.setTimeout(runScroll, 150);
+    const t3 = window.setTimeout(runScroll, 300);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [store.isWorkoutFocusActive, store.selectedExerciseId, store.selectedQueueItemId]);
+
+  useEffect(() => {
+    if (!store.isWorkoutFocusActive) return;
+    const handleResize = () => {
+      if (!isCardInputFocused) {
+        scrollCurrentSetIntoView();
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [store.isWorkoutFocusActive, isCardInputFocused]);
 
   // Monitor rest transition for natural end flash & vibration
   useEffect(() => {
@@ -399,7 +487,10 @@ export const WorkoutTab: React.FC = () => {
         </div>
 
         {/* Scrollable Middle Content */}
-        <div className="flex-1 p-3.5 space-y-3.5 pb-36">
+        <div
+          className="flex-1 shrink-0 p-3.5 space-y-3.5"
+          style={{ paddingBottom: 'calc(112px + var(--safe-bottom, 0px) + 1.5rem)' }}
+        >
           {/* 2. ROUTINE EXERCISE QUEUE + MID-WORKOUT ADD / SWAP */}
           {store.templateQueue.length > 0 && (
             <div className="space-y-1.5">
@@ -511,7 +602,11 @@ export const WorkoutTab: React.FC = () => {
             </div>
 
             {/* Direct Keyboard Input + Stepper for Weight/Distance & Reps/Duration */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div
+              ref={currentSetRowRef}
+              data-testid="focus-current-set-row"
+              className="grid grid-cols-2 gap-2.5"
+            >
               {/* Weight / Distance / Intensity Input */}
               <div
                 style={{ scrollMarginTop: '80px', scrollMarginBottom: '140px' }}
@@ -868,7 +963,7 @@ export const WorkoutTab: React.FC = () => {
 
               {/* Body */}
               <p className="text-xs font-bold text-[#786B63] leading-relaxed">
-                已完成的 {store.sessionSets.length} 組會全部刪除，不會算進今天的運動，也拿不到經驗值和遊戲幣。
+                已完成的 {store.sessionSets.length} 組紀錄會刪除，不會拿到經驗值；已經拿到的遊戲幣會保留。
               </p>
 
               {/* Buttons: top to bottom */}

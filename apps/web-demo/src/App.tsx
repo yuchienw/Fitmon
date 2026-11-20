@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useGameStore } from './stores/useGameStore';
 import { TopHeader } from './components/layout/TopHeader';
 import { BottomNav } from './components/layout/BottomNav';
@@ -31,6 +31,48 @@ export const App: React.FC = () => {
     toastMessage,
     notificationsOpen,
   } = useGameStore();
+
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const [toastTop, setToastTop] = useState<string>('calc(var(--safe-top, 0px) + 3.5rem)');
+
+  // Position toast below TopHeader (normal) or below Focus Sticky Top Bar (focus mode)
+  useEffect(() => {
+    if (!isWorkoutFocusActive) {
+      setToastTop('calc(var(--safe-top, 0px) + 3.5rem)');
+      return;
+    }
+
+    const updateToastPosition = () => {
+      const stickyBar = shellRef.current?.querySelector<HTMLElement>(
+        '[data-testid="focus-sticky-top-bar"]'
+      );
+      if (stickyBar && shellRef.current) {
+        const shellRect = shellRef.current.getBoundingClientRect();
+        const barRect = stickyBar.getBoundingClientRect();
+        const topPx = Math.round(barRect.bottom - shellRect.top + 8);
+        setToastTop(`${topPx}px`);
+      } else {
+        setToastTop('calc(var(--safe-top, 0px) + 3.5rem + var(--focus-sticky-bar-height, 56px) + 8px)');
+      }
+    };
+
+    updateToastPosition();
+
+    const stickyBar = shellRef.current?.querySelector<HTMLElement>(
+      '[data-testid="focus-sticky-top-bar"]'
+    );
+    let ro: ResizeObserver | null = null;
+    if (stickyBar && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(updateToastPosition);
+      ro.observe(stickyBar);
+    }
+    window.addEventListener('resize', updateToastPosition);
+
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', updateToastPosition);
+    };
+  }, [isWorkoutFocusActive, activeTab, toastMessage]);
 
   // Detect system color scheme with fallback to 'light'
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
@@ -85,6 +127,7 @@ export const App: React.FC = () => {
     >
       {/* Mobile-First App Shell Container (430px max width on desktop, full screen on mobile) */}
       <div
+        ref={shellRef}
         className={`w-full max-w-[430px] h-[100dvh] flex flex-col border-x shadow-2xl relative overflow-hidden transition-colors duration-200 ${
           resolvedTheme === 'dark'
             ? 'bg-[#211d1a] border-[#3d3530]'
@@ -94,10 +137,10 @@ export const App: React.FC = () => {
         {/* Top Persistent Header + Cross-Tab Workout Focus Dynamic Island */}
         <TopHeader resolvedTheme={resolvedTheme} />
 
-        {/* Toast Notification Pill (Safe-Area Aware below TopHeader) */}
+        {/* Toast Notification Pill (Safe-Area Aware below TopHeader or Focus Sticky Top Bar) */}
         {toastMessage && (
           <div
-            style={{ top: 'calc(var(--safe-top, 0px) + 3.5rem)' }}
+            style={{ top: toastTop }}
             className="absolute left-3 right-3 z-40 pointer-events-none flex justify-center"
           >
             <div className="px-3.5 py-2 rounded-xl bg-amber-400 border-2 border-amber-600 text-slate-950 text-xs font-black shadow-xl">

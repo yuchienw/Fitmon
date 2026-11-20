@@ -316,7 +316,23 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
               }}
               className="absolute z-10"
             >
-              <TeammateStatusChip variant="empty" onClick={copyInviteCode} className="max-w-[96px]" />
+              {store.devMinorTestAccount ? (
+                <span
+                  style={{
+                    maxWidth: '100%',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    padding: '3px 6px',
+                  }}
+                  className="inline-flex max-w-[96px] items-center gap-[2px] rounded-full border border-dashed border-slate-300 bg-slate-100/80 text-[11px] font-bold text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis select-none"
+                >
+                  <UserPlus className="h-3 w-3 text-slate-400 shrink-0" />
+                  <span className="truncate min-w-0 whitespace-nowrap">待加入</span>
+                </span>
+              ) : (
+                <TeammateStatusChip variant="empty" onClick={copyInviteCode} className="max-w-[96px]" />
+              )}
             </div>
           );
         })}
@@ -379,18 +395,29 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
         ))}
 
         {/* Empty Slots */}
-        {Array.from({ length: Math.max(0, totalSlots - teammates.length) }).map((_, idx) => (
-          <div
-            key={`empty_slot_${idx}`}
-            onClick={copyInviteCode}
-            role="button"
-            tabIndex={0}
-            className="flex min-w-0 overflow-hidden cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 px-1 py-1.5 text-muted-foreground hover:bg-muted active:scale-95"
-          >
-            <UserPlus className="h-3.5 w-3.5 opacity-60 text-amber-700 shrink-0" />
-            <span className="mt-1 truncate text-[10px] font-bold text-amber-800">＋邀請</span>
-          </div>
-        ))}
+        {Array.from({ length: Math.max(0, totalSlots - teammates.length) }).map((_, idx) =>
+          store.devMinorTestAccount ? (
+            <div
+              key={`empty_slot_${idx}`}
+              className="flex min-w-0 overflow-hidden flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 px-1 py-1.5 text-muted-foreground select-none"
+            >
+              <UserPlus className="h-3.5 w-3.5 opacity-40 text-muted-foreground shrink-0" />
+              <span className="mt-1 truncate text-[10px] font-bold text-muted-foreground">待加入</span>
+            </div>
+          ) : (
+            <div
+              key={`empty_slot_${idx}`}
+              data-testid="copy-invite-empty-slot"
+              onClick={copyInviteCode}
+              role="button"
+              tabIndex={0}
+              className="flex min-w-0 overflow-hidden cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/40 px-1 py-1.5 text-muted-foreground hover:bg-muted active:scale-95"
+            >
+              <UserPlus className="h-3.5 w-3.5 opacity-60 text-amber-700 shrink-0" />
+              <span className="mt-1 truncate text-[10px] font-bold text-amber-800">＋邀請</span>
+            </div>
+          )
+        )}
       </div>
 
       {teammates.length < totalSlots && (
@@ -415,24 +442,27 @@ export const SquadConfirmScreen: React.FC<SquadConfirmScreenProps> = ({
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={copyInviteCode}
-            aria-label="複製邀請碼"
-            className="retro-btn flex h-9 items-center gap-1 rounded-xl bg-muted px-3 text-xs font-black text-foreground hover:bg-muted/80 active:translate-y-0.5"
-          >
-            {copied ? (
-              <>
-                <Check className="h-3.5 w-3.5 text-emerald-600" />
-                <span className="text-emerald-700">已複製</span>
-              </>
-            ) : (
-              <>
-                <Copy className="h-3.5 w-3.5" />
-                <span>複製</span>
-              </>
-            )}
-          </button>
+          {!store.devMinorTestAccount && (
+            <button
+              type="button"
+              data-testid="copy-invite-code"
+              onClick={copyInviteCode}
+              aria-label="複製邀請碼"
+              className="retro-btn flex h-9 items-center gap-1 rounded-xl bg-muted px-3 text-xs font-black text-foreground hover:bg-muted/80 active:translate-y-0.5"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  <span className="text-emerald-700">已複製</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5" />
+                  <span>複製</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
