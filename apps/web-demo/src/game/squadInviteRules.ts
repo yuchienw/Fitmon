@@ -21,6 +21,7 @@ import {
   EquipSlot,
   resolveFriendProfileId,
 } from '../config/catalogConfig';
+import { IS_DEMO, DEMO_FAKE_SQUADS as DEMO_FAKE_SQUADS_RAW, DemoFakeSquad } from '../config/demo';
 
 export const SQUAD_CAP = 4;
 export const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -69,6 +70,8 @@ export interface SquadMemberState {
   currentSquadId?: string;
 }
 
+// 假角色候選池（測試用）
+// 資安規定：假角色不得使用真實個資（無真實姓名、電話、Email 或真人照片）。
 export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
   {
     id: 'friend_akai',
@@ -199,39 +202,14 @@ export const SQUAD_CANDIDATE_POOL: SquadMemberState[] = [
 ];
 
 // 測試用，上線前移除
-export interface DemoFakeSquad {
-  id: string;
-  name: string;
-  leaderId: string;
-  leaderNameZh: string;
-  members: SquadMemberState[];
-  inviteCode: string;
-}
-
-// 測試用，上線前移除
-export const DEMO_FAKE_SQUADS: DemoFakeSquad[] = [
-  {
-    id: 'squad_titan',
-    name: '泰坦力量戰隊',
-    leaderId: 'celeb_titan_chen', // 陳巨石 (stranger / celebrity)
-    leaderNameZh: '健力金牌 · 陳巨石',
-    members: [
-      SQUAD_CANDIDATE_POOL[3], // celeb_titan_chen
-      SQUAD_CANDIDATE_POOL[4], // celeb_aesthetic_lin (林健美)
-    ],
-    inviteCode: getSquadInviteCode('泰坦力量戰隊'),
-  },
-  {
-    id: 'squad_cardio',
-    name: '有氧魔焰戰隊',
-    leaderId: 'user_leo', // 街頭健體 · Leo
-    leaderNameZh: '街頭健體 · Leo',
-    members: [
-      SQUAD_CANDIDATE_POOL[2], // user_leo
-    ],
-    inviteCode: getSquadInviteCode('有氧魔焰戰隊'),
-  },
-];
+export type { DemoFakeSquad };
+// inviteCode 必須等於 getSquadInviteCode(name)，否則輸入測試代碼會對不上。
+export const DEMO_FAKE_SQUADS: DemoFakeSquad[] = IS_DEMO
+  ? DEMO_FAKE_SQUADS_RAW.map((s) => ({
+      ...s,
+      inviteCode: getSquadInviteCode(s.name),
+    }))
+  : [];
 
 export type SquadSocialSource = 'friend' | 'recent' | 'code' | 'link';
 export type SquadSocialKind = 'invite' | 'request';

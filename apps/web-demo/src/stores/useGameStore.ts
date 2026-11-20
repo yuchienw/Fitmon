@@ -24,7 +24,49 @@ import {
   DOUBLE_COIN_DURATION_MS,
   DOUBLE_COIN_COUPON_COIN_PRICE,
   GACHA_TICKET_COIN_PRICE,
+  DEFAULT_ADULT_INVITE_FROM,
+  DEFAULT_ADULT_DISCOVERABLE_BY_CODE,
+  MINOR_PRIVACY,
 } from '../config/economy';
+import {
+  migratePersistedState,
+  ensureV3Defaults,
+  generatePlayerCode,
+  formatPlayerCode,
+  normalizePlayerCode,
+  canRegeneratePlayerCode,
+  regeneratePlayerCode,
+  PLAYER_CODE_REGEN_COOLDOWN_MS,
+  NOTIFICATIONS_CAP,
+  NOTIFICATIONS_KEEP_MS,
+  INVITE_SEND_LOG_KEEP_MS,
+  FriendRequestItem,
+  RecentTeammateItem,
+  NotificationItem,
+  InviteSendLogItem,
+  PlayerPrivacySettings,
+  ReportLogItem,
+} from '../game/persistMigrate';
+
+export type {
+  FriendRequestItem,
+  RecentTeammateItem,
+  NotificationItem,
+  InviteSendLogItem,
+  PlayerPrivacySettings,
+  ReportLogItem,
+};
+export {
+  NOTIFICATIONS_CAP,
+  NOTIFICATIONS_KEEP_MS,
+  INVITE_SEND_LOG_KEEP_MS,
+  generatePlayerCode,
+  formatPlayerCode,
+  normalizePlayerCode,
+  canRegeneratePlayerCode,
+  regeneratePlayerCode,
+  PLAYER_CODE_REGEN_COOLDOWN_MS,
+};
 import {
   getLocalDayKey,
   getWeekKey,
@@ -317,7 +359,7 @@ export interface VictorySettlementData {
   topExerciseName: string;
 }
 
-interface GameState {
+export interface GameState {
   // Navigation & Global Overlays
   activeTab: MainTab;
   locale: Locale;
@@ -430,6 +472,23 @@ interface GameState {
   currentSquadId: string;
   isSquadLeader: boolean;
   devMinorTestAccount: boolean;
+
+  // V3 Social, Privacy & Progression Fields (T3-D3)
+  /** 試玩用，第 2 階段由伺服器產生 */
+  playerCode: string;
+  playerCodeGeneratedAt: number;
+  friendRequests: FriendRequestItem[];
+  recentTeammates: RecentTeammateItem[];
+  notifications: NotificationItem[];
+  inviteSendLog: InviteSendLogItem[];
+  privacy: PlayerPrivacySettings;
+  blockedIds: string[];
+  reportLog: ReportLogItem[];
+  squadJoinOrder: string[];
+  bossRewardClaimedWeekKey: string | null;
+  unlockCheckinDays: number;
+  unlockedPoseIds: string[];
+  unlockedOutfitIds: string[];
   personalMaxStage: number;
   squadMaxStage: number;
   personalMaxDamage: number;
@@ -1062,6 +1121,23 @@ export const useGameStore = create<GameState>()(
       currentSquadId: DEMO_PLAYER_SQUAD_ID,
       isSquadLeader: true,
       devMinorTestAccount: false,
+      playerCode: generatePlayerCode(), // 試玩用，第 2 階段由伺服器產生
+      playerCodeGeneratedAt: Date.now(),
+      friendRequests: [],
+      recentTeammates: [],
+      notifications: [],
+      inviteSendLog: [],
+      privacy: {
+        inviteFrom: DEFAULT_ADULT_INVITE_FROM,
+        discoverableByCode: DEFAULT_ADULT_DISCOVERABLE_BY_CODE,
+      },
+      blockedIds: [],
+      reportLog: [],
+      squadJoinOrder: [DEMO_PLAYER_ID],
+      bossRewardClaimedWeekKey: null,
+      unlockCheckinDays: 0,
+      unlockedPoseIds: [],
+      unlockedOutfitIds: [],
       personalMaxStage: 1,
       squadMaxStage: 2,
       personalMaxDamage: 680,
@@ -2554,7 +2630,12 @@ export const useGameStore = create<GameState>()(
       },
 
       setDevMinorTestAccount: (on) => {
-        set({ devMinorTestAccount: on });
+        set((s) => ({
+          devMinorTestAccount: on,
+          privacy: on
+            ? { ...MINOR_PRIVACY }
+            : s.privacy,
+        }));
         get().showToast(`未成年測試帳號已${on ? '開啟' : '關閉'}`);
       },
 
@@ -2595,9 +2676,11 @@ export const useGameStore = create<GameState>()(
       // 測試用，上線前移除
       simulateIncomingInvite: (params) => {
         const state = get();
+        if (!DEMO_FAKE_SQUADS || DEMO_FAKE_SQUADS.length === 0) return;
         const squadId = params?.fromSquadId || DEMO_FAKE_SQUADS[0].id;
         const fakeSquad =
           DEMO_FAKE_SQUADS.find((s) => s.id === squadId) || DEMO_FAKE_SQUADS[0];
+        if (!fakeSquad) return;
         const res = applySquadSocialAction(
           getSquadSocialSnapshot(state),
           {
@@ -2798,63 +2881,11 @@ export const useGameStore = create<GameState>()(
     {
       name: 'fitmon-mvp-storage-v6',
       version: 3,
-      migrate: (persistedState: unknown, version: number) => {
-        if (!persistedState || typeof persistedState !== 'object') return persistedState;
-        const state = persistedState as Record<string, unknown>;
-        if (typeof state.soloStage !== 'number' || state.soloStage < 1) {
-          state.soloStage = 1;
-        }
-        if (typeof state.squadStage !== 'number' || state.squadStage < 1) {
-          state.squadStage = 1;
-        }
-        if (version < 2) {
-          // Delete old fields
-          delete state.adventureCooldownUntil;
-          delete state.dailyIapCooldownResetCount;
-          delete state.dailyIapCooldownResetDate;
-          delete state.todayWorkoutStatus;
-          delete state.raidTickets;
-          delete state.streakFreezes;
-          delete state.doubleCoinActive;
-
-          // Consumables: keep bcaa_water, remove old coupon/freeze/gacha ticket inventory
-          const oldConsumables = (state.consumables as Record<string, number>) || {};
-          state.consumables = {
-            bcaa_water: typeof oldConsumables.bcaa_water === 'number' ? oldConsumables.bcaa_water : 1,
-            double_coin_card: 0,
-            gacha_ticket: 0,
-          };
-
-          // Defaults for new fields
-          state.lastCheckinDate = null;
-          state.lastBossDate = null;
-          state.checkinDayKeys = [];
-          state.joinDayKey = '1970-01-01'; // old players don't get rookie floor
-          state.disclaimerAcceptedAt = null;
-          state.coinsEarnedToday = 0;
-          state.coinsEarnedDayKey = null;
-          state.chestClaimedWeekKey = null;
-          state.doubleCoinUntil = 0;
-          state.checkinLogs = [];
-          state.ownedCosmeticBuyoutIds = [];
-
-          const existingStamina = typeof state.stamina === 'number' ? state.stamina : STAMINA_MAX;
-          state.stamina = Math.min(STAMINA_MAX, Math.max(0, existingStamina));
-        }
-        if (version < 3) {
-          state.squadInvites = [];
-          state.currentSquadId = 'squad_self';
-          state.isSquadLeader = true;
-          state.devMinorTestAccount = false;
-        }
-        return state;
-      },
+      migrate: (persistedState: unknown, version: number) =>
+        migratePersistedState(persistedState, version, Date.now()) as unknown as GameState,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        if (!Array.isArray(state.squadInvites)) state.squadInvites = [];
-        if (!state.currentSquadId) state.currentSquadId = 'squad_self';
-        if (typeof state.isSquadLeader !== 'boolean') state.isSquadLeader = true;
-        if (typeof state.devMinorTestAccount !== 'boolean') state.devMinorTestAccount = false;
+        ensureV3Defaults(state as unknown as Record<string, unknown>, Date.now());
         if (state.lastCheckinDate === undefined) state.lastCheckinDate = null;
         if (state.lastBossDate === undefined) state.lastBossDate = null;
         if (!Array.isArray(state.checkinDayKeys)) state.checkinDayKeys = [];
@@ -2929,6 +2960,20 @@ export const useGameStore = create<GameState>()(
         todaySportType: state.todaySportType,
         activeTeamComboBuff: state.activeTeamComboBuff,
         collectedBossLoots: state.collectedBossLoots,
+        playerCode: state.playerCode,
+        playerCodeGeneratedAt: state.playerCodeGeneratedAt,
+        friendRequests: state.friendRequests,
+        recentTeammates: state.recentTeammates,
+        notifications: state.notifications,
+        inviteSendLog: state.inviteSendLog,
+        privacy: state.privacy,
+        blockedIds: state.blockedIds,
+        reportLog: state.reportLog,
+        squadJoinOrder: state.squadJoinOrder,
+        bossRewardClaimedWeekKey: state.bossRewardClaimedWeekKey,
+        unlockCheckinDays: state.unlockCheckinDays,
+        unlockedPoseIds: state.unlockedPoseIds,
+        unlockedOutfitIds: state.unlockedOutfitIds,
       }),
     }
   )

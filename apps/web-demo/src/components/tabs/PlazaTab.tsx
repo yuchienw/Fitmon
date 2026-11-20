@@ -27,6 +27,7 @@ import {
   SQUAD_CAP,
   DEMO_PLAYER_ID,
 } from '../../stores/useGameStore';
+import { IS_DEMO } from '../../config/demo';
 
 import {
   ADVENTURE_BOSS_CATALOG,
@@ -716,9 +717,11 @@ export const PlazaTab: React.FC = () => {
                 <div className="text-[10px] text-slate-400">
                   輸入邀請碼將對該隊伍送出入隊請求，需經該隊隊長同意（若該隊已邀請你，輸入將直接同意入隊）。
                 </div>
-                <div className="text-[10px] text-amber-300/80 font-mono">
-                  測試用代碼（上線前移除）：{DEMO_FAKE_SQUADS.map((s) => `${s.name} ${s.inviteCode}`).join(' · ')}
-                </div>
+                {IS_DEMO && DEMO_FAKE_SQUADS.length > 0 && (
+                  <div className="text-[10px] text-amber-300/80 font-mono">
+                    測試用代碼（上線前移除）：{DEMO_FAKE_SQUADS.map((s) => `${s.name} ${s.inviteCode}`).join(' · ')}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -761,24 +764,26 @@ export const PlazaTab: React.FC = () => {
                   <span className="text-xs font-black text-white flex items-center gap-1.5">
                     <Bell className="w-4 h-4 text-cyan-400" />
                     組隊邀請與請求
-                    <span className="text-[10px] text-slate-400 font-normal">（測試用，上線前移除）</span>
+                    {IS_DEMO && <span className="text-[10px] text-slate-400 font-normal">（測試用，上線前移除）</span>}
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      data-testid="dev-simulate-request"
-                      onClick={() => store.simulateIncomingJoinRequest()}
-                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700"
-                    >
-                      模擬一筆入隊請求
-                    </button>
-                    <button
-                      data-testid="dev-simulate-invite"
-                      onClick={() => store.simulateIncomingInvite()}
-                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700"
-                    >
-                      模擬一則組隊邀請
-                    </button>
-                  </div>
+                  {IS_DEMO && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        data-testid="dev-simulate-request"
+                        onClick={() => store.simulateIncomingJoinRequest()}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700"
+                      >
+                        模擬一筆入隊請求
+                      </button>
+                      <button
+                        data-testid="dev-simulate-invite"
+                        onClick={() => store.simulateIncomingInvite()}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700"
+                      >
+                        模擬一則組隊邀請
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* A. 邀請健友名單（隊長發送邀請） */}
@@ -962,20 +967,24 @@ export const PlazaTab: React.FC = () => {
                               >
                                 取消
                               </button>
-                              <button
-                                data-testid={`dev-sim-accept-${item.id}`}
-                                onClick={() => store.resolvePendingAsFake({ id: item.id, accept: true })}
-                                className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[10px] font-bold border border-slate-700"
-                              >
-                                模擬同意
-                              </button>
-                              <button
-                                data-testid={`dev-sim-decline-${item.id}`}
-                                onClick={() => store.resolvePendingAsFake({ id: item.id, accept: false })}
-                                className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-300 text-[10px] font-bold border border-slate-700"
-                              >
-                                模擬拒絕
-                              </button>
+                              {IS_DEMO && (
+                                <>
+                                  <button
+                                    data-testid={`dev-sim-accept-${item.id}`}
+                                    onClick={() => store.resolvePendingAsFake({ id: item.id, accept: true })}
+                                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[10px] font-bold border border-slate-700"
+                                  >
+                                    模擬同意
+                                  </button>
+                                  <button
+                                    data-testid={`dev-sim-decline-${item.id}`}
+                                    onClick={() => store.resolvePendingAsFake({ id: item.id, accept: false })}
+                                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-300 text-[10px] font-bold border border-slate-700"
+                                  >
+                                    模擬拒絕
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
