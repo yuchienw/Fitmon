@@ -22,7 +22,7 @@ export const SettingsModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-sm retro-box rounded-2xl p-4 space-y-4 border-2 border-slate-700">
+      <div className="w-full max-w-sm retro-box rounded-2xl p-4 space-y-4 border-2 border-slate-700 max-h-full overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
           <h3 className="text-sm font-black text-white">⚙️ 系統設定與 MVP 測試控制台</h3>
           <button
@@ -189,15 +189,15 @@ export const SettingsModal: React.FC = () => {
             </div>
 
             {/* 未成年測試帳號 */}
-            <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
-              <div>
+            <div className="flex items-center justify-between gap-2.5 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+              <div className="min-w-0 flex-1">
                 <div className="text-xs font-bold text-slate-200">未成年測試帳號</div>
-                <div className="text-[10px] text-slate-400">開啟後不會收到路人／陌生人的入隊請求與組隊邀請</div>
+                <div className="text-[10px] text-slate-400 leading-tight">開啟後不會收到路人／陌生人的入隊請求與組隊邀請</div>
               </div>
               <button
                 data-testid="dev-minor-toggle"
                 onClick={() => store.setDevMinorTestAccount(!store.devMinorTestAccount)}
-                className={`px-3 py-1 rounded-lg text-xs font-black ${
+                className={`min-h-11 min-w-11 px-3 py-1.5 rounded-lg text-xs font-black shrink-0 flex items-center justify-center transition ${
                   store.devMinorTestAccount
                     ? 'bg-amber-400 text-slate-950'
                     : 'bg-slate-800 text-slate-400'
@@ -212,7 +212,7 @@ export const SettingsModal: React.FC = () => {
               <div className="text-xs font-bold text-slate-200">
                 模擬收件人狀態（Q19 隊友提醒過濾測試）
               </div>
-              <div className="text-[10px] text-slate-400">
+              <div className="text-[10px] text-slate-400 leading-tight">
                 非正式存檔欄位，任一開啟時隊友提醒通知隱藏且不計紅點
               </div>
               <div className="grid grid-cols-3 gap-1.5 pt-1">
@@ -223,7 +223,7 @@ export const SettingsModal: React.FC = () => {
                       isRestDay: !store.devRecipientNotifyDemo.isRestDay,
                     })
                   }
-                  className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                  className={`min-h-11 min-w-11 py-1 px-1 rounded-lg text-[11px] font-bold border transition flex items-center justify-center text-center leading-tight ${
                     store.devRecipientNotifyDemo.isRestDay
                       ? 'bg-amber-500/20 border-amber-400 text-amber-300'
                       : 'bg-slate-800/80 border-slate-700 text-slate-400'
@@ -239,7 +239,7 @@ export const SettingsModal: React.FC = () => {
                       isCaringForBody: !store.devRecipientNotifyDemo.isCaringForBody,
                     })
                   }
-                  className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                  className={`min-h-11 min-w-11 py-1 px-1 rounded-lg text-[11px] font-bold border transition flex items-center justify-center text-center leading-tight ${
                     store.devRecipientNotifyDemo.isCaringForBody
                       ? 'bg-amber-500/20 border-amber-400 text-amber-300'
                       : 'bg-slate-800/80 border-slate-700 text-slate-400'
@@ -255,7 +255,7 @@ export const SettingsModal: React.FC = () => {
                       isPaused: !store.devRecipientNotifyDemo.isPaused,
                     })
                   }
-                  className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                  className={`min-h-11 min-w-11 py-1 px-1 rounded-lg text-[11px] font-bold border transition flex items-center justify-center text-center leading-tight ${
                     store.devRecipientNotifyDemo.isPaused
                       ? 'bg-amber-500/20 border-amber-400 text-amber-300'
                       : 'bg-slate-800/80 border-slate-700 text-slate-400'
@@ -276,7 +276,7 @@ export const SettingsModal: React.FC = () => {
                     store.seedDemoNotifications('qa_mixed');
                     store.showToast('已塞入綜合測試通知 (QA)');
                   }}
-                  className="py-1.5 px-2 rounded-lg bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold"
+                  className="min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   塞入綜合測試通知
                 </button>
@@ -287,7 +287,7 @@ export const SettingsModal: React.FC = () => {
                     store.seedDemoNotifications('ten_plus');
                     store.showToast('已塞入 12 則通知 (測試 9+ 紅點)');
                   }}
-                  className="py-1.5 px-2 rounded-lg bg-orange-950/50 hover:bg-orange-900/60 border border-orange-500/40 text-orange-300 text-xs font-bold"
+                  className="min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-orange-950/50 hover:bg-orange-900/60 border border-orange-500/40 text-orange-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   塞入 10+ 未讀 (紅點 9+)
                 </button>
@@ -298,7 +298,7 @@ export const SettingsModal: React.FC = () => {
                     store.clearNotifications();
                     store.showToast('已清空所有通知');
                   }}
-                  className="col-span-2 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs font-bold"
+                  className="col-span-2 min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   清空所有通知
                 </button>
@@ -340,7 +340,7 @@ export const SettingsModal: React.FC = () => {
                 <button
                   data-testid="dev-seed-incoming-friend"
                   onClick={() => store.seedIncomingFriendRequest()}
-                  className="py-1.5 px-2 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold"
+                  className="min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   塞入 Mika 好友申請
                 </button>
@@ -348,7 +348,7 @@ export const SettingsModal: React.FC = () => {
                 <button
                   data-testid="dev-seed-recent-teammates"
                   onClick={() => store.seedRecentTeammates()}
-                  className="py-1.5 px-2 rounded-lg bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold"
+                  className="min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   塞入最近隊友資料
                 </button>
@@ -364,7 +364,7 @@ export const SettingsModal: React.FC = () => {
                 <button
                   data-testid="dev-seed-squad-members"
                   onClick={() => store.seedSquadMembers()}
-                  className="py-1.5 px-2 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold"
+                  className="min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   加入假隊員
                 </button>
@@ -372,7 +372,7 @@ export const SettingsModal: React.FC = () => {
                 <button
                   data-testid="dev-join-fake-squad-as-member"
                   onClick={() => store.joinFakeSquadAsMember()}
-                  className="py-1.5 px-2 rounded-lg bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/40 text-indigo-300 text-xs font-bold"
+                  className="min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-500/40 text-indigo-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   加入假隊伍當隊員
                 </button>
@@ -380,7 +380,7 @@ export const SettingsModal: React.FC = () => {
                 <button
                   data-testid="dev-simulate-kicked"
                   onClick={() => store.simulateKicked()}
-                  className="py-1.5 px-2 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 text-xs font-bold"
+                  className="min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   模擬被請離
                 </button>
@@ -388,7 +388,7 @@ export const SettingsModal: React.FC = () => {
                 <button
                   data-testid="dev-claim-boss-reward-week"
                   onClick={() => store.claimBossRewardWeek()}
-                  className="py-1.5 px-2 rounded-lg bg-amber-950/50 hover:bg-amber-900/60 border border-amber-500/40 text-amber-300 text-xs font-bold"
+                  className="min-h-11 min-w-11 py-1.5 px-2 rounded-lg bg-amber-950/50 hover:bg-amber-900/60 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center justify-center text-center leading-tight"
                 >
                   標記本週 Boss 獎勵已領
                 </button>
@@ -400,7 +400,7 @@ export const SettingsModal: React.FC = () => {
         {/* Reset LocalStorage */}
         <button
           onClick={() => store.resetDemoState()}
-          className="w-full py-2.5 rounded-xl bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center justify-center gap-1.5"
+          className="w-full min-h-11 py-2.5 rounded-xl bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center justify-center gap-1.5"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>重置本機 LocalStorage 初始進度</span>
