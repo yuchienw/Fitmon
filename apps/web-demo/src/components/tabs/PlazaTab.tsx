@@ -47,6 +47,8 @@ import { VenueTowerScreen } from '../../features/adventure/flow/VenueTowerScreen
 import { RareLootShareModal } from '../../features/adventure/share/RareLootShareModal';
 import { RareLootPosterData } from '../../features/adventure/share/types';
 import { TeammateInspectSheet } from '../adventure/TeammateInspectSheet';
+import { LeaveConfirmDialog, KickConfirmDialog } from '../adventure/SquadMembershipDialog';
+import { previewLeaveSquad } from '../../game/squadMembershipRules';
 
 type AdventureMainSubTab = 'raid' | 'combat_stats' | 'squad_invite' | 'ladder';
 type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
@@ -73,6 +75,10 @@ export const PlazaTab: React.FC = () => {
   const [devCheatOpen, setDevCheatOpen] = useState(false);
   const [lootBagOpen, setLootBagOpen] = useState(false);
   const [bagLootReport, setBagLootReport] = useState<RareLootPosterData | null>(null);
+
+  // T3-D4 Leave & Kick confirm state
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [memberToKick, setMemberToKick] = useState<SquadMemberState | null>(null);
 
   const [shakingMemberId, setShakingMemberId] = useState<string | null>(null);
   // Calculate player's current gear stats & attack damage range
@@ -1039,6 +1045,14 @@ export const PlazaTab: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  data-testid="leave-squad-button"
+                  onClick={() => setLeaveConfirmOpen(true)}
+                  className="px-2.5 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-300 hover:bg-rose-500/30 text-xs font-black shrink-0 transition"
+                >
+                  退出
+                </button>
               </div>
 
               {/* Slots 2~4: Joined Friends */}
@@ -1120,14 +1134,29 @@ export const PlazaTab: React.FC = () => {
                       </div>
                     </div>
 
-                    {!member.hasWorkedOutToday && (
-                      <button
-                        onClick={(e) => handleNudge(member.id, e)}
-                        className="px-2.5 py-1.5 rounded-xl bg-rose-500 text-white text-[11px] font-black shrink-0 shadow"
-                      >
-                        🔨 敲他
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {store.isSquadLeader && (
+                        <button
+                          type="button"
+                          data-testid="kick-member-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMemberToKick(member);
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-rose-950/40 hover:border-rose-500/50 text-[11px] font-black transition"
+                        >
+                          請離隊伍
+                        </button>
+                      )}
+                      {!member.hasWorkedOutToday && (
+                        <button
+                          onClick={(e) => handleNudge(member.id, e)}
+                          className="px-2.5 py-1.5 rounded-xl bg-rose-500 text-white text-[11px] font-black shadow"
+                        >
+                          🔨 敲他
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -1568,6 +1597,51 @@ export const PlazaTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* T3-D4 退出隊伍與請離隊友確認彈窗 */}
+      {(() => {
+        const preview = previewLeaveSquad(
+          {
+            playerId: DEMO_PLAYER_ID,
+            currentSquadId: store.currentSquadId,
+            isSquadLeader: store.isSquadLeader,
+            squadName: store.squadName,
+            squadMembers: store.squadMembers,
+            squadInvites: store.squadInvites,
+            squadJoinOrder: store.squadJoinOrder,
+            recentTeammates: store.recentTeammates,
+            notifications: store.notifications,
+            squadStage: store.squadStage,
+            squadBossHp: store.squadBossHp,
+            bossRewardClaimedWeekKey: store.bossRewardClaimedWeekKey,
+          },
+          Date.now()
+        );
+        return (
+          <LeaveConfirmDialog
+            isOpen={leaveConfirmOpen}
+            confirmText={preview.confirmText}
+            claimedNote={preview.claimedNote}
+            onClose={() => setLeaveConfirmOpen(false)}
+            onConfirm={() => {
+              store.leaveSquad();
+              setLeaveConfirmOpen(false);
+            }}
+          />
+        );
+      })()}
+
+      <KickConfirmDialog
+        isOpen={!!memberToKick}
+        memberName={memberToKick?.nameZh || ''}
+        onClose={() => setMemberToKick(null)}
+        onConfirm={() => {
+          if (memberToKick) {
+            store.kickSquadMember(memberToKick.id);
+            setMemberToKick(null);
+          }
+        }}
+      />
 
     </div>
   );

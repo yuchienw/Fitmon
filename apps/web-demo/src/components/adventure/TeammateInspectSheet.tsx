@@ -8,6 +8,7 @@ import {
   ArrowRight,
   ShieldAlert,
   Zap,
+  LogOut,
 } from 'lucide-react';
 import {
   useGameStore,
@@ -22,6 +23,8 @@ import {
 } from './memberStats';
 import { TeammateStatusChip } from './TeammateStatusChip';
 import { usePrefersReducedMotion } from '../../features/adventure/battle/usePrefersReducedMotion';
+import { KickConfirmDialog } from './SquadMembershipDialog';
+import { DEMO_PLAYER_ID } from '../../game/squadInviteRules';
 
 export type InspectContext = 'squad_confirm' | 'island' | 'tower' | 'list';
 
@@ -48,6 +51,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
   const touchStartY = useRef<number | null>(null);
   const [touchDeltaY, setTouchDeltaY] = useState(0);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [kickConfirmOpen, setKickConfirmOpen] = useState(false);
 
   const squadMembers = store.squadMembers;
   const currentIdx = squadMembers.findIndex((m) => m.id === memberId);
@@ -188,7 +192,8 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
   const hasManagementActions =
     (context === 'squad_confirm' && !worked) ||
     ((context === 'island' || context === 'tower') && (!worked || !!onNavigateToSquadConfirm)) ||
-    context === 'list';
+    context === 'list' ||
+    (store.isSquadLeader && !!member && member.id !== DEMO_PLAYER_ID);
 
   // Refresh Teammate Avatar cache from id-exact sources (PR #2 QA Spec)
   const handleRefresh = (e: React.MouseEvent) => {
@@ -453,10 +458,36 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
                   )}
                 </div>
               )}
+
+              {/* Context D: Leader Kick Teammate Action */}
+              {store.isSquadLeader && member.id !== DEMO_PLAYER_ID && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    data-testid="kick-member-button"
+                    onClick={() => setKickConfirmOpen(true)}
+                    className="retro-btn flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 py-2.5 text-xs font-black text-rose-700 hover:bg-rose-100 active:translate-y-0.5 transition"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>請離隊伍</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      <KickConfirmDialog
+        isOpen={kickConfirmOpen}
+        memberName={member.nameZh}
+        onClose={() => setKickConfirmOpen(false)}
+        onConfirm={() => {
+          store.kickSquadMember(member.id);
+          setKickConfirmOpen(false);
+          onClose();
+        }}
+      />
     </div>
   );
 };

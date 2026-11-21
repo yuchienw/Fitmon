@@ -1,5 +1,5 @@
-import { ExerciseCategory } from '@fitmon/engine';
-import { BCAA_COIN_PRICE, DOUBLE_COIN_COUPON_COIN_PRICE, GACHA_TICKET_COIN_PRICE } from './economy';
+import type { ExerciseCategory } from '@fitmon/engine';
+import { BCAA_COIN_PRICE, DOUBLE_COIN_COUPON_COIN_PRICE, GACHA_TICKET_COIN_PRICE } from './economy.ts';
 
 export type AvatarBodyStage = 'beginner' | 'powerlifter' | 'aesthetic' | 'titan';
 export type AvatarExpression = 'smile' | 'strain' | 'cool' | 'cry';

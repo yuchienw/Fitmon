@@ -30,22 +30,42 @@ import {
   DOUBLE_COIN_COUPON_COIN_PRICE,
   GACHA_TICKET_COIN_PRICE,
   MAX_SINGLE_GRANT,
-} from '../config/economy';
+} from '../config/economy.ts';
 import {
   getLocalDayKey,
   getWeekKey,
   getWeekDayKeys,
   getNextResetAt,
   getCheckinStreak,
-} from './day';
-export { getCheckinStreak } from './day';
+} from './day.ts';
+export { getCheckinStreak } from './day.ts';
+
+/**
+ * FitMon Weekly Squad Boss Reward & Scaled Squad HP Helpers (T3-D4 YuChien 11/14 12:09)
+ */
+export function getBossRewardWeekKey(now: Date | number = Date.now()): string {
+  return getWeekKey(getLocalDayKey(now));
+}
+
+export function hasClaimedSquadBossRewardThisWeek(
+  claimedWeekKey: string | null | undefined,
+  now: Date | number = Date.now()
+): boolean {
+  if (!claimedWeekKey) return false;
+  return claimedWeekKey === getBossRewardWeekKey(now);
+}
+
+export function getSquadBossMaxHp(stage: number): number {
+  const boss = ADVENTURE_BOSS_CATALOG[(stage - 1) % ADVENTURE_BOSS_CATALOG.length];
+  return Math.round(boss.maxHp * 1.8 * (1 + (stage - 1) * 0.25));
+}
 
 import {
   ADVENTURE_BOSS_CATALOG,
   AVATAR_ITEMS,
   CONSUMABLE_ITEMS,
-  EquipSlot,
-} from '../config/catalogConfig';
+  type EquipSlot,
+} from '../config/catalogConfig.ts';
 
 // ================= TYPES =================
 
@@ -207,6 +227,7 @@ export interface BossAttackStateSnapshot {
   coinsEarnedToday: number;
   coinsEarnedDayKey: string | null;
   doubleCoinUntil: number;
+  bossRewardClaimedWeekKey?: string | null;
 }
 
 export type BossAttackPatch = {
@@ -228,6 +249,7 @@ export type BossAttackPatch = {
   squadStage?: number;
   squadBossHp?: number;
   squadMaxStage?: number;
+  bossRewardClaimedWeekKey?: string | null;
 };
 
 export interface BossAttackRuleResult {
@@ -679,12 +701,28 @@ export function bossAttack(
 
   let coinsGranted = 0;
   let nextCoins = state.coins;
+  let nextBossRewardClaimedWeekKey = state.bossRewardClaimedWeekKey ?? null;
 
   if (defeated) {
-    const bounty = getBossClearBounty(stageNum);
-    const uncappedRes = grantUncappedCoins({ coins: state.coins }, bounty);
-    coinsGranted = uncappedRes.result.granted;
-    nextCoins = uncappedRes.patch.coins;
+    if (mode === 'squad') {
+      const currentWeekKey = getBossRewardWeekKey(now);
+      if (hasClaimedSquadBossRewardThisWeek(state.bossRewardClaimedWeekKey, now)) {
+        coinsGranted = 0;
+        // 本週獎勵已領過，不發送賞金，不改變金幣與 claimed key
+      } else {
+        const bounty = getBossClearBounty(stageNum);
+        const uncappedRes = grantUncappedCoins({ coins: state.coins }, bounty);
+        coinsGranted = uncappedRes.result.granted;
+        nextCoins = uncappedRes.patch.coins;
+        nextBossRewardClaimedWeekKey = currentWeekKey;
+      }
+    } else {
+      // Solo 模式完全不受組隊週獎勵限制影響
+      const bounty = getBossClearBounty(stageNum);
+      const uncappedRes = grantUncappedCoins({ coins: state.coins }, bounty);
+      coinsGranted = uncappedRes.result.granted;
+      nextCoins = uncappedRes.patch.coins;
+    }
   }
 
   const patch: BossAttackPatch = {
@@ -697,6 +735,10 @@ export function bossAttack(
     devForceNextLootDrop: false,
     coins: nextCoins,
   };
+
+  if (mode === 'squad' && defeated && nextBossRewardClaimedWeekKey && nextBossRewardClaimedWeekKey !== (state.bossRewardClaimedWeekKey ?? null)) {
+    patch.bossRewardClaimedWeekKey = nextBossRewardClaimedWeekKey;
+  }
 
   if (mode === 'solo') {
     if (defeated) {
@@ -714,8 +756,7 @@ export function bossAttack(
   } else {
     if (defeated) {
       const nextStage = state.squadStage + 1;
-      const nextBoss = ADVENTURE_BOSS_CATALOG[(nextStage - 1) % ADVENTURE_BOSS_CATALOG.length];
-      const scaledHp = Math.round(nextBoss.maxHp * 1.8 * (1 + (nextStage - 1) * 0.25));
+      const scaledHp = getSquadBossMaxHp(nextStage);
       patch.squadStage = nextStage;
       patch.squadBossHp = scaledHp;
       patch.squadMaxStage = Math.max(state.squadMaxStage || 0, nextStage);

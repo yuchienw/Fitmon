@@ -17,11 +17,13 @@
  */
 
 import {
-  AvatarBodyStage,
-  EquipSlot,
+  type AvatarBodyStage,
+  type EquipSlot,
   resolveFriendProfileId,
-} from '../config/catalogConfig';
-import { IS_DEMO, DEMO_FAKE_SQUADS as DEMO_FAKE_SQUADS_RAW, DemoFakeSquad } from '../config/demo';
+} from '../config/catalogConfig.ts';
+import { IS_DEMO, DEMO_FAKE_SQUADS as DEMO_FAKE_SQUADS_RAW, type DemoFakeSquad } from '../config/demo.ts';
+import type { RecentTeammateItem } from './persistMigrate.ts';
+import { upsertRecentTeammates } from './squadMembershipRules.ts';
 
 export const SQUAD_CAP = 4;
 export const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -241,6 +243,8 @@ export interface SquadSocialStateSnapshot {
   squadInvites: SquadInviteItem[];
   friendIds: string[];
   devMinorTestAccount: boolean;
+  squadJoinOrder?: string[];
+  recentTeammates?: RecentTeammateItem[];
 }
 
 export type SquadSocialAction =
@@ -400,6 +404,15 @@ export function applySquadSocialAction(
     }
     return item;
   });
+
+  const defaultJoinOrder = [state.playerId, ...state.squadMembers.map((m) => m.id)];
+  const currentJoinOrder =
+    Array.isArray(state.squadJoinOrder) && state.squadJoinOrder.length > 0
+      ? state.squadJoinOrder
+      : defaultJoinOrder;
+  const currentRecentTeammates = Array.isArray(state.recentTeammates)
+    ? state.recentTeammates
+    : [];
 
   if (action.type === 'expireDue') {
     return {
@@ -739,6 +752,18 @@ export function applySquadSocialAction(
           return inv;
         });
 
+        const fakeMemberIds = fakeSquad.members
+          .map((m) => m.id)
+          .filter((id) => id !== state.playerId);
+        const newJoinOrder = Array.from(
+          new Set([fakeSquad.leaderId, ...fakeMemberIds, state.playerId])
+        );
+        const newRecentTeammates = upsertRecentTeammates(
+          currentRecentTeammates,
+          Array.from(new Set([fakeSquad.leaderId, ...fakeMemberIds])),
+          now
+        );
+
         return {
           ok: true,
           patch: {
@@ -747,6 +772,8 @@ export function applySquadSocialAction(
             squadName: fakeSquad.name,
             squadMembers: fakeSquad.members,
             squadInvites: updatedInvites,
+            squadJoinOrder: newJoinOrder,
+            recentTeammates: newRecentTeammates,
           },
           result: {
             type: 'joined',
@@ -804,11 +831,22 @@ export function applySquadSocialAction(
         1 + newMembers.length
       );
 
+      const newJoinOrder = currentJoinOrder.includes(candidate.id)
+        ? currentJoinOrder
+        : [...currentJoinOrder, candidate.id];
+      const newRecentTeammates = upsertRecentTeammates(
+        currentRecentTeammates,
+        [candidate.id],
+        now
+      );
+
       return {
         ok: true,
         patch: {
           squadMembers: newMembers,
           squadInvites: updatedInvites,
+          squadJoinOrder: newJoinOrder,
+          recentTeammates: newRecentTeammates,
         },
         result: {
           type: 'joined',
@@ -914,6 +952,18 @@ export function applySquadSocialAction(
           return inv;
         });
 
+        const fakeMemberIds = fakeSquad.members
+          .map((m) => m.id)
+          .filter((id) => id !== state.playerId);
+        const newJoinOrder = Array.from(
+          new Set([fakeSquad.leaderId, ...fakeMemberIds, state.playerId])
+        );
+        const newRecentTeammates = upsertRecentTeammates(
+          currentRecentTeammates,
+          Array.from(new Set([fakeSquad.leaderId, ...fakeMemberIds])),
+          now
+        );
+
         return {
           ok: true,
           patch: {
@@ -922,6 +972,8 @@ export function applySquadSocialAction(
             squadName: fakeSquad.name,
             squadMembers: fakeSquad.members,
             squadInvites: updatedInvites,
+            squadJoinOrder: newJoinOrder,
+            recentTeammates: newRecentTeammates,
           },
           result: {
             type: 'joined',
@@ -979,11 +1031,22 @@ export function applySquadSocialAction(
         1 + newMembers.length
       );
 
+      const newJoinOrder = currentJoinOrder.includes(candidate.id)
+        ? currentJoinOrder
+        : [...currentJoinOrder, candidate.id];
+      const newRecentTeammates = upsertRecentTeammates(
+        currentRecentTeammates,
+        [candidate.id],
+        now
+      );
+
       return {
         ok: true,
         patch: {
           squadMembers: newMembers,
           squadInvites: updatedInvites,
+          squadJoinOrder: newJoinOrder,
+          recentTeammates: newRecentTeammates,
         },
         result: {
           type: 'joined',
