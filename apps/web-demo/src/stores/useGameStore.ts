@@ -31,6 +31,8 @@ import {
 import {
   migratePersistedState,
   ensureV3Defaults,
+  ensureV4Defaults,
+  fillV4SessionDefaults,
   generatePlayerCode,
   formatPlayerCode,
   normalizePlayerCode,
@@ -46,6 +48,18 @@ import {
   InviteSendLogItem,
   PlayerPrivacySettings,
   ReportLogItem,
+  WorkoutSessionSportType,
+  mapLegacyExerciseToSportType,
+  computePersistedSetFields,
+  finalizePreviousSetRest,
+  isLoggedSetTimingComplete,
+  isWorkoutSessionTimingComplete,
+  selectIsRestDay,
+  selectUnwellHalfUsed,
+  selectSelfCheckCompleted,
+  selectOnboardingCompleted,
+  selectOnboardingWorkoutHintSeen,
+  selectOnboardingSortieHintSeen,
 } from '../game/persistMigrate';
 import {
   pruneNotifications,
@@ -79,6 +93,7 @@ export type {
   InviteSendLogItem,
   PlayerPrivacySettings,
   ReportLogItem,
+  WorkoutSessionSportType,
 };
 export {
   NOTIFICATIONS_CAP,
@@ -90,6 +105,17 @@ export {
   canRegeneratePlayerCode,
   regeneratePlayerCode,
   PLAYER_CODE_REGEN_COOLDOWN_MS,
+  mapLegacyExerciseToSportType,
+  computePersistedSetFields,
+  finalizePreviousSetRest,
+  isLoggedSetTimingComplete,
+  isWorkoutSessionTimingComplete,
+  selectIsRestDay,
+  selectUnwellHalfUsed,
+  selectSelfCheckCompleted,
+  selectOnboardingCompleted,
+  selectOnboardingWorkoutHintSeen,
+  selectOnboardingSortieHintSeen,
 };
 import {
   getLocalDayKey,
@@ -328,6 +354,16 @@ export interface LoggedSet {
   decayFactor: number;
   isPR: boolean;
   timestamp: number;
+
+  // T4-D1 multi-sport data model fields
+  startedAt?: number;
+  completedAt?: number;
+  durationSec?: number;
+  distanceM?: number;
+  plannedRestSec?: number;
+  restTimerElapsedSec?: number;
+  startedEarly?: boolean;
+  timingIncomplete?: boolean;
 }
 
 export interface TemplateQueueItem {
@@ -356,8 +392,34 @@ export interface WorkoutSessionRecord {
     exerciseId: string;
     exerciseNameZh: string;
     unitLabel: string;
-    sets: { weightKg: number; reps: number; restSec: number; isPR: boolean }[];
+    sets: {
+      weightKg: number;
+      reps: number;
+      restSec: number;
+      isPR: boolean;
+      startedAt?: number;
+      completedAt?: number;
+      durationSec?: number;
+      distanceM?: number;
+      plannedRestSec?: number;
+      restTimerElapsedSec?: number;
+      startedEarly?: boolean;
+      timingIncomplete?: boolean;
+    }[];
   }[];
+
+  // T4-D1 multi-sport data model session fields
+  sportType?: WorkoutSessionSportType;
+  source?: 'in_app' | 'health_app';
+  loggingMode?: 'live_focus' | 'after_the_fact' | 'health_app';
+  endedUnwell?: boolean;
+  pauseSegments?: { startedAt: number; endedAt: number }[];
+  durationSec?: number;
+  distanceM?: number;
+  totalDurationSec?: number;
+  restSec?: number; // Phase 2 will recompute restSec on server
+  restShare?: number;
+  timingIncomplete?: boolean;
 }
 
 export interface DailyQuest {
@@ -494,6 +556,10 @@ export interface GameState {
   restSecondsLeft: number;
   isRestRunning: boolean;
 
+  // In-memory workout timing tracking (not persisted in partialize)
+  currentSetStartedAt: number | null;
+  restStartedAt: number | null;
+
   // Full Workout History & Biometrics (V2-01, V2-09)
   personalRecords: Record<string, number>;
   workoutHistory: WorkoutSessionRecord[];
@@ -542,6 +608,17 @@ export interface GameState {
   unlockCheckinDays: number;
   unlockedPoseIds: string[];
   unlockedOutfitIds: string[];
+
+  // T4-D1 / T1 / T5 store-level fields (v4)
+  restDayKeys: string[];
+  caringDayKeys: string[];
+  unwellHalfUsedByWeek: Record<string, number>;
+  selfCheckCompletedAt: string | null;
+  selfCheckAnyYes: boolean | null;
+  unwellNudgeShownWeek: string | null;
+  onboardingCompletedAt: string | null;
+  onboardingWorkoutHintSeenAt: string | null;
+  onboardingSortieHintSeenAt: string | null;
   personalMaxStage: number;
   squadMaxStage: number;
   personalMaxDamage: number;
@@ -1059,7 +1136,7 @@ const INITIAL_WORKOUT_HISTORY: WorkoutSessionRecord[] = [
       },
     ],
   },
-];
+].map((s) => fillV4SessionDefaults(s) as unknown as WorkoutSessionRecord);
 
 const getSquadSocialSnapshot = (state: GameState): SquadSocialStateSnapshot => ({
   playerId: DEMO_PLAYER_ID,
@@ -1212,6 +1289,8 @@ export const useGameStore = create<GameState>()(
       sessionSets: [],
       restSecondsLeft: 0,
       isRestRunning: false,
+      currentSetStartedAt: null,
+      restStartedAt: null,
 
       personalRecords: {
         barbell_squat: 100,
@@ -1264,6 +1343,15 @@ export const useGameStore = create<GameState>()(
       unlockCheckinDays: 0,
       unlockedPoseIds: [],
       unlockedOutfitIds: [],
+      restDayKeys: [],
+      caringDayKeys: [],
+      unwellHalfUsedByWeek: {},
+      selfCheckCompletedAt: null,
+      selfCheckAnyYes: null,
+      unwellNudgeShownWeek: null,
+      onboardingCompletedAt: null,
+      onboardingWorkoutHintSeenAt: null,
+      onboardingSortieHintSeenAt: null,
       personalMaxStage: 1,
       squadMaxStage: 2,
       personalMaxDamage: 680,
@@ -2057,13 +2145,14 @@ export const useGameStore = create<GameState>()(
 
       startWorkoutFocus: (routine) => {
         soundFX.playSetComplete();
+        const now = Date.now();
         const firstCfg = routine?.exercises[0];
         const firstEx =
           EXERCISE_LIBRARY.find((e) => e.id === firstCfg?.exerciseId) || EXERCISE_LIBRARY[0];
 
         const initialQueue: TemplateQueueItem[] = routine
           ? routine.exercises.map((e, idx) => ({
-              id: `qitem_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+              id: `qitem_${now}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
               exerciseId: e.exerciseId,
               targetSets: e.sets,
               completedSets: 0,
@@ -2073,7 +2162,7 @@ export const useGameStore = create<GameState>()(
             }))
           : [
               {
-                id: `qitem_${Date.now()}_0`,
+                id: `qitem_${now}_0`,
                 exerciseId: firstEx.id,
                 targetSets: 4,
                 completedSets: 0,
@@ -2097,6 +2186,10 @@ export const useGameStore = create<GameState>()(
           currentReps: firstItem.reps,
           currentRestConfigSec: firstItem.restSeconds,
           sessionSets: [],
+          currentSetStartedAt: now,
+          restStartedAt: null,
+          isRestRunning: false,
+          restSecondsLeft: 0,
         });
       },
 
@@ -2223,6 +2316,7 @@ export const useGameStore = create<GameState>()(
       tickGlobalTimers: () => {
         const state = get();
         const updates: Partial<GameState> = {};
+        const now = Date.now();
 
         if (state.isWorkoutFocusActive) {
           updates.workoutElapsedSeconds = state.workoutElapsedSeconds + 1;
@@ -2233,6 +2327,23 @@ export const useGameStore = create<GameState>()(
             soundFX.playSetComplete();
             updates.restSecondsLeft = 0;
             updates.isRestRunning = false;
+            updates.restStartedAt = null;
+            updates.currentSetStartedAt = now;
+
+            // Timer hits 0 naturally: finalize previous set restTimerElapsedSec, startedEarly = false
+            if (state.sessionSets.length > 0) {
+              const lastIdx = state.sessionSets.length - 1;
+              const lastSet = state.sessionSets[lastIdx];
+              const updatedLastSet = finalizePreviousSetRest(
+                lastSet,
+                state.restStartedAt,
+                now,
+                true
+              );
+              const newSessionSets = [...state.sessionSets];
+              newSessionSets[lastIdx] = updatedLastSet;
+              updates.sessionSets = newSessionSets;
+            }
           } else {
             updates.restSecondsLeft = state.restSecondsLeft - 1;
           }
@@ -2245,16 +2356,76 @@ export const useGameStore = create<GameState>()(
 
       setRestTimer: (seconds) => {
         soundFX.playBlip();
-        set({ restSecondsLeft: seconds, isRestRunning: seconds > 0 });
+        const state = get();
+        const now = Date.now();
+
+        if (state.isRestRunning && seconds === 0) {
+          // User skips rest while it was running: finalize previous set rest with startedEarly = true
+          const updates: Partial<GameState> = {
+            restSecondsLeft: 0,
+            isRestRunning: false,
+            restStartedAt: null,
+            currentSetStartedAt: now,
+          };
+
+          if (state.sessionSets.length > 0) {
+            const lastIdx = state.sessionSets.length - 1;
+            const lastSet = state.sessionSets[lastIdx];
+            const updatedLastSet = finalizePreviousSetRest(
+              lastSet,
+              state.restStartedAt,
+              now,
+              false
+            );
+            const newSessionSets = [...state.sessionSets];
+            newSessionSets[lastIdx] = updatedLastSet;
+            updates.sessionSets = newSessionSets;
+          }
+
+          set(updates);
+          return;
+        }
+
+        if (seconds > 0) {
+          // Keep restStartedAt so "+30s" does not erase time already rested
+          set({
+            restSecondsLeft: seconds,
+            isRestRunning: true,
+            restStartedAt: state.isRestRunning ? (state.restStartedAt ?? now) : now,
+          });
+        } else {
+          set({
+            restSecondsLeft: 0,
+            isRestRunning: false,
+            restStartedAt: null,
+          });
+        }
       },
 
       logWorkoutSet: () => {
         const state = get();
+        const now = Date.now();
         const ex =
           EXERCISE_LIBRARY.find((e) => e.id === state.selectedExerciseId) || EXERCISE_LIBRARY[0];
 
+        // 1. If a rest timer was running (user starts next set early), finalize previous set's rest
+        let sessionSets = [...state.sessionSets];
+        if (state.isRestRunning && sessionSets.length > 0) {
+          const lastIdx = sessionSets.length - 1;
+          const lastSet = sessionSets[lastIdx];
+          sessionSets[lastIdx] = finalizePreviousSetRest(
+            lastSet,
+            state.restStartedAt,
+            now,
+            false
+          );
+        }
+
+        // Set startedAt: use currentSetStartedAt ?? now
+        const setStartedAt = state.currentSetStartedAt ?? now;
+
         const muscleSetsCount =
-          state.sessionSets.filter((s) => s.muscleGroup === ex.muscleGroup).length + 1;
+          sessionSets.filter((s) => s.muscleGroup === ex.muscleGroup).length + 1;
         let decayFactor = 1.0;
         if (muscleSetsCount === 9) decayFactor = 0.5;
         else if (muscleSetsCount === 10) decayFactor = 0.3;
@@ -2285,21 +2456,30 @@ export const useGameStore = create<GameState>()(
 
         const targetQueueItemId = activeQueueItem?.id;
 
+        // Persist duration/distance as specified; do not write km or seconds into persisted weightKg
+        const persisted = computePersistedSetFields(state.currentWeightKg, ex.unitLabel);
+
         const newSet: LoggedSet = {
-          id: `set_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          id: `set_${now}_${Math.random().toString(36).slice(2, 6)}`,
           queueItemId: targetQueueItemId,
           exerciseId: ex.id,
           exerciseNameZh: ex.nameZh,
           unitLabel: ex.unitLabel,
           muscleGroup: ex.muscleGroup,
           category: ex.category,
-          weightKg: state.currentWeightKg,
+          weightKg: persisted.weightKg,
           reps: state.currentReps,
           restSec: state.currentRestConfigSec,
           coinsEarned: instantCoins,
           decayFactor,
           isPR,
-          timestamp: Date.now(),
+          timestamp: now,
+          startedAt: setStartedAt,
+          completedAt: now,
+          plannedRestSec: state.currentRestConfigSec,
+          distanceM: persisted.distanceM,
+          durationSec: persisted.durationSec,
+          timingIncomplete: false,
         };
 
         let updatedQueue = [...state.templateQueue];
@@ -2311,7 +2491,7 @@ export const useGameStore = create<GameState>()(
               : item
           );
         } else {
-          const newQueueId = `qitem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+          const newQueueId = `qitem_${now}_${Math.random().toString(36).slice(2, 6)}`;
           updatedQueue.push({
             id: newQueueId,
             exerciseId: ex.id,
@@ -2324,12 +2504,14 @@ export const useGameStore = create<GameState>()(
         }
 
         set({
-          sessionSets: [...state.sessionSets, newSet],
+          sessionSets: [...sessionSets, newSet],
           personalRecords: isPR
             ? { ...state.personalRecords, [ex.id]: state.currentWeightKg }
             : state.personalRecords,
           restSecondsLeft: state.currentRestConfigSec,
           isRestRunning: true,
+          restStartedAt: now,
+          currentSetStartedAt: null,
           templateQueue: updatedQueue,
         });
 
@@ -2349,12 +2531,21 @@ export const useGameStore = create<GameState>()(
           return;
         }
 
+        // T4-D1 temporary compatibility input for calculateWorkoutExp:
+        // Cardio km and yoga seconds were previously persisted in weightKg.
+        // Reconstruct the legacy input number so settlement coins & XP stay unchanged.
+        // T4-D3 will introduce dedicated sport capacity formulas.
         const calcResult = calculateWorkoutExp(
           state.sessionSets.map((s) => ({
             exerciseId: s.exerciseId,
             muscleGroup: s.muscleGroup,
             category: s.category,
-            weightKg: s.weightKg,
+            weightKg:
+              s.unitLabel === 'km' && typeof s.distanceM === 'number'
+                ? s.distanceM / 1000
+                : s.unitLabel === '秒' && typeof s.durationSec === 'number'
+                ? s.durationSec
+                : s.weightKg,
             reps: s.reps,
           })),
           {
@@ -2394,26 +2585,48 @@ export const useGameStore = create<GameState>()(
             exerciseId: string;
             exerciseNameZh: string;
             unitLabel: string;
-            sets: { weightKg: number; reps: number; restSec: number; isPR: boolean }[];
+            sets: {
+              weightKg: number;
+              reps: number;
+              restSec: number;
+              isPR: boolean;
+              startedAt?: number;
+              completedAt?: number;
+              durationSec?: number;
+              distanceM?: number;
+              plannedRestSec?: number;
+              restTimerElapsedSec?: number;
+              startedEarly?: boolean;
+              timingIncomplete?: boolean;
+            }[];
           }
         >();
 
         state.sessionSets.forEach((s) => {
           const groupKey = s.queueItemId || s.exerciseId;
+          const setPayload = {
+            weightKg: s.weightKg,
+            reps: s.reps,
+            restSec: s.restSec,
+            isPR: s.isPR,
+            startedAt: s.startedAt,
+            completedAt: s.completedAt,
+            durationSec: s.durationSec,
+            distanceM: s.distanceM,
+            plannedRestSec: s.plannedRestSec,
+            restTimerElapsedSec: s.restTimerElapsedSec,
+            startedEarly: s.startedEarly,
+            timingIncomplete: s.timingIncomplete,
+          };
           const existing = groupedMap.get(groupKey);
           if (existing) {
-            existing.sets.push({
-              weightKg: s.weightKg,
-              reps: s.reps,
-              restSec: s.restSec,
-              isPR: s.isPR,
-            });
+            existing.sets.push(setPayload);
           } else {
             groupedMap.set(groupKey, {
               exerciseId: s.exerciseId,
               exerciseNameZh: s.exerciseNameZh,
               unitLabel: s.unitLabel,
-              sets: [{ weightKg: s.weightKg, reps: s.reps, restSec: s.restSec, isPR: s.isPR }],
+              sets: [setPayload],
             });
           }
         });
@@ -2421,6 +2634,45 @@ export const useGameStore = create<GameState>()(
         const routineTitle = state.activeTemplateName || '自由訓練課表';
         const topEx = state.sessionSets[0]?.exerciseNameZh || '綜合訓練';
         const durationMin = Math.max(1, Math.round(state.workoutElapsedSeconds / 60));
+        const totalDurationSec = Math.max(0, state.workoutElapsedSeconds);
+
+        const firstEx = EXERCISE_LIBRARY.find((e) => e.id === state.sessionSets[0]?.exerciseId);
+        const detectedSport: AdventureSportSkillType = firstEx?.sportType || 'strength';
+        const sessionSportType: WorkoutSessionSportType = mapLegacyExerciseToSportType(
+          state.sessionSets[0]?.exerciseId,
+          state.sessionSets[0]?.unitLabel
+        );
+
+        // Phase 2 will recompute restSec on server
+        let totalRestSec = 0;
+        let sessionTimingIncomplete = false;
+        for (let i = 0; i < state.sessionSets.length; i++) {
+          const s = state.sessionSets[i];
+          if (
+            s.timingIncomplete ||
+            typeof s.startedAt !== 'number' ||
+            typeof s.completedAt !== 'number'
+          ) {
+            sessionTimingIncomplete = true;
+          }
+          if (typeof s.restTimerElapsedSec === 'number') {
+            totalRestSec += s.restTimerElapsedSec;
+          } else if (i < state.sessionSets.length - 1) {
+            // Trailing rest on last set is optional, but non-last sets must have restTimerElapsedSec
+            sessionTimingIncomplete = true;
+          }
+        }
+
+        const restShare =
+          !sessionTimingIncomplete && totalDurationSec > 0
+            ? Math.min(1, Math.max(0, totalRestSec / totalDurationSec))
+            : undefined;
+
+        const totalDistanceM = state.sessionSets.reduce((acc, s) => acc + (s.distanceM || 0), 0);
+        const totalDurationSecFromSets = state.sessionSets.reduce(
+          (acc, s) => acc + (s.durationSec || 0),
+          0
+        );
 
         const sessionRecord: WorkoutSessionRecord = {
           id: `hist_${Date.now()}`,
@@ -2435,17 +2687,26 @@ export const useGameStore = create<GameState>()(
           expEarned: checkinRes ? checkinRes.xpGained : 0,
           topExerciseZh: topEx,
           exerciseLogs: Array.from(groupedMap.values()),
+          sportType: sessionSportType,
+          source: 'in_app',
+          loggingMode: 'live_focus',
+          endedUnwell: false,
+          pauseSegments: [],
+          totalDurationSec,
+          restSec: totalRestSec,
+          restShare,
+          timingIncomplete: sessionTimingIncomplete,
+          ...(totalDistanceM > 0 ? { distanceM: totalDistanceM } : {}),
+          ...(totalDurationSecFromSets > 0 ? { durationSec: totalDurationSecFromSets } : {}),
         };
 
         soundFX.playVictory();
 
-        const firstEx = EXERCISE_LIBRARY.find((e) => e.id === state.sessionSets[0]?.exerciseId);
-        const detectedSport: AdventureSportSkillType = firstEx?.sportType || 'strength';
-
         set({
           isWorkoutFocusActive: false,
           workoutElapsedSeconds: 0,
-
+          currentSetStartedAt: null,
+          restStartedAt: null,
           isRestRunning: false,
           restSecondsLeft: 0,
           todaySportType: detectedSport,
@@ -2474,6 +2735,8 @@ export const useGameStore = create<GameState>()(
         set({
           isWorkoutFocusActive: false,
           workoutElapsedSeconds: 0,
+          currentSetStartedAt: null,
+          restStartedAt: null,
           isRestRunning: false,
           restSecondsLeft: 0,
           sessionSets: [],
@@ -3660,12 +3923,13 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'fitmon-mvp-storage-v6',
-      version: 3,
+      version: 4,
       migrate: (persistedState: unknown, version: number) =>
         migratePersistedState(persistedState, version, Date.now()) as unknown as GameState,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         ensureV3Defaults(state as unknown as Record<string, unknown>, Date.now());
+        ensureV4Defaults(state as unknown as Record<string, unknown>, Date.now());
         if (state.lastCheckinDate === undefined) state.lastCheckinDate = null;
         if (state.lastBossDate === undefined) state.lastBossDate = null;
         if (!Array.isArray(state.checkinDayKeys)) state.checkinDayKeys = [];
@@ -3684,6 +3948,17 @@ export const useGameStore = create<GameState>()(
             q.id === 'q_interact_pet' ? { ...q, rewardCoins: ROOM_INTERACT_COINS } : q
           );
         }
+        if (!Array.isArray(state.restDayKeys)) state.restDayKeys = [];
+        if (!Array.isArray(state.caringDayKeys)) state.caringDayKeys = [];
+        if (!state.unwellHalfUsedByWeek || typeof state.unwellHalfUsedByWeek !== 'object') {
+          state.unwellHalfUsedByWeek = {};
+        }
+        if (state.selfCheckCompletedAt === undefined) state.selfCheckCompletedAt = null;
+        if (state.selfCheckAnyYes === undefined) state.selfCheckAnyYes = null;
+        if (state.unwellNudgeShownWeek === undefined) state.unwellNudgeShownWeek = null;
+        if (state.onboardingCompletedAt === undefined) state.onboardingCompletedAt = null;
+        if (state.onboardingWorkoutHintSeenAt === undefined) state.onboardingWorkoutHintSeenAt = null;
+        if (state.onboardingSortieHintSeenAt === undefined) state.onboardingSortieHintSeenAt = null;
       },
       partialize: (state) => ({
         locale: state.locale,
@@ -3754,6 +4029,15 @@ export const useGameStore = create<GameState>()(
         unlockCheckinDays: state.unlockCheckinDays,
         unlockedPoseIds: state.unlockedPoseIds,
         unlockedOutfitIds: state.unlockedOutfitIds,
+        restDayKeys: state.restDayKeys,
+        caringDayKeys: state.caringDayKeys,
+        unwellHalfUsedByWeek: state.unwellHalfUsedByWeek,
+        selfCheckCompletedAt: state.selfCheckCompletedAt,
+        selfCheckAnyYes: state.selfCheckAnyYes,
+        unwellNudgeShownWeek: state.unwellNudgeShownWeek,
+        onboardingCompletedAt: state.onboardingCompletedAt,
+        onboardingWorkoutHintSeenAt: state.onboardingWorkoutHintSeenAt,
+        onboardingSortieHintSeenAt: state.onboardingSortieHintSeenAt,
       }),
     }
   )

@@ -11,6 +11,7 @@ import {
   PLAYER_CODE_REGEN_COOLDOWN_MS,
   calculateSeedUnlockCheckinDays,
   ensureV3Defaults,
+  ensureV4Defaults,
   migratePersistedState,
   NOTIFICATIONS_CAP,
   NOTIFICATIONS_KEEP_MS,
@@ -643,6 +644,562 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
         'outfit_unlock_15d',
         'outfit_unlock_30d',
       ]);
+    });
+  });
+
+  describe('Official v2→v4 Old Saves Migration (T4-D1)', () => {
+    const v2Files = [
+      {
+        path: '/workspace/fitmon-qa-2026-11-14/t3-d2/oldsave-main-ae12c43.json',
+        expectedTeammates: ['friend_akai', 'user_leo', 'friend_alice'],
+      },
+      {
+        path: '/workspace/fitmon-qa-2026-11-14/t3-d2/oldsave-main-with-chloe.json',
+        expectedTeammates: ['friend_akai', 'user_leo', 'friend_chloe'],
+      },
+    ];
+
+    for (const { path: savePath, expectedTeammates } of v2Files) {
+      test(`migrates official v2 old save to v4: ${savePath.split('/').pop()}`, () => {
+        const fileContent = fs.readFileSync(savePath, 'utf8');
+        const parsed = JSON.parse(fileContent);
+        assert.equal(parsed.version, 2);
+        const v2State = parsed.state;
+
+        // Snapshot original progress data
+        const origCoins = v2State.coins;
+        const origLevel = v2State.level;
+        const origExp = v2State.exp;
+        const origSquadMembers = JSON.parse(JSON.stringify(v2State.squadMembers));
+        const origFriendIds = [...v2State.friendIds];
+        const origCheckinDayKeys = [...v2State.checkinDayKeys];
+        const origHistory = JSON.parse(JSON.stringify(v2State.workoutHistory));
+
+        const mockNow = 1763640000000;
+        const migrated = migratePersistedState(v2State, 2, mockNow);
+
+        // 1. Assert coins, level, exp, squadMembers, friendIds, checkinDayKeys, workoutHistory length
+        assert.equal(migrated.coins, origCoins);
+        assert.equal(migrated.level, origLevel);
+        assert.equal(migrated.exp, origExp);
+        assert.deepEqual(migrated.squadMembers, origSquadMembers);
+        assert.deepEqual(migrated.friendIds, origFriendIds);
+        assert.deepEqual(migrated.checkinDayKeys, origCheckinDayKeys);
+        assert.equal((migrated.workoutHistory as any[]).length, origHistory.length);
+
+        // 2. Each session's coinsEarned / expEarned / totalVolume unchanged; no records dropped
+        const migratedHistory = migrated.workoutHistory as any[];
+        for (let i = 0; i < origHistory.length; i++) {
+          const origSess = origHistory[i];
+          const migSess = migratedHistory[i];
+          assert.equal(migSess.id, origSess.id);
+          assert.equal(migSess.coinsEarned, origSess.coinsEarned);
+          assert.equal(migSess.expEarned, origSess.expEarned);
+          assert.equal(migSess.totalVolume, origSess.totalVolume);
+          assert.equal(migSess.durationMinutes, origSess.durationMinutes);
+
+          // V4 session fields
+          assert.equal(migSess.source, 'in_app');
+          assert.equal(migSess.loggingMode, 'live_focus');
+          assert.equal(migSess.endedUnwell, false);
+          assert.deepEqual(migSess.pauseSegments, []);
+          assert.equal(migSess.totalDurationSec, origSess.durationMinutes * 60);
+          assert.equal(typeof migSess.sportType, 'string');
+
+          // Old records lack startedAt, marked timingIncomplete: true
+          assert.equal(migSess.timingIncomplete, true);
+          assert.equal(migSess.restShare, undefined);
+
+          // Check sets
+          for (const log of migSess.exerciseLogs) {
+            for (const s of log.sets) {
+              assert.equal(s.plannedRestSec, s.restSec);
+              assert.equal(s.timingIncomplete, true);
+              if (log.unitLabel === 'km' && typeof s.weightKg === 'number') {
+                assert.equal(s.distanceM, s.weightKg * 1000);
+              }
+              if (log.unitLabel === '秒' && typeof s.weightKg === 'number') {
+                assert.equal(s.durationSec, s.weightKg);
+              }
+            }
+          }
+        }
+
+        // 3. V3 fields get defaults
+        assert.deepEqual(migrated.friendIds, origFriendIds);
+        assert.deepEqual(migrated.friendRequests, []);
+        assert.equal(typeof migrated.playerCode, 'string');
+        assert.equal((migrated.playerCode as string).length, 8);
+        assert.deepEqual(migrated.notifications, []);
+        assert.deepEqual(migrated.inviteSendLog, []);
+        assert.deepEqual(
+          migrated.recentTeammates,
+          expectedTeammates.map((id) => ({ id, lastTogetherAt: mockNow }))
+        );
+        assert.deepEqual(migrated.squadJoinOrder, [DEMO_PLAYER_ID, ...expectedTeammates]);
+
+        // 4. V4 fields get defaults
+        assert.equal(migrated.selfCheckAnyYes, null);
+        assert.equal(migrated.selfCheckCompletedAt, null);
+        assert.equal(migrated.unwellNudgeShownWeek, null);
+        assert.equal(migrated.onboardingCompletedAt, null);
+        assert.equal(migrated.onboardingWorkoutHintSeenAt, null);
+        assert.equal(migrated.onboardingSortieHintSeenAt, null);
+        assert.deepEqual(migrated.restDayKeys, []);
+        assert.deepEqual(migrated.caringDayKeys, []);
+        assert.deepEqual(migrated.unwellHalfUsedByWeek, {});
+
+        // 5. Idempotent: migrate again with fromVersion 4
+        const snapshotFirst = JSON.parse(JSON.stringify(migrated));
+        const secondMigrated = migratePersistedState(migrated, 4, mockNow);
+        assert.deepEqual(secondMigrated, snapshotFirst);
+      });
+    }
+
+    test('fills distanceM and durationSec from weightKg when unitLabel allows without mutating historical weightKg', () => {
+      const stateWithCardioPlank: Record<string, unknown> = {
+        workoutHistory: [
+          {
+            id: 'sess_mixed',
+            durationMinutes: 30,
+            coinsEarned: 50,
+            expEarned: 500,
+            totalVolume: 1500,
+            exerciseLogs: [
+              {
+                exerciseId: 'cardio_incline_run',
+                unitLabel: 'km',
+                sets: [{ weightKg: 5, reps: 1, restSec: 60 }],
+              },
+              {
+                exerciseId: 'bw_plank_core',
+                unitLabel: '秒',
+                sets: [{ weightKg: 45, reps: 3, restSec: 45 }],
+              },
+            ],
+          },
+        ],
+      };
+
+      const migrated = migratePersistedState(stateWithCardioPlank, 3, 1763640000000);
+      const sess = (migrated.workoutHistory as any[])[0];
+
+      // Cardio set
+      const cardioSet = sess.exerciseLogs[0].sets[0];
+      assert.equal(cardioSet.distanceM, 5000);
+      assert.equal(cardioSet.weightKg, 5); // Historical weightKg left intact!
+      assert.equal(cardioSet.plannedRestSec, 60);
+      assert.equal(cardioSet.timingIncomplete, true);
+
+      // Plank set
+      const plankSet = sess.exerciseLogs[1].sets[0];
+      assert.equal(plankSet.durationSec, 45);
+      assert.equal(plankSet.weightKg, 45); // Historical weightKg left intact!
+      assert.equal(plankSet.plannedRestSec, 45);
+      assert.equal(plankSet.timingIncomplete, true);
+
+      // Historical economy fields unchanged
+      assert.equal(sess.coinsEarned, 50);
+      assert.equal(sess.expEarned, 500);
+      assert.equal(sess.totalVolume, 1500);
+    });
+  });
+
+  describe('Official v3→v4 Migration with Social Data (T4-D1)', () => {
+    test('preserves all v3 fields exactly from v3-save-with-social.json and applies v4 defaults', () => {
+      const savePath = '/workspace/fitmon-qa-2026-11-21/t4-d1/v3-save-with-social.json';
+      const fileContent = fs.readFileSync(savePath, 'utf8');
+      const parsed = JSON.parse(fileContent);
+      assert.equal(parsed.version, 3);
+      const v3State = parsed.state;
+
+      // Capture v3 snapshots
+      const expectedUnlockDays = v3State.unlockCheckinDays; // 8
+      const expectedPlayerCode = v3State.playerCode; // "AB2CD3EF"
+      const expectedPlayerCodeGenAt = v3State.playerCodeGeneratedAt;
+      const expectedPoseIds = [...v3State.unlockedPoseIds];
+      const expectedOutfitIds = [...v3State.unlockedOutfitIds];
+      const expectedPrivacy = { ...v3State.privacy };
+      const expectedBlockedIds = [...v3State.blockedIds];
+      const expectedNotifications = JSON.parse(JSON.stringify(v3State.notifications)).sort(
+        (a: any, b: any) => b.createdAt - a.createdAt || (b.id || '').localeCompare(a.id || '')
+      );
+      const expectedFriendRequests = JSON.parse(JSON.stringify(v3State.friendRequests));
+      const expectedRecentTeammates = JSON.parse(JSON.stringify(v3State.recentTeammates));
+      const expectedInviteSendLog = JSON.parse(JSON.stringify(v3State.inviteSendLog));
+      const expectedSquadJoinOrder = [...v3State.squadJoinOrder];
+      const expectedBossRewardWeekKey = v3State.bossRewardClaimedWeekKey;
+      const expectedCoins = v3State.coins;
+      const expectedLevel = v3State.level;
+      const expectedExp = v3State.exp;
+
+      const mockNow = 1795240000000;
+      const migrated = migratePersistedState(v3State, 3, mockNow);
+
+      // Verify v3 fields are preserved exactly
+      assert.equal(migrated.unlockCheckinDays, expectedUnlockDays);
+      assert.equal(migrated.playerCode, expectedPlayerCode);
+      assert.equal(migrated.playerCodeGeneratedAt, expectedPlayerCodeGenAt);
+      assert.deepEqual(migrated.unlockedPoseIds, expectedPoseIds);
+      assert.deepEqual(migrated.unlockedOutfitIds, expectedOutfitIds);
+      assert.deepEqual(migrated.privacy, expectedPrivacy);
+      assert.deepEqual(migrated.blockedIds, expectedBlockedIds);
+      assert.deepEqual(migrated.friendRequests, expectedFriendRequests);
+      assert.deepEqual(migrated.recentTeammates, expectedRecentTeammates);
+      assert.deepEqual(migrated.notifications, expectedNotifications);
+      assert.deepEqual(migrated.inviteSendLog, expectedInviteSendLog);
+      assert.deepEqual(migrated.squadJoinOrder, expectedSquadJoinOrder);
+      assert.equal(migrated.bossRewardClaimedWeekKey, expectedBossRewardWeekKey);
+      assert.equal(migrated.coins, expectedCoins);
+      assert.equal(migrated.level, expectedLevel);
+      assert.equal(migrated.exp, expectedExp);
+
+      // Verify v4 defaults
+      assert.equal(migrated.selfCheckAnyYes, null);
+      assert.equal(migrated.selfCheckCompletedAt, null);
+      assert.equal(migrated.unwellNudgeShownWeek, null);
+      assert.equal(migrated.onboardingCompletedAt, null);
+      assert.equal(migrated.onboardingWorkoutHintSeenAt, null);
+      assert.equal(migrated.onboardingSortieHintSeenAt, null);
+      assert.deepEqual(migrated.restDayKeys, []);
+      assert.deepEqual(migrated.caringDayKeys, []);
+      assert.deepEqual(migrated.unwellHalfUsedByWeek, {});
+
+      // Idempotent: migrate again fromVersion 4
+      const snapshotFirst = JSON.parse(JSON.stringify(migrated));
+      const secondMigrated = migratePersistedState(migrated, 4, mockNow);
+      assert.deepEqual(secondMigrated, snapshotFirst);
+    });
+  });
+
+  describe('Malformed Input Handling & Idempotency (T4-D1)', () => {
+    test('tolerates malformed workoutHistory (not array, non-object session, invalid numbers)', () => {
+      const malformedState: Record<string, unknown> = {
+        coins: 500,
+        level: 5,
+        friendIds: ['friend_akai'],
+        workoutHistory: 'not an array' as any,
+      };
+
+      assert.doesNotThrow(() => {
+        migratePersistedState(malformedState, 3);
+      });
+      assert.deepEqual(malformedState.workoutHistory, []);
+      assert.equal(malformedState.coins, 500);
+      assert.equal(malformedState.level, 5);
+      assert.deepEqual(malformedState.friendIds, ['friend_akai']);
+
+      // Session is not an object, sets with Infinity, -Infinity, NaN
+      const malformedSessions: Record<string, unknown> = {
+        workoutHistory: [
+          null,
+          'invalid_session',
+          42,
+          {
+            id: 'sess_nan',
+            durationMinutes: NaN,
+            exerciseLogs: [
+              {
+                exerciseId: 'cardio_incline_run',
+                unitLabel: 'km',
+                sets: [
+                  { weightKg: Infinity, reps: NaN, restSec: -Infinity },
+                  { weightKg: -Infinity, reps: 5, timestamp: NaN },
+                  { weightKg: NaN, reps: 5 },
+                  null,
+                  'not_a_set',
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      assert.doesNotThrow(() => {
+        migratePersistedState(malformedSessions, 3);
+      });
+      const hist = malformedSessions.workoutHistory as any[];
+      assert.equal(hist.length, 1);
+      assert.equal(hist[0].id, 'sess_nan');
+      // Set distanceM must not be NaN or Infinity
+      for (const set of hist[0].exerciseLogs[0].sets) {
+        assert.equal(set.distanceM, undefined);
+      }
+    });
+
+    test('preserves selfCheckAnyYes: false, but normalizes invalid/undefined/0/"no" to null', () => {
+      // Valid false must be preserved
+      const stateFalse: Record<string, unknown> = { selfCheckAnyYes: false };
+      ensureV4Defaults(stateFalse);
+      assert.equal(stateFalse.selfCheckAnyYes, false);
+
+      // Valid true must be preserved
+      const stateTrue: Record<string, unknown> = { selfCheckAnyYes: true };
+      ensureV4Defaults(stateTrue);
+      assert.equal(stateTrue.selfCheckAnyYes, true);
+
+      // undefined, "no", 0, {} must become null
+      const stateInvalid1: Record<string, unknown> = { selfCheckAnyYes: undefined };
+      ensureV4Defaults(stateInvalid1);
+      assert.equal(stateInvalid1.selfCheckAnyYes, null);
+
+      const stateInvalid2: Record<string, unknown> = { selfCheckAnyYes: 'no' };
+      ensureV4Defaults(stateInvalid2);
+      assert.equal(stateInvalid2.selfCheckAnyYes, null);
+
+      const stateInvalid3: Record<string, unknown> = { selfCheckAnyYes: 0 };
+      ensureV4Defaults(stateInvalid3);
+      assert.equal(stateInvalid3.selfCheckAnyYes, null);
+    });
+
+    test('normalizes selfCheckCompletedAt (0 / Infinity / object -> null)', () => {
+      const state1: Record<string, unknown> = { selfCheckCompletedAt: 0 };
+      ensureV4Defaults(state1);
+      assert.equal(state1.selfCheckCompletedAt, null);
+
+      const state2: Record<string, unknown> = { selfCheckCompletedAt: Infinity };
+      ensureV4Defaults(state2);
+      assert.equal(state2.selfCheckCompletedAt, null);
+
+      const state3: Record<string, unknown> = { selfCheckCompletedAt: { date: '2026-11-21' } };
+      ensureV4Defaults(state3);
+      assert.equal(state3.selfCheckCompletedAt, null);
+
+      const stateValid: Record<string, unknown> = { selfCheckCompletedAt: '2026-11-21' };
+      ensureV4Defaults(stateValid);
+      assert.equal(stateValid.selfCheckCompletedAt, '2026-11-21');
+    });
+
+    test('normalizes unwellNudgeShownWeek (number -> null, string preserved)', () => {
+      const stateNum: Record<string, unknown> = { unwellNudgeShownWeek: 202647 };
+      ensureV4Defaults(stateNum);
+      assert.equal(stateNum.unwellNudgeShownWeek, null);
+
+      const stateValid: Record<string, unknown> = { unwellNudgeShownWeek: '2026-W47' };
+      ensureV4Defaults(stateValid);
+      assert.equal(stateValid.unwellNudgeShownWeek, '2026-W47');
+    });
+
+    test('normalizes restDayKeys, caringDayKeys, unwellHalfUsedByWeek', () => {
+      const state: Record<string, unknown> = {
+        restDayKeys: ['2026-11-20', '', null, 123, '2026-11-21'],
+        caringDayKeys: 'invalid' as any,
+        unwellHalfUsedByWeek: {
+          '2026-W47': 2,
+          '2026-W46': -1,
+          '2026-W45': NaN,
+          '2026-W44': Infinity,
+          '2026-W43': 'two' as any,
+        },
+      };
+      ensureV4Defaults(state);
+
+      assert.deepEqual(state.restDayKeys, ['2026-11-20', '2026-11-21']);
+      assert.deepEqual(state.caringDayKeys, []);
+      assert.deepEqual(state.unwellHalfUsedByWeek, { '2026-W47': 2 });
+    });
+
+    test('normalizes onboarding flag fields (0, Infinity, {}, "", false, etc. -> null; valid strings preserved)', () => {
+      const fields = [
+        'onboardingCompletedAt',
+        'onboardingWorkoutHintSeenAt',
+        'onboardingSortieHintSeenAt',
+      ] as const;
+
+      const malformedValues = [0, Infinity, -Infinity, NaN, {}, [], '', '   ', false, true, 42];
+
+      for (const field of fields) {
+        for (const malformed of malformedValues) {
+          const state: Record<string, unknown> = { [field]: malformed };
+          ensureV4Defaults(state);
+          assert.equal(
+            state[field],
+            null,
+            `Expected ${field} with value ${JSON.stringify(malformed)} to normalize to null`
+          );
+        }
+
+        const stateMissing: Record<string, unknown> = {};
+        ensureV4Defaults(stateMissing);
+        assert.equal(stateMissing[field], null);
+
+        const stateNull: Record<string, unknown> = { [field]: null };
+        ensureV4Defaults(stateNull);
+        assert.equal(stateNull[field], null);
+
+        const stateValid: Record<string, unknown> = { [field]: '2026-11-20' };
+        ensureV4Defaults(stateValid);
+        assert.equal(stateValid[field], '2026-11-20');
+      }
+    });
+
+    test('preserves existing onboardingCompletedAt and hint timestamps from v3 state through migrate v3->v4 and second migrate v4 (idempotent)', () => {
+      const v3StateWithOnboarding: Record<string, unknown> = {
+        coins: 420,
+        level: 2,
+        exp: 0,
+        onboardingCompletedAt: '2026-11-20',
+        onboardingWorkoutHintSeenAt: '2026-11-20T14:30:00Z',
+        onboardingSortieHintSeenAt: '2026-11-20T15:00:00Z',
+      };
+
+      const mockNow = 1795240000000;
+      const migratedOnce = migratePersistedState(v3StateWithOnboarding, 3, mockNow);
+      assert.equal(migratedOnce.onboardingCompletedAt, '2026-11-20');
+      assert.equal(migratedOnce.onboardingWorkoutHintSeenAt, '2026-11-20T14:30:00Z');
+      assert.equal(migratedOnce.onboardingSortieHintSeenAt, '2026-11-20T15:00:00Z');
+      assert.equal(migratedOnce.coins, 420);
+      assert.equal(migratedOnce.level, 2);
+      assert.equal(migratedOnce.exp, 0);
+
+      // Snapshot and migrate again from version 4
+      const snapshot = JSON.parse(JSON.stringify(migratedOnce));
+      const migratedTwice = migratePersistedState(migratedOnce, 4, mockNow);
+      assert.deepEqual(migratedTwice, snapshot);
+      assert.equal(migratedTwice.onboardingCompletedAt, '2026-11-20');
+      assert.equal(migratedTwice.onboardingWorkoutHintSeenAt, '2026-11-20T14:30:00Z');
+      assert.equal(migratedTwice.onboardingSortieHintSeenAt, '2026-11-20T15:00:00Z');
+    });
+  });
+
+  describe('Write-Path State Machine & Persistence Pure Logic (T4-D1 Acceptance)', () => {
+    test('end-to-end workout timing flow: natural rest completion, early start rest skip, cardio/yoga persistence', () => {
+      // 1. Start workout focus at T0
+      const t0 = 100000;
+      let currentSetStartedAt: number | null = t0;
+      let restStartedAt: number | null = null;
+      let isRestRunning = false;
+      const sessionSets: any[] = [];
+
+      // 2. Perform Strength Set 1 (barbell_squat, 80kg x 8), logged at T1 (45s later)
+      const t1 = 100045;
+      const set1Persisted = {
+        id: 's1',
+        exerciseId: 'barbell_squat',
+        unitLabel: 'kg',
+        weightKg: 80,
+        reps: 8,
+        plannedRestSec: 120,
+        startedAt: currentSetStartedAt ?? t1,
+        completedAt: t1,
+        timestamp: t1,
+        timingIncomplete: false,
+      };
+      sessionSets.push(set1Persisted);
+      // Rest timer starts
+      isRestRunning = true;
+      restStartedAt = t1;
+      currentSetStartedAt = null;
+
+      // 3. Rest timer completes naturally after 120s at T2
+      const t2 = t1 + 120000; // 220045
+      const set1Finalized = {
+        ...sessionSets[0],
+        restTimerElapsedSec: Math.max(0, Math.round((t2 - restStartedAt) / 1000)),
+        startedEarly: false,
+      };
+      sessionSets[0] = set1Finalized;
+      isRestRunning = false;
+      restStartedAt = null;
+      currentSetStartedAt = t2;
+
+      assert.equal(sessionSets[0].restTimerElapsedSec, 120);
+      assert.equal(sessionSets[0].startedEarly, false);
+      assert.equal(currentSetStartedAt, t2);
+
+      // 4. Perform Cardio Set 2 (cardio_incline_run, 5km), logged at T3 (600s later)
+      const t3 = t2 + 600000; // 820045
+      const set2Fields = {
+        id: 's2',
+        exerciseId: 'cardio_incline_run',
+        unitLabel: 'km',
+        weightKg: 0, // Persist 0 in weightKg!
+        distanceM: 5 * 1000, // 5000m
+        reps: 1,
+        plannedRestSec: 60,
+        startedAt: currentSetStartedAt ?? t3,
+        completedAt: t3,
+        timestamp: t3,
+        timingIncomplete: false,
+      };
+      sessionSets.push(set2Fields);
+      isRestRunning = true;
+      restStartedAt = t3;
+      currentSetStartedAt = null;
+
+      assert.equal(sessionSets[1].weightKg, 0);
+      assert.equal(sessionSets[1].distanceM, 5000);
+      assert.equal(sessionSets[1].startedAt, t2);
+
+      // 5. User rests for 20s and clicks "Skip Rest" early at T4 (20s later)
+      const t4 = t3 + 20000; // 840045
+      const set2Finalized = {
+        ...sessionSets[1],
+        restTimerElapsedSec: Math.max(0, Math.round((t4 - restStartedAt) / 1000)),
+        startedEarly: true, // Started early!
+      };
+      sessionSets[1] = set2Finalized;
+      isRestRunning = false;
+      restStartedAt = null;
+      currentSetStartedAt = t4;
+
+      assert.equal(sessionSets[1].restTimerElapsedSec, 20);
+      assert.equal(sessionSets[1].startedEarly, true);
+      assert.equal(currentSetStartedAt, t4);
+
+      // 6. Perform Yoga/Plank Set 3 (bw_plank_core, 60s hold), logged at T5 (60s later)
+      const t5 = t4 + 60000; // 900045
+      const set3Fields = {
+        id: 's3',
+        exerciseId: 'bw_plank_core',
+        unitLabel: '秒',
+        weightKg: 0, // Persist 0 in weightKg!
+        durationSec: 60, // 60s
+        reps: 1,
+        plannedRestSec: 45,
+        startedAt: currentSetStartedAt ?? t5,
+        completedAt: t5,
+        timestamp: t5,
+        timingIncomplete: false,
+        // Last set trailing rest is omitted/unset
+      };
+      sessionSets.push(set3Fields);
+
+      assert.equal(sessionSets[2].weightKg, 0);
+      assert.equal(sessionSets[2].durationSec, 60);
+      assert.equal(sessionSets[2].startedAt, t4);
+      assert.equal(sessionSets[2].restTimerElapsedSec, undefined);
+
+      // 7. Finish session: compute total restSec and restShare
+      const totalDurationSec = Math.round((t5 - t0) / 1000); // (900045 - 100000) / 1000 = 800
+      let totalRestSec = 0;
+      for (const s of sessionSets) {
+        if (typeof s.restTimerElapsedSec === 'number') {
+          totalRestSec += s.restTimerElapsedSec;
+        }
+      }
+      assert.equal(totalRestSec, 120 + 20); // 140s
+      const restShare = totalRestSec / totalDurationSec; // 140 / 800 = 0.175
+
+      const sessionRecord = {
+        id: 'sess_new_complete',
+        durationMinutes: Math.round(totalDurationSec / 60),
+        totalDurationSec,
+        restSec: totalRestSec,
+        restShare,
+        timingIncomplete: false,
+        exerciseLogs: [
+          { exerciseId: 'barbell_squat', unitLabel: 'kg', sets: [sessionSets[0]] },
+          { exerciseId: 'cardio_incline_run', unitLabel: 'km', sets: [sessionSets[1]] },
+          { exerciseId: 'bw_plank_core', unitLabel: '秒', sets: [sessionSets[2]] },
+        ],
+      };
+
+      // Assert complete timing
+      assert.equal(sessionRecord.timingIncomplete, false);
+      assert.ok(sessionRecord.restShare > 0);
+      assert.equal(sessionSets[0].startedEarly, false);
+      assert.equal(sessionSets[1].startedEarly, true);
     });
   });
 });

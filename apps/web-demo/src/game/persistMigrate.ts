@@ -1,13 +1,13 @@
 /**
- * FitMon 存檔遷移與 V3 預設值純函式庫 (T3-D3 資安 11/20)
+ * FitMon 存檔遷移與 V3/V4 預設值純函式庫 (T3-D3 / T4-D1)
  *
  * Persist key: fitmon-mvp-storage-v6
- * Persist version: 3
+ * Persist version: 4
  *
- * YuChien 於 2026-11-20 決策：所有新欄位皆納入 v3（不升 v4，v4 由 T4-D1 擁有）。
- * 本模組提供純函式 migratePersistedState 及 ensureV3Defaults，
- * 確保從舊版（v0/v1/v2 或未含完整社群欄位的初始 v3 存檔）升級時具備完整冪等性，
- * 且不刪除或竄改任何金幣、等級、經驗值、打卡紀錄、好友名單或戰隊資訊。
+ * 鏈式遷移順序：2→3 (社群、邀請、通知等) → 4 (T4-D1 多種運動紀錄資料模型與 T1/T5 本地存檔欄位)。
+ * 本模組提供純函式 migratePersistedState, ensureV3Defaults 及 ensureV4Defaults，
+ * 確保從舊版（v0/v1/v2 或 v3 存檔）升級時具備完整串行冪等性，
+ * 且不刪除或竄改任何金幣、等級、經驗值、打卡紀錄、好友名單、戰隊資訊或歷史運動統計。
  */
 
 import {
@@ -19,6 +19,37 @@ import {
   OUTFIT_UNLOCK_THRESHOLDS,
   unlockedIdsForDays,
 } from '../config/economy.ts';
+import {
+  type WorkoutSessionSportType,
+  VALID_WORKOUT_SESSION_SPORT_TYPES,
+  mapLegacyExerciseToSportType,
+  isLoggedSetTimingComplete,
+  isWorkoutSessionTimingComplete,
+  computePersistedSetFields,
+  finalizePreviousSetRest,
+  selectIsRestDay,
+  selectUnwellHalfUsed,
+  selectSelfCheckCompleted,
+  selectOnboardingCompleted,
+  selectOnboardingWorkoutHintSeen,
+  selectOnboardingSortieHintSeen,
+} from './workoutRecord.ts';
+
+export type { WorkoutSessionSportType };
+export {
+  VALID_WORKOUT_SESSION_SPORT_TYPES,
+  mapLegacyExerciseToSportType,
+  isLoggedSetTimingComplete,
+  isWorkoutSessionTimingComplete,
+  computePersistedSetFields,
+  finalizePreviousSetRest,
+  selectIsRestDay,
+  selectUnwellHalfUsed,
+  selectSelfCheckCompleted,
+  selectOnboardingCompleted,
+  selectOnboardingWorkoutHintSeen,
+  selectOnboardingSortieHintSeen,
+};
 
 /** 本地玩家 ID（單一真理來源，與 squadInviteRules 保持一致） */
 export const DEMO_PLAYER_ID = 'self';
@@ -384,10 +415,245 @@ export function ensureV3Defaults(
 }
 
 /**
+ * 將歷史或未補全之 WorkoutSessionRecord 填補為合規之 V4 結構 (冪等函式)。
+ * 規則：
+ * - 補齊 sportType, source, loggingMode, endedUnwell, pauseSegments, totalDurationSec。
+ * - 補齊 sets 之 plannedRestSec (from restSec)、completedAt (from timestamp)、distanceM (km)、durationSec (秒)。
+ * - 舊資料絕不變更 weightKg 數值，亦不竄改 coinsEarned, expEarned, totalVolume。
+ * - 缺 startedAt 或實際休息無法還原者，標記 timingIncomplete: true，不虛構 restShare。
+ */
+export function fillV4SessionDefaults<T extends Record<string, unknown>>(session: T): T {
+  const s = session as Record<string, unknown>;
+
+  if (!Array.isArray(s.exerciseLogs)) {
+    s.exerciseLogs = [];
+  } else {
+    s.exerciseLogs = s.exerciseLogs.filter(
+      (log: any) => log && typeof log === 'object' && !Array.isArray(log)
+    );
+  }
+
+  const logs = s.exerciseLogs as Record<string, unknown>[];
+  const firstLog = logs[0];
+  const firstExId = typeof firstLog?.exerciseId === 'string' ? firstLog.exerciseId : undefined;
+  const firstUnit = typeof firstLog?.unitLabel === 'string' ? firstLog.unitLabel : undefined;
+
+  // sportType: 若已有有效型別則保留；否則透過對應函式推論
+  if (
+    typeof s.sportType !== 'string' ||
+    !VALID_WORKOUT_SESSION_SPORT_TYPES.includes(s.sportType as WorkoutSessionSportType)
+  ) {
+    s.sportType = mapLegacyExerciseToSportType(firstExId, firstUnit);
+  }
+
+  // source: in_app 或 health_app；預設 in_app
+  if (s.source !== 'in_app' && s.source !== 'health_app') {
+    s.source = 'in_app';
+  }
+
+  // loggingMode: live_focus, after_the_fact, health_app；預設 live_focus
+  if (
+    s.loggingMode !== 'live_focus' &&
+    s.loggingMode !== 'after_the_fact' &&
+    s.loggingMode !== 'health_app'
+  ) {
+    s.loggingMode = 'live_focus';
+  }
+
+  // endedUnwell: 布林值；預設 false
+  if (typeof s.endedUnwell !== 'boolean') {
+    s.endedUnwell = false;
+  }
+
+  // pauseSegments: 陣列；預設 []
+  if (!Array.isArray(s.pauseSegments)) {
+    s.pauseSegments = [];
+  } else {
+    s.pauseSegments = s.pauseSegments.filter(
+      (seg: any) =>
+        seg &&
+        typeof seg === 'object' &&
+        typeof seg.startedAt === 'number' &&
+        Number.isFinite(seg.startedAt) &&
+        typeof seg.endedAt === 'number' &&
+        Number.isFinite(seg.endedAt)
+    );
+  }
+
+  // totalDurationSec: 若有有限數值保留；否則由 durationMinutes * 60 推算
+  if (typeof s.totalDurationSec !== 'number' || !Number.isFinite(s.totalDurationSec)) {
+    if (typeof s.durationMinutes === 'number' && Number.isFinite(s.durationMinutes)) {
+      s.totalDurationSec = Math.round(s.durationMinutes * 60);
+    }
+  }
+
+  let hasTimingIncomplete = false;
+
+  for (const log of logs) {
+    if (!Array.isArray(log.sets)) {
+      log.sets = [];
+    } else {
+      log.sets = log.sets.filter((set: any) => set && typeof set === 'object' && !Array.isArray(set));
+    }
+
+    const unit = typeof log.unitLabel === 'string' ? log.unitLabel.trim() : '';
+
+    for (const setItem of log.sets as Record<string, unknown>[]) {
+      // plannedRestSec: 複製自 restSec (若 plannedRestSec 缺失且 restSec 為有效數值)
+      if (
+        setItem.plannedRestSec === undefined &&
+        typeof setItem.restSec === 'number' &&
+        Number.isFinite(setItem.restSec)
+      ) {
+        setItem.plannedRestSec = setItem.restSec;
+      }
+
+      // completedAt: 複製自 timestamp (若 completedAt 缺失且 timestamp 為有效數值)
+      if (
+        setItem.completedAt === undefined &&
+        typeof setItem.timestamp === 'number' &&
+        Number.isFinite(setItem.timestamp)
+      ) {
+        setItem.completedAt = setItem.timestamp;
+      }
+
+      // 距離與秒數回填 (舊資料不改動 weightKg 數值)
+      if (unit === 'km') {
+        if (
+          setItem.distanceM === undefined &&
+          typeof setItem.weightKg === 'number' &&
+          Number.isFinite(setItem.weightKg)
+        ) {
+          setItem.distanceM = Math.round(setItem.weightKg * 1000);
+        }
+      } else if (unit === '秒') {
+        if (
+          setItem.durationSec === undefined &&
+          typeof setItem.weightKg === 'number' &&
+          Number.isFinite(setItem.weightKg)
+        ) {
+          setItem.durationSec = Math.round(setItem.weightKg);
+        }
+      }
+
+      // 若缺 startedAt 或實際休息無法還原，設 timingIncomplete: true
+      if (
+        setItem.startedAt === undefined ||
+        typeof setItem.startedAt !== 'number' ||
+        !Number.isFinite(setItem.startedAt)
+      ) {
+        setItem.timingIncomplete = true;
+        hasTimingIncomplete = true;
+      } else if (setItem.timingIncomplete === true) {
+        hasTimingIncomplete = true;
+      }
+    }
+  }
+
+  // 舊紀錄缺 startedAt 不虛構暫停/休息佔比，設 timingIncomplete: true
+  if (hasTimingIncomplete || logs.length === 0) {
+    s.timingIncomplete = true;
+  }
+
+  return session;
+}
+
+/**
+ * 確保狀態具備所有 V4 欄位與預設值 (T4-D1 多種運動紀錄資料模型、T1/T5 本地存檔欄位)。
+ * 具備完整冪等性：已存在之有效值絕不覆寫。
+ */
+export function ensureV4Defaults(
+  state: Record<string, unknown>,
+  _now?: number
+): Record<string, unknown> {
+  // 1. restDayKeys: 若非陣列設為 []；若是陣列僅保留非空字串
+  if (!Array.isArray(state.restDayKeys)) {
+    state.restDayKeys = [];
+  } else {
+    state.restDayKeys = state.restDayKeys.filter(
+      (k: any) => typeof k === 'string' && k.trim().length > 0
+    );
+  }
+
+  // 2. caringDayKeys: 若非陣列設為 []；若是陣列僅保留非空字串
+  if (!Array.isArray(state.caringDayKeys)) {
+    state.caringDayKeys = [];
+  } else {
+    state.caringDayKeys = state.caringDayKeys.filter(
+      (k: any) => typeof k === 'string' && k.trim().length > 0
+    );
+  }
+
+  // 3. unwellHalfUsedByWeek: 若非純物件設為 {}；丟棄非有限數字或 < 0 的鍵值
+  if (
+    !state.unwellHalfUsedByWeek ||
+    typeof state.unwellHalfUsedByWeek !== 'object' ||
+    Array.isArray(state.unwellHalfUsedByWeek)
+  ) {
+    state.unwellHalfUsedByWeek = {};
+  } else {
+    const cleaned: Record<string, number> = {};
+    for (const [k, v] of Object.entries(state.unwellHalfUsedByWeek as Record<string, unknown>)) {
+      if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+        cleaned[k] = v;
+      }
+    }
+    state.unwellHalfUsedByWeek = cleaned;
+  }
+
+  // 4. selfCheckCompletedAt: 僅保留有限非空字串；否則為 null
+  if (typeof state.selfCheckCompletedAt !== 'string' || !state.selfCheckCompletedAt.trim()) {
+    state.selfCheckCompletedAt = null;
+  }
+
+  // 5. selfCheckAnyYes: 僅保留 true 或 false；否則為 null (絕不預設 false)
+  if (typeof state.selfCheckAnyYes !== 'boolean') {
+    state.selfCheckAnyYes = null;
+  }
+
+  // 6. unwellNudgeShownWeek: 僅保留非空字串；否則為 null
+  if (typeof state.unwellNudgeShownWeek !== 'string' || !state.unwellNudgeShownWeek.trim()) {
+    state.unwellNudgeShownWeek = null;
+  }
+
+  // 7. onboardingCompletedAt: 僅保留非空字串；否則為 null (絕不預設為已完成)
+  if (typeof state.onboardingCompletedAt !== 'string' || !state.onboardingCompletedAt.trim()) {
+    state.onboardingCompletedAt = null;
+  }
+
+  // 8. onboardingWorkoutHintSeenAt: 僅保留非空字串；否則為 null
+  if (
+    typeof state.onboardingWorkoutHintSeenAt !== 'string' ||
+    !state.onboardingWorkoutHintSeenAt.trim()
+  ) {
+    state.onboardingWorkoutHintSeenAt = null;
+  }
+
+  // 9. onboardingSortieHintSeenAt: 僅保留非空字串；否則為 null
+  if (
+    typeof state.onboardingSortieHintSeenAt !== 'string' ||
+    !state.onboardingSortieHintSeenAt.trim()
+  ) {
+    state.onboardingSortieHintSeenAt = null;
+  }
+
+  // 10. workoutHistory: 若非陣列設為 []；若是陣列則就地填補 V4 欄位
+  if (!Array.isArray(state.workoutHistory)) {
+    state.workoutHistory = [];
+  } else {
+    state.workoutHistory = state.workoutHistory
+      .filter((session: any) => session && typeof session === 'object' && !Array.isArray(session))
+      .map((session: any) => fillV4SessionDefaults(session));
+  }
+
+  return state;
+}
+
+/**
  * Zustand persist 遷移純函式。
  * 版本小於 2 的遷移邏輯維持完全不變；
- * 版本小於 3（或現有 v3 存檔缺少新欄位時）補齊所有 v3 欄位預設值。
- * 注意：本版本為 v3，後續 T4-D1 遷移時將以鏈式遷移（3→4）方式銜接，切勿佔用 version 4。
+ * 鏈式串行遷移：始終先執行 2→3 預設值 (ensureV3Defaults)，再執行 3→4 預設值 (ensureV4Defaults)。
+ * 具備完整冪等性，即便是從 version 4 或 v2/v3 存檔載入皆保證正確執行。
  */
 export function migratePersistedState(
   persistedState: unknown,
@@ -442,9 +708,11 @@ export function migratePersistedState(
     state.stamina = Math.min(STAMINA_MAX, Math.max(0, existingStamina));
   }
 
-  // 套用 v3 預設值（幂等檢查並補齊缺失欄位）
-  // 注意：本版本為 v3，後續 T4-D1 遷移時將以鏈式遷移（3→4）方式銜接，切勿佔用 version 4。
+  // 串行 Stage 3: 套用 v3 預設值（幂等檢查並補齊缺失欄位）
   ensureV3Defaults(state, now);
+
+  // 串行 Stage 4: 套用 v4 預設值 (T4-D1 多種運動紀錄資料模型與 T1/T5 本地存檔欄位)
+  ensureV4Defaults(state, now);
 
   return state;
 }
