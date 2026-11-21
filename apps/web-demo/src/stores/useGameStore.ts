@@ -194,6 +194,8 @@ import {
   BossAttackResult,
   CoinSource,
 } from '../game/economyRules';
+import { evaluateCheckinValidity } from '../game/checkinValidity';
+import { applyCheckinGrant } from '../game/checkinGrant';
 import {
   applySquadMembershipAction,
   previewLeaveSquad,
@@ -2778,30 +2780,22 @@ export const useGameStore = create<GameState>()(
           }
         );
 
-        // Finishing a workout session counts as the day's check-in ONLY if countsTowardCheckin is true
-        // 註記 (T4-D5 / T1-D2 / T1-D3)：這是舊的「結算就打卡」路徑，本單維持現況不改發獎時機。
-        // 未來達標發獎與打卡按鈕移除歸 T1-D2 / T1-D3 正式實作。
-        let checkinRes: CheckinResultData | null = null;
-        if (!state.isCheckedInToday() && implausibleEval.countsTowardCheckin) {
-          checkinRes = state.checkin({
-            type: '重訓',
-            minutes: Math.max(1, Math.round(state.workoutElapsedSeconds / 60)),
-            intensity: '中等',
-          });
-        }
+        const sessionNow = Date.now();
+        const todayKey = getLocalDayKey(sessionNow);
 
         // 第 2 階段由伺服器重算，不信任客戶端
+        // 先組 sessionRecord（expEarned 初始為 0，若本次判定達標發獎則寫 100）
         const sessionRecord: WorkoutSessionRecord = {
-          id: `hist_${Date.now()}`,
+          id: `hist_${sessionNow}`,
           dateLabel: '今日 剛剛',
           daysAgo: 0,
-          timestamp: Date.now(),
+          timestamp: sessionNow,
           routineName: routineTitle,
           durationMinutes: durationMin,
           totalVolume: calcResult.totalRawVolume,
           totalSets: state.sessionSets.length,
           coinsEarned: settlementCoins,
-          expEarned: checkinRes ? checkinRes.xpGained : 0,
+          expEarned: 0,
           topExerciseZh: topEx,
           exerciseLogs: Array.from(groupedMap.values()),
           sportType: sessionSportType,
@@ -2818,9 +2812,56 @@ export const useGameStore = create<GameState>()(
           ...(totalDurationSecFromSets > 0 ? { durationSec: totalDurationSecFromSets } : {}),
         };
 
+        // T1-D2: 判定門檻並發放打卡獎勵（當日有效運動達標首筆）
+        // 以「既有 workoutHistory + 這筆新紀錄」進行當天累積判定
+        const currentState = get();
+        const daySessions = [sessionRecord, ...currentState.workoutHistory];
+        const validity = evaluateCheckinValidity({
+          sessions: daySessions,
+          dayKey: todayKey,
+          now: sessionNow,
+          restDayKeys: currentState.restDayKeys,
+          caringDayKeys: currentState.caringDayKeys,
+          unwellHalfUsedByWeek: currentState.unwellHalfUsedByWeek,
+          checkinDayKeys: currentState.checkinDayKeys,
+          joinDayKey: currentState.joinDayKey,
+        });
+
+        const grantRes = applyCheckinGrant({
+          dayKey: todayKey,
+          nowMs: sessionNow,
+          validity,
+          state: {
+            lastCheckinDate: currentState.lastCheckinDate,
+            checkinDayKeys: currentState.checkinDayKeys,
+            checkinLogs: currentState.checkinLogs,
+            level: currentState.level,
+            exp: currentState.exp,
+            joinDayKey: currentState.joinDayKey,
+            coins: currentState.coins,
+            coinsEarnedToday: currentState.coinsEarnedToday,
+            coinsEarnedDayKey: currentState.coinsEarnedDayKey,
+            doubleCoinUntil: currentState.doubleCoinUntil,
+            unlockCheckinDays: currentState.unlockCheckinDays,
+            unwellHalfUsedByWeek: currentState.unwellHalfUsedByWeek,
+            unlockedPoseIds: currentState.unlockedPoseIds,
+            unlockedOutfitIds: currentState.unlockedOutfitIds,
+          },
+          annotation: {
+            type: sessionSportType === 'strength' ? '重訓' : undefined,
+            minutes: durationMin,
+            intensity: '中等',
+          },
+        });
+
+        const grantedRewards = Boolean(grantRes.ok && grantRes.granted && grantRes.result);
+        if (grantedRewards && grantRes.result) {
+          sessionRecord.expEarned = grantRes.result.xpGained;
+        }
+
         soundFX.playVictory();
 
-        set({
+        const patchToApply: Record<string, any> = {
           isWorkoutFocusActive: false,
           activeSessionSportType: null,
           workoutElapsedSeconds: 0,
@@ -2829,24 +2870,44 @@ export const useGameStore = create<GameState>()(
           isRestRunning: false,
           restSecondsLeft: 0,
           todaySportType: detectedSport,
-          victoryModalData: {
-            calcResult,
-            routineName: routineTitle,
-            setsCount: state.sessionSets.length,
-            bonusCoins: settlementCoins,
-            newPRs,
-            staminaDepletedNotice: false,
-            topExerciseName: topEx,
-          },
-          workoutHistory: [sessionRecord, ...state.workoutHistory],
-          quests: state.quests.map((q) =>
+          workoutHistory: [sessionRecord, ...currentState.workoutHistory],
+          quests: currentState.quests.map((q) =>
             q.id === 'q_daily_workout' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
           ),
           sessionSets: [],
           activeTemplateName: null,
           templateQueue: [],
           selectedQueueItemId: null,
-        });
+        };
+
+        if (grantedRewards && grantRes.patch && grantRes.result) {
+          // 有發打卡獎：套用發獎 patch、顯示 CheckInResultModal (+70/+100)，關閉 VictoryModal
+          Object.assign(patchToApply, grantRes.patch);
+          patchToApply.checkinResult = grantRes.result;
+          patchToApply.victoryModalData = null;
+        } else {
+          // 未發打卡獎（未達標、或今日已打卡的第二筆）：正常開啟 VictoryModal
+          patchToApply.victoryModalData = {
+            calcResult,
+            routineName: routineTitle,
+            setsCount: currentState.sessionSets.length,
+            bonusCoins: settlementCoins,
+            newPRs,
+            staminaDepletedNotice: false,
+            topExerciseName: topEx,
+          };
+          patchToApply.checkinResult = null;
+        }
+
+        set(patchToApply);
+
+        if (grantedRewards && grantRes.result) {
+          if (grantRes.result.leveledUp) {
+            currentState.showToast(`🎉 升上 Lv.${grantRes.result.levelAfter}！+${grantRes.result.xpGained} XP`);
+          } else {
+            currentState.showToast(`✅ 今日打卡成功！+${grantRes.result.xpGained} XP`);
+          }
+        }
       },
 
       discardWorkoutSession: () => {
@@ -3070,22 +3131,72 @@ export const useGameStore = create<GameState>()(
 
       checkin: (annotation) => {
         const state = get();
-        const res = checkinRule(state, { annotation });
-        if (!res.ok) {
+        const now = Date.now();
+        const todayKey = getLocalDayKey(now);
+
+        if (state.isCheckedInToday(now) || (state.checkinDayKeys || []).includes(todayKey)) {
+          state.showToast('今天已經打過卡了喔！');
+          return null;
+        }
+
+        // 擋「今天有動」空按領獎：先以當日紀錄跑判定
+        const validity = evaluateCheckinValidity({
+          sessions: state.workoutHistory,
+          dayKey: todayKey,
+          now,
+          restDayKeys: state.restDayKeys,
+          caringDayKeys: state.caringDayKeys,
+          unwellHalfUsedByWeek: state.unwellHalfUsedByWeek,
+          checkinDayKeys: state.checkinDayKeys,
+          joinDayKey: state.joinDayKey,
+        });
+
+        if (!validity.wouldGrantRewards) {
+          state.showToast('先記下今天的運動，達標就會自動發獎');
+          return null;
+        }
+
+        const res = applyCheckinGrant({
+          dayKey: todayKey,
+          nowMs: now,
+          validity,
+          state: {
+            lastCheckinDate: state.lastCheckinDate,
+            checkinDayKeys: state.checkinDayKeys,
+            checkinLogs: state.checkinLogs,
+            level: state.level,
+            exp: state.exp,
+            joinDayKey: state.joinDayKey,
+            coins: state.coins,
+            coinsEarnedToday: state.coinsEarnedToday,
+            coinsEarnedDayKey: state.coinsEarnedDayKey,
+            doubleCoinUntil: state.doubleCoinUntil,
+            unlockCheckinDays: state.unlockCheckinDays,
+            unwellHalfUsedByWeek: state.unwellHalfUsedByWeek,
+            unlockedPoseIds: state.unlockedPoseIds,
+            unlockedOutfitIds: state.unlockedOutfitIds,
+          },
+          annotation,
+        });
+
+        if (!res.ok || !res.granted || !res.patch || !res.result) {
           if (res.reason === 'already_checked_in') {
             state.showToast('今天已經打過卡了喔！');
+          } else {
+            state.showToast('先記下今天的運動，達標就會自動發獎');
           }
           return null;
         }
+
         soundFX.playVictory();
-        set(res.patch!);
-        set({ checkinResult: res.result!, checkinSheetOpen: false });
-        if (res.result!.leveledUp) {
-          state.showToast(`🎉 升上 Lv.${res.result!.levelAfter}！+${res.result!.xpGained} XP`);
+        set(res.patch);
+        set({ checkinResult: res.result, checkinSheetOpen: false });
+        if (res.result.leveledUp) {
+          state.showToast(`🎉 升上 Lv.${res.result.levelAfter}！+${res.result.xpGained} XP`);
         } else {
-          state.showToast(`✅ 打卡成功！+${res.result!.xpGained} XP`);
+          state.showToast(`✅ 今日打卡成功！+${res.result.xpGained} XP`);
         }
-        return res.result!;
+        return res.result;
       },
 
       getDamageInfo: (now = Date.now()) => {

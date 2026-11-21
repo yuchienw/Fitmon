@@ -288,20 +288,93 @@ export interface PreviewCappedRewardStateSnapshot {
 // ================= FUNCTIONS =================
 
 /**
+ * 0. calculateLevelProgression
+ * Pure helper for XP gain & level-up loop. Reusable across checkin and checkinGrant.
+ */
+export function calculateLevelProgression(
+  levelBefore: number,
+  expBefore: number,
+  xpGained: number
+): {
+  levelAfter: number;
+  expAfter: number;
+  xpToNextBefore: number;
+  xpToNextAfter: number;
+  leveledUp: boolean;
+} {
+  const xpToNextBefore = xpToNext(levelBefore);
+  let currentLevel = levelBefore;
+  let currentExp = expBefore + xpGained;
+
+  while (currentExp >= xpToNext(currentLevel)) {
+    currentExp -= xpToNext(currentLevel);
+    currentLevel += 1;
+  }
+
+  const levelAfter = currentLevel;
+  const expAfter = currentExp;
+  const xpToNextAfter = xpToNext(levelAfter);
+  const leveledUp = levelAfter > levelBefore;
+
+  return {
+    levelAfter,
+    expAfter,
+    xpToNextBefore,
+    xpToNextAfter,
+    leveledUp,
+  };
+}
+
+/**
  * 2. getDamageInfo
  * Computes weekly damage multiplier and whether rookie floor applies.
+ * Supports countSameWeekBackfillTowardWeeklyDays:
+ * Uses existing checkinLogs to infer backfill (getLocalDayKey(timestamp) !== dayKey).
+ * When countSameWeekBackfillTowardWeeklyDays is false, backfilled days in this week are not counted.
+ * Past settled weeks are frozen (only current week days are examined).
  */
 export function getDamageInfo(
   state: {
     checkinDayKeys: string[];
     joinDayKey: string;
+    checkinLogs?: CheckinLogEntry[];
   },
-  now: Date | number = Date.now()
+  now: Date | number = Date.now(),
+  config?: { countSameWeekBackfillTowardWeeklyDays?: boolean }
 ): DamageInfoResult {
   const todayKey = getLocalDayKey(now);
   const currentWeekDays = getWeekDayKeys(todayKey);
   const checkinSet = new Set(state.checkinDayKeys || []);
-  const daysThisWeek = currentWeekDays.filter((k) => checkinSet.has(k)).length;
+  const countSameWeekBackfill =
+    config?.countSameWeekBackfillTowardWeeklyDays ?? true;
+
+  const backfilledDayKeys = new Set<string>();
+  if (state.checkinLogs && Array.isArray(state.checkinLogs)) {
+    const immediateDays = new Set<string>();
+    const mismatchedDays = new Set<string>();
+    for (const log of state.checkinLogs) {
+      if (!log || !log.dayKey || typeof log.timestamp !== 'number') continue;
+      const logLocalDay = getLocalDayKey(log.timestamp);
+      if (logLocalDay === log.dayKey) {
+        immediateDays.add(log.dayKey);
+      } else {
+        mismatchedDays.add(log.dayKey);
+      }
+    }
+    for (const day of mismatchedDays) {
+      if (!immediateDays.has(day)) {
+        backfilledDayKeys.add(day);
+      }
+    }
+  }
+
+  const daysThisWeek = currentWeekDays.filter((k) => {
+    if (!checkinSet.has(k)) return false;
+    if (!countSameWeekBackfill && backfilledDayKeys.has(k)) {
+      return false;
+    }
+    return true;
+  }).length;
 
   let damageMultiplier = DAMAGE_MULTIPLIER_BY_DAYS[1]; // 1.0
   let multiplierTier: '1' | '2' | '3+' = '1';
@@ -352,33 +425,21 @@ export function checkin(
 
   const levelBefore = state.level;
   const expBefore = state.exp;
-  const xpToNextBefore = xpToNext(levelBefore);
-
-  let currentLevel = levelBefore;
-  let currentExp = expBefore + CHECKIN_XP;
-
-  while (currentExp >= xpToNext(currentLevel)) {
-    currentExp -= xpToNext(currentLevel);
-    currentLevel += 1;
-  }
-
-  const levelAfter = currentLevel;
-  const expAfter = currentExp;
-  const xpToNextAfter = xpToNext(levelAfter);
-  const leveledUp = levelAfter > levelBefore;
+  const levelProgression = calculateLevelProgression(
+    levelBefore,
+    expBefore,
+    CHECKIN_XP
+  );
+  const levelAfter = levelProgression.levelAfter;
+  const expAfter = levelProgression.expAfter;
+  const xpToNextBefore = levelProgression.xpToNextBefore;
+  const xpToNextAfter = levelProgression.xpToNextAfter;
+  const leveledUp = levelProgression.leveledUp;
 
   const nextCheckinDayKeys = [
     ...(state.checkinDayKeys || []).filter((k) => k !== today),
     today,
   ].slice(-21);
-
-  const damageInfo = getDamageInfo(
-    {
-      checkinDayKeys: nextCheckinDayKeys,
-      joinDayKey: state.joinDayKey,
-    },
-    now
-  );
 
   const nowMs = typeof now === 'number' ? now : now.getTime();
   const newLog: CheckinLogEntry = {
@@ -387,6 +448,15 @@ export function checkin(
     annotation: intent.annotation,
   };
   const nextCheckinLogs = [newLog, ...(state.checkinLogs || [])].slice(0, 30);
+
+  const damageInfo = getDamageInfo(
+    {
+      checkinDayKeys: nextCheckinDayKeys,
+      joinDayKey: state.joinDayKey,
+      checkinLogs: nextCheckinLogs,
+    },
+    now
+  );
 
   // Grant check-in coins via capped grant
   const coinGrantRes = grantCoins(
