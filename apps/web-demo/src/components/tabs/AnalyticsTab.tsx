@@ -11,11 +11,14 @@ import {
   Clock,
   Activity,
   CalendarDays,
+  Users,
 } from 'lucide-react';
 import { useGameStore, WorkoutSessionRecord, selectStreakDays } from '../../stores/useGameStore';
 
 import { EXERCISE_LIBRARY } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
+import { MyPlayerCodeCard } from '../social/MyPlayerCodeCard';
+import { FriendsView } from '../social/FriendsView';
 
 type MeSubTab = 'history' | 'charts' | 'trophies';
 type HistoryViewMode = 'calendar' | 'weekly';
@@ -25,6 +28,7 @@ export const AnalyticsTab: React.FC = () => {
   const store = useGameStore();
   const streakDays = useGameStore(selectStreakDays);
 
+  const [showFriendsView, setShowFriendsView] = useState<boolean>(false);
   const [subTab, setSubTab] = useState<MeSubTab>('history');
   const [historyMode, setHistoryMode] = useState<HistoryViewMode>('calendar');
   const [calYear, setCalYear] = useState<number>(() => new Date().getFullYear());
@@ -230,35 +234,65 @@ export const AnalyticsTab: React.FC = () => {
 
   return (
     <div className="p-3.5 space-y-3.5 pb-10">
-      {/* 1. PLAYER PROFILE HEADER CARD */}
-      <div className="retro-box rounded-2xl p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/50 flex items-center justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-1.5">
-            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black">
-              Lv.{store.level}
-            </span>
-            <span className="text-xs font-mono text-amber-300 font-bold">
-              🔥 連勝 {streakDays} 天
-            </span>
+      {/* 好友子分頁面板 (7a, 7c, 7d, 7e) */}
+      {showFriendsView ? (
+        <FriendsView onBack={() => setShowFriendsView(false)} />
+      ) : (
+        <>
+          {/* 1. PLAYER PROFILE HEADER CARD */}
+          <div className="retro-box rounded-2xl p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/50 flex items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black">
+                  Lv.{store.level}
+                </span>
+                <span className="text-xs font-mono text-amber-300 font-bold">
+                  🔥 連勝 {streakDays} 天
+                </span>
+              </div>
+              <h2 className="text-base font-black text-white mt-1">{store.nickname}</h2>
+              <p className="text-[11px] text-slate-400">
+                累計 {store.workoutHistory.length} 次訓練 · {store.coins.toLocaleString()} 🪙
+              </p>
+            </div>
 
+            <button
+              onClick={() => store.setWardrobeModalOpen(true)}
+              className="retro-btn px-3 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shrink-0 shadow-md"
+            >
+              <Shirt className="w-4 h-4" />
+              <span>衣櫃佈置</span>
+            </button>
           </div>
-          <h2 className="text-base font-black text-white mt-1">{store.nickname}</h2>
-          <p className="text-[11px] text-slate-400">
-            累計 {store.workoutHistory.length} 次訓練 · {store.coins.toLocaleString()} 🪙
-          </p>
-        </div>
 
-        <button
-          onClick={() => store.setWardrobeModalOpen(true)}
-          className="retro-btn px-3 py-2 rounded-xl bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shrink-0 shadow-md"
-        >
-          <Shirt className="w-4 h-4" />
-          <span>衣櫃佈置</span>
-        </button>
-      </div>
+          {/* 1.5 我的玩家代碼卡 (7b，成人顯示代碼，未成年顯示 QR 占位) */}
+          <MyPlayerCodeCard />
 
-      {/* 2. THREE SUB-TABS: 月曆與紀錄 / 趨勢圖表 / 體態與PR */}
-      <div className="grid grid-cols-3 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+          {/* 1.6 好友入口列 (3a / 7a，進入好友子面板) */}
+          <div
+            data-testid="friends-entry-button"
+            onClick={() => setShowFriendsView(true)}
+            className="bg-[#FFFDF8] border border-[#E5DCCB] rounded-2xl p-3 shadow-sm hover:border-[#F3C29A] transition cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#FFF1E4] border border-[#FED7AA] flex items-center justify-center text-[#EA580C]">
+                  <Users className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-black text-[#29221E]">好友</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#786B63]">
+                <span className="px-2 py-0.5 rounded-full bg-[#FFF1E4] text-[#C2410C] border border-[#FED7AA] font-black">
+                  {store.friendIds.length} 位
+                </span>
+                <ChevronRight className="w-4 h-4 text-[#A89A8C]" />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. THREE SUB-TABS: 月曆與紀錄 / 趨勢圖表 / 體態與PR */}
+          <div className="grid grid-cols-3 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
         {(
           [
             { id: 'history', label: '月曆與紀錄', icon: Calendar },
@@ -1122,6 +1156,8 @@ export const AnalyticsTab: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

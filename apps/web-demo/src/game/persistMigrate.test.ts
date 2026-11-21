@@ -108,6 +108,7 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
     test('canRegeneratePlayerCode enforces 24h cooldown', () => {
       const baseNow = 1700000000000;
       assert.equal(canRegeneratePlayerCode(undefined, baseNow), true);
+      assert.equal(canRegeneratePlayerCode(null, baseNow), true);
       assert.equal(canRegeneratePlayerCode(0, baseNow), true);
 
       // 23 hours later: cannot regenerate
@@ -118,6 +119,36 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
       assert.equal(canRegeneratePlayerCode(baseNow, baseNow + PLAYER_CODE_REGEN_COOLDOWN_MS), true);
       // 25 hours later: can regenerate
       assert.equal(canRegeneratePlayerCode(baseNow, baseNow + 25 * 3600_000), true);
+    });
+
+    test('fresh save (null timestamp) regenerates immediately, then blocks second regen within 24h', () => {
+      const baseNow = 1700000000000;
+      const state: Record<string, unknown> = {};
+      ensureV3Defaults(state, baseNow);
+      const initialCode = state.playerCode as string;
+      assert.equal(state.playerCodeGeneratedAt, null);
+
+      // (B) Fresh save can regenerate immediately
+      assert.equal(canRegeneratePlayerCode(state.playerCodeGeneratedAt as number | null, baseNow), true);
+      const firstRegenResult = regeneratePlayerCode(state, baseNow);
+      const secondCode = firstRegenResult.playerCode as string;
+      assert.notEqual(secondCode, initialCode);
+      assert.equal(secondCode.length, 8);
+      assert.equal(firstRegenResult.playerCodeGeneratedAt, baseNow);
+
+      // (C) Second regeneration within 24h is blocked
+      const tenHoursLater = baseNow + 10 * 3600_000;
+      assert.equal(canRegeneratePlayerCode(firstRegenResult.playerCodeGeneratedAt as number, tenHoursLater), false);
+      const blockedResult = regeneratePlayerCode(state, tenHoursLater);
+      assert.equal(blockedResult.playerCode, secondCode);
+      assert.equal(blockedResult.playerCodeGeneratedAt, baseNow);
+
+      // After 24h, further regen succeeds and updates timestamp
+      const afterCooldown = baseNow + PLAYER_CODE_REGEN_COOLDOWN_MS + 1000;
+      assert.equal(canRegeneratePlayerCode(firstRegenResult.playerCodeGeneratedAt as number, afterCooldown), true);
+      const thirdRegenResult = regeneratePlayerCode(state, afterCooldown);
+      assert.notEqual(thirdRegenResult.playerCode, secondCode);
+      assert.equal(thirdRegenResult.playerCodeGeneratedAt, afterCooldown);
     });
 
     test('regeneratePlayerCode leaves code and timestamp unchanged if cooldown has not elapsed', () => {
@@ -269,14 +300,14 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
   });
 
   describe('ensureV3Defaults & Idempotency', () => {
-    test('populates brand-new save with empty defaults and sets playerCodeGeneratedAt to now', () => {
+    test('populates brand-new save with empty defaults and sets playerCodeGeneratedAt to null', () => {
       const now = 1700000000000;
       const state: Record<string, unknown> = {};
       ensureV3Defaults(state, now);
 
       assert.equal(typeof state.playerCode, 'string');
       assert.equal((state.playerCode as string).length, 8);
-      assert.equal(state.playerCodeGeneratedAt, now);
+      assert.equal(state.playerCodeGeneratedAt, null);
       assert.deepEqual(state.friendRequests, []);
       assert.deepEqual(state.recentTeammates, []);
       assert.deepEqual(state.notifications, []);
@@ -294,7 +325,7 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
       assert.deepEqual(state.unlockedOutfitIds, []);
     });
 
-    test('if playerCode exists but playerCodeGeneratedAt is missing, sets timestamp without changing code', () => {
+    test('if playerCode exists but playerCodeGeneratedAt is missing, normalizes timestamp to null without changing code', () => {
       const now = 1700000000000;
       const existingCode = 'EXISTING';
       const state: Record<string, unknown> = {
@@ -304,7 +335,7 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
       ensureV3Defaults(state, now);
 
       assert.equal(state.playerCode, existingCode);
-      assert.equal(state.playerCodeGeneratedAt, now);
+      assert.equal(state.playerCodeGeneratedAt, null);
     });
 
     test('if playerCode and playerCodeGeneratedAt already exist, neither is modified', () => {
@@ -386,7 +417,7 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
       assert.equal(migrated.level, 3);
       assert.equal(typeof migrated.playerCode, 'string');
       assert.equal((migrated.playerCode as string).length, 8);
-      assert.equal(migrated.playerCodeGeneratedAt, now);
+      assert.equal(migrated.playerCodeGeneratedAt, null);
       assert.deepEqual(migrated.friendRequests, []);
       assert.deepEqual(migrated.notifications, []);
       assert.deepEqual(migrated.inviteSendLog, []);
@@ -442,13 +473,13 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
         assert.deepEqual(migrated.unlockedPoseIds, []);
         assert.deepEqual(migrated.unlockedOutfitIds, []);
 
-        // 5. playerCode is 8 chars from the alphabet; playerCodeGeneratedAt === passed now
+        // 5. playerCode is 8 chars from the alphabet; playerCodeGeneratedAt === null on first auto-generation
         assert.equal(typeof migrated.playerCode, 'string');
         assert.equal((migrated.playerCode as string).length, 8);
         for (const char of migrated.playerCode as string) {
           assert.ok(PLAYER_CODE_CHARSET.includes(char), `Char "${char}" should be in PLAYER_CODE_CHARSET`);
         }
-        assert.equal(migrated.playerCodeGeneratedAt, mockNow);
+        assert.equal(migrated.playerCodeGeneratedAt, null);
 
         // 6. privacy is adult default; notifications []; inviteSendLog []
         assert.deepEqual(migrated.privacy, {
@@ -470,7 +501,7 @@ describe('persistMigrate & V3 Schema (資安 11/20 Overrides)', () => {
         const secondMigrated = migratePersistedState(migrated, 3, mockNow);
         assert.deepEqual(secondMigrated, snapshotFirst);
         assert.equal(secondMigrated.playerCode, snapshotFirst.playerCode);
-        assert.equal(secondMigrated.playerCodeGeneratedAt, mockNow);
+        assert.equal(secondMigrated.playerCodeGeneratedAt, null);
       });
     }
   });

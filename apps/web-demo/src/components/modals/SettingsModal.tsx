@@ -304,6 +304,56 @@ export const SettingsModal: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* 好友系統測試與 QA 代碼 (T3-D9) */}
+            <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-2">
+              <div className="text-xs font-bold text-amber-300 flex items-center justify-between">
+                <span>好友系統 QA 代碼與種子 (T3-D9)</span>
+              </div>
+              <div className="bg-slate-900/90 rounded-lg p-2 text-[11px] space-y-1 font-mono text-slate-300 border border-slate-800">
+                <div className="text-[10px] font-sans font-bold text-slate-400 mb-1">
+                  可複製於「找人」測試搜尋結果：
+                </div>
+                <div className="flex justify-between">
+                  <span>Mika (成人・可搜尋):</span>
+                  <span className="text-emerald-400 font-bold select-all">K7PM 4XQ9</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Jun (成人・可搜尋):</span>
+                  <span className="text-emerald-400 font-bold select-all">R3HW 8NTE</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Leo (成人・關閉代碼找人):</span>
+                  <span className="text-slate-400 select-all">W9CT 2KMF</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>小樹 (未成年・搜不到):</span>
+                  <span className="text-slate-400 select-all">T2MN 8XWP</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>舊代碼 (失效舊碼・搜不到):</span>
+                  <span className="text-slate-400 select-all">W9CT 2KMX</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                <button
+                  data-testid="dev-seed-incoming-friend"
+                  onClick={() => store.seedIncomingFriendRequest()}
+                  className="py-1.5 px-2 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold"
+                >
+                  塞入 Mika 好友申請
+                </button>
+
+                <button
+                  data-testid="dev-seed-recent-teammates"
+                  onClick={() => store.seedRecentTeammates()}
+                  className="py-1.5 px-2 rounded-lg bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold"
+                >
+                  塞入最近隊友資料
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

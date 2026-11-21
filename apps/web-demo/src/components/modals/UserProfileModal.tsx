@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
   BadgeCheck,
@@ -10,6 +10,10 @@ import {
   Dumbbell,
   UserPlus,
   Check,
+  QrCode,
+  MoreHorizontal,
+  Ban,
+  Flag,
 } from 'lucide-react';
 import { useGameStore } from '../../stores/useGameStore';
 import {
@@ -20,19 +24,22 @@ import {
 } from '../../config/catalogConfig';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
+import { getFriendRequestView } from '../../game/friendSocial';
+import { DEMO_PLAYER_ID } from '../../game/persistMigrate';
+import { IS_DEMO, DEMO_REPORT_DISCLAIMER } from '../../config/demo';
 
 export const UserProfileModal: React.FC = () => {
   const store = useGameStore();
   const profileId = store.selectedProfileId;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (!profileId) return null;
 
   const profile = getFriendProfile(profileId);
   if (!profile) return null;
 
-  const isFriendNow = store.friendIds.some(
-    (id) => (resolveFriendProfileId(id) || id) === profile.id
-  );
+  const isViewerMinor = store.devMinorTestAccount === true;
+  const requestView = getFriendRequestView(store, DEMO_PLAYER_ID, profile.id, Date.now());
 
   const userPosts = store.posts.filter(
     (p) =>
@@ -58,27 +65,98 @@ export const UserProfileModal: React.FC = () => {
             <p className="text-[11px] text-slate-400 mt-1">{profile.bioZh}</p>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => store.toggleFriend(profile.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 border transition ${
-                isFriendNow
-                  ? 'bg-slate-800 border-emerald-500/40 text-emerald-300'
-                  : 'bg-emerald-500 text-slate-950 border-emerald-400 shadow'
-              }`}
-            >
-              {isFriendNow ? (
-                <>
+          <div className="flex items-center gap-1.5 shrink-0 relative">
+            {isViewerMinor ? (
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300">
+                <QrCode className="w-3.5 h-3.5 text-amber-400" />
+                <span>請用好友 QR 加好友</span>
+              </div>
+            ) : requestView === 'friends' ? (
+              <div
+                data-testid="friend-status-friends"
+                className="px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 bg-slate-800 border border-emerald-500/40 text-emerald-300"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>好友</span>
+              </div>
+            ) : requestView === 'pending' ? (
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  disabled
+                  data-testid="friend-request-sent"
+                  className="px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 bg-[#EFE8DC] border border-[#E5DCCB] text-[#A89A8C] cursor-not-allowed"
+                >
                   <Check className="w-3.5 h-3.5" />
-                  <span>好友</span>
-                </>
-              ) : (
-                <>
+                  <span>已送出好友申請</span>
+                </button>
+                <button
+                  onClick={() => store.cancelFriendRequestAction(profile.id)}
+                  data-testid="friend-request-cancel"
+                  className="text-[11px] font-bold text-slate-400 hover:text-white underline cursor-pointer"
+                >
+                  取消好友申請
+                </button>
+                <span className="text-[10px] text-slate-400">對方同意後，會在小鈴鐺通知你。</span>
+              </div>
+            ) : requestView === 'limit' ? (
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  disabled
+                  data-testid="friend-request-limit"
+                  className="px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 bg-slate-800 border border-slate-700 text-slate-500 cursor-not-allowed"
+                >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>加好友</span>
-                </>
+                </button>
+                <span className="text-[10px] text-amber-300">今天的好友申請次數用完了，明天再來</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => store.sendFriendRequestAction(profile.id)}
+                data-testid="user-profile-add-friend"
+                className="px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 bg-emerald-500 text-slate-950 border border-emerald-400 shadow hover:bg-emerald-400 transition"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>加好友</span>
+              </button>
+            )}
+
+            {/* ⋯ Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="更多選項"
+                className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-36 bg-slate-900 border border-slate-700 rounded-xl shadow-xl py-1 z-30 space-y-0.5">
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      store.showToast('已封鎖此玩家');
+                    }}
+                    className="w-full px-3 py-1.5 text-left text-xs font-bold text-slate-300 hover:bg-slate-800 flex items-center gap-1.5"
+                  >
+                    <Ban className="w-3.5 h-3.5 text-rose-400" />
+                    <span>封鎖</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      store.showToast(IS_DEMO ? DEMO_REPORT_DISCLAIMER : '已收到檢舉');
+                    }}
+                    className="w-full px-3 py-1.5 text-left text-xs font-bold text-slate-300 hover:bg-slate-800 flex items-center gap-1.5"
+                  >
+                    <Flag className="w-3.5 h-3.5 text-amber-400" />
+                    <span>檢舉</span>
+                  </button>
+                </div>
               )}
-            </button>
+            </div>
+
             <button
               onClick={() => store.setSelectedProfileId(null)}
               className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
