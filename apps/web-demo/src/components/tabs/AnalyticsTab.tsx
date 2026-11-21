@@ -23,6 +23,7 @@ import { FriendsView } from '../social/FriendsView';
 import { PrivacySafetyView } from '../social/PrivacySafetyView';
 import { evaluateImplausibleSession } from '../../game/implausibleCapsEvaluator';
 import { EditFlaggedSessionModal } from '../modals/EditFlaggedSessionModal';
+import { formatExerciseLogSummary } from '../../game/workoutRecord';
 
 type MeSubTab = 'history' | 'charts' | 'trophies';
 type HistoryViewMode = 'calendar' | 'weekly';
@@ -777,8 +778,7 @@ export const AnalyticsTab: React.FC = () => {
                                   <span className="text-[9px] text-amber-700">📖</span>
                                 </div>
                                 <div className="font-mono text-amber-800 font-bold">
-                                  {log.sets.length}組 · {Math.max(...log.sets.map((s) => s.weightKg))}
-                                  {log.unitLabel}
+                                  {formatExerciseLogSummary(log)}
                                 </div>
                               </div>
                             </div>
@@ -853,8 +853,7 @@ export const AnalyticsTab: React.FC = () => {
                               <span className="text-[9px] text-cyan-400">📖</span>
                             </div>
                             <div className="font-mono text-cyan-300">
-                              {log.sets.length}組 · {Math.max(...log.sets.map((s) => s.weightKg))}
-                              {log.unitLabel}
+                              {formatExerciseLogSummary(log)}
                             </div>
                           </div>
                         </div>
