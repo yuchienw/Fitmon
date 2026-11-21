@@ -47,6 +47,14 @@ import {
   PlayerPrivacySettings,
   ReportLogItem,
 } from '../game/persistMigrate';
+import {
+  pruneNotifications,
+  visibleNotifications,
+  unreadCount,
+  markAllRead,
+  type RecipientNotifyContext,
+} from '../game/notificationCenter';
+import { IS_DEMO } from '../config/demo';
 
 export type {
   FriendRequestItem,
@@ -372,6 +380,13 @@ export interface GameState {
   memeStudioOpen: boolean;
   shareStudioContext: 'workout_photo' | 'boss_victory';
   settingsOpen: boolean;
+  notificationsOpen: boolean;
+  // 非正式存檔欄位，僅試玩模擬收件狀態 (Q19)
+  devRecipientNotifyDemo: {
+    isRestDay: boolean;
+    isCaringForBody: boolean;
+    isPaused: boolean;
+  };
   wardrobeModalOpen: boolean;
   selectedProfileId: string | null;
   selectedHistorySessionId: string | null;
@@ -512,6 +527,18 @@ export interface GameState {
   toggleNightModeRoom: () => void;
   setMemeStudioOpen: (open: boolean, context?: 'workout_photo' | 'boss_victory') => void;
   setSettingsOpen: (open: boolean) => void;
+  setNotificationsOpen: (open: boolean) => void;
+  toggleNotifications: () => void;
+  setDevRecipientNotifyDemo: (
+    patch: Partial<{ isRestDay: boolean; isCaringForBody: boolean; isPaused: boolean }>
+  ) => void;
+  markAllVisibleNotificationsRead: () => void;
+  applyNotificationAction: (
+    id: string,
+    action: 'join' | 'decline' | 'accept' | 'skip'
+  ) => void;
+  seedDemoNotifications: (preset?: 'qa_mixed' | 'ten_plus' | 'clear') => void;
+  clearNotifications: () => void;
   setWardrobeModalOpen: (open: boolean) => void;
   setSelectedProfileId: (id: string | null) => void;
   setSelectedHistorySessionId: (id: string | null) => void;
@@ -995,6 +1022,13 @@ export const useGameStore = create<GameState>()(
       memeStudioOpen: false,
       shareStudioContext: 'workout_photo',
       settingsOpen: false,
+      notificationsOpen: false,
+      // 非正式存檔欄位，僅試玩模擬收件狀態 (Q19)
+      devRecipientNotifyDemo: {
+        isRestDay: false,
+        isCaringForBody: false,
+        isPaused: false,
+      },
       wardrobeModalOpen: false,
       selectedProfileId: null,
       selectedHistorySessionId: null,
@@ -1157,7 +1191,7 @@ export const useGameStore = create<GameState>()(
 
       setActiveTab: (tab) => {
         soundFX.playBlip();
-        set({ activeTab: tab });
+        set({ activeTab: tab, notificationsOpen: false });
       },
 
       setLocale: (locale) => set({ locale }),
@@ -1196,6 +1230,190 @@ export const useGameStore = create<GameState>()(
       setSettingsOpen: (open) => {
         soundFX.playBlip();
         set({ settingsOpen: open });
+      },
+
+      setNotificationsOpen: (open) => {
+        soundFX.playBlip();
+        set({ notificationsOpen: open });
+      },
+
+      toggleNotifications: () => {
+        soundFX.playBlip();
+        set((s) => ({ notificationsOpen: !s.notificationsOpen }));
+      },
+
+      setDevRecipientNotifyDemo: (patch) => {
+        set((s) => ({
+          devRecipientNotifyDemo: {
+            ...s.devRecipientNotifyDemo,
+            ...patch,
+          },
+        }));
+      },
+
+      markAllVisibleNotificationsRead: () => {
+        const s = get();
+        const now = Date.now();
+        const ctx: RecipientNotifyContext = {
+          ...s.devRecipientNotifyDemo,
+          isMinor: s.devMinorTestAccount,
+          friendIds: s.friendIds,
+        };
+        const visible = visibleNotifications(s.notifications, ctx, now);
+        const visibleIds = visible.all.map((item) => item.id);
+        const updated = markAllRead(s.notifications, visibleIds, now);
+        set({ notifications: updated });
+      },
+
+      applyNotificationAction: (id, action) => {
+        soundFX.playBlip();
+        set((s) => {
+          const target = s.notifications.find((n) => n.id === id);
+          if (!target) return s;
+
+          let newStatus = target.status || 'info';
+          if (action === 'join') newStatus = 'accepted';
+          else if (action === 'decline') newStatus = 'declined';
+          else if (action === 'accept') newStatus = 'accepted';
+          else if (action === 'skip') newStatus = 'skipped';
+
+          const updated = s.notifications.map((n) => {
+            if (n.id === id) {
+              return { ...n, status: newStatus };
+            }
+            // After 加入 on a squad_invite, other still-pending squad_invite items become invalid
+            if (action === 'join' && n.type === 'squad_invite' && (!n.status || n.status === 'pending')) {
+              return { ...n, status: 'invalid' };
+            }
+            return n;
+          });
+
+          return { notifications: updated };
+        });
+      },
+
+      clearNotifications: () => {
+        set({ notifications: [] });
+      },
+
+      seedDemoNotifications: (preset = 'qa_mixed') => {
+        const now = Date.now();
+        if (preset === 'clear') {
+          set({ notifications: [] });
+          return;
+        }
+
+        if (preset === 'ten_plus') {
+          const tenPlus: NotificationItem[] = [];
+          for (let i = 0; i < 12; i++) {
+            tenPlus.push({
+              id: `seed_tp_${now}_${i}`,
+              type: i % 2 === 0 ? 'result_success' : 'squad_change',
+              actorId: i % 2 === 0 ? 'friend_akai' : 'user_leo',
+              squadName: '🔥 腿日絕不缺席戰隊',
+              createdAt: now - (12 - i) * 10 * 60 * 1000,
+              status: 'info',
+            });
+          }
+          set({ notifications: tenPlus });
+          return;
+        }
+
+        // 'qa_mixed': pending invites from friend & stranger, join request, friend request, success/fail results, squad changes, nudge, expired, invalid, handled
+        const mixed: NotificationItem[] = [
+          {
+            id: `seed_inv_friend_${now}`,
+            type: 'squad_invite',
+            actorId: 'friend_akai',
+            squadName: '🔥 週末舉鐵團',
+            createdAt: now - 30 * 60 * 1000,
+            status: 'pending',
+            expiresAt: now + 23.5 * 60 * 60 * 1000,
+          },
+          {
+            id: `seed_inv_stranger_${now}`,
+            type: 'squad_invite',
+            actorId: 'demo_mika',
+            squadName: '夜跑狂熱隊',
+            createdAt: now - 60 * 60 * 1000,
+            status: 'pending',
+            expiresAt: now + 23 * 60 * 60 * 1000,
+          },
+          {
+            id: `seed_join_req_${now}`,
+            type: 'join_request',
+            actorId: 'friend_chloe',
+            squadName: '🔥 腿日絕不缺席戰隊',
+            createdAt: now - 2 * 60 * 60 * 1000,
+            status: 'pending',
+            expiresAt: now + 22 * 60 * 60 * 1000,
+          },
+          {
+            id: `seed_friend_req_${now}`,
+            type: 'friend_request',
+            actorId: 'user_leo',
+            createdAt: now - 4 * 60 * 60 * 1000,
+            status: 'pending',
+            expiresAt: now + 6 * 24 * 60 * 60 * 1000,
+          },
+          {
+            id: `seed_res_succ_${now}`,
+            type: 'result_success',
+            actorId: 'friend_alice',
+            squadName: '🔥 腿日絕不缺席戰隊',
+            createdAt: now - 5 * 60 * 60 * 1000,
+            status: 'info',
+          },
+          {
+            id: `seed_res_fail_${now}`,
+            type: 'result_failure',
+            actorId: 'demo_jun',
+            createdAt: now - 6 * 60 * 60 * 1000,
+            status: 'info',
+          },
+          {
+            id: `seed_squad_chg_${now}`,
+            type: 'squad_change',
+            actorId: 'friend_alice',
+            refId: 'member_join',
+            squadName: '🔥 腿日絕不缺席戰隊',
+            createdAt: now - 8 * 60 * 60 * 1000,
+            status: 'info',
+          },
+          {
+            id: `seed_nudge_${now}`,
+            type: 'nudge',
+            actorId: 'friend_akai',
+            createdAt: now - 1 * 60 * 60 * 1000,
+            status: 'pending',
+          },
+          {
+            id: `seed_inv_expired_${now}`,
+            type: 'squad_invite',
+            actorId: 'friend_akai',
+            squadName: '晨跑小隊',
+            createdAt: now - 25 * 60 * 60 * 1000,
+            status: 'pending',
+            expiresAt: now - 1 * 60 * 60 * 1000,
+          },
+          {
+            id: `seed_inv_invalid_${now}`,
+            type: 'squad_invite',
+            actorId: 'demo_jun',
+            squadName: '重訓極限軍',
+            createdAt: now - 10 * 60 * 60 * 1000,
+            status: 'invalid',
+          },
+          {
+            id: `seed_inv_handled_${now}`,
+            type: 'squad_invite',
+            actorId: 'friend_chloe',
+            squadName: '核心瑜珈團',
+            createdAt: now - 12 * 60 * 60 * 1000,
+            status: 'accepted',
+          },
+        ];
+        set({ notifications: mixed });
       },
 
       setWardrobeModalOpen: (open) => {
@@ -2989,4 +3207,13 @@ export const useGameStore = create<GameState>()(
 export const selectStreakDays = (state: GameState): number =>
   getCheckinStreak(state.checkinDayKeys);
 export const selectCheckinStreak = selectStreakDays;
+
+// 測試用，上線前移除：提供 Playwright / 自動化測試直接注入通知
+if (typeof window !== 'undefined' && (import.meta.env.DEV || IS_DEMO)) {
+  (window as unknown as { __FITMON_SEED_NOTIFICATIONS__?: (items: NotificationItem[]) => void }).__FITMON_SEED_NOTIFICATIONS__ = (
+    items: NotificationItem[]
+  ) => {
+    useGameStore.setState({ notifications: items });
+  };
+}
 

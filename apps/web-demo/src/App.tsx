@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useGameStore } from './stores/useGameStore';
 import { TopHeader } from './components/layout/TopHeader';
 import { BottomNav } from './components/layout/BottomNav';
+import { NotificationCenter } from './components/layout/NotificationCenter';
 import { HomeTab } from './components/tabs/HomeTab';
 import { WorkoutTab } from './components/tabs/WorkoutTab';
 import { ShopTab } from './components/tabs/ShopTab';
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
     isWorkoutFocusActive,
     tickGlobalTimers,
     toastMessage,
+    notificationsOpen,
   } = useGameStore();
 
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -148,12 +150,13 @@ export const App: React.FC = () => {
         )}
 
         {/* Main Scrollable Content Area (SPA Instant Switching) */}
-        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col">
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col relative">
           {activeTab === 'home' && <HomeTab />}
           {activeTab === 'workout' && <WorkoutTab />}
           {activeTab === 'shop' && <ShopTab />}
           {activeTab === 'plaza' && <PlazaTab />}
           {activeTab === 'analytics' && <AnalyticsTab />}
+          {notificationsOpen && <NotificationCenter resolvedTheme={resolvedTheme} />}
         </main>
 
         {/* Bottom 5-Tab Navigation Bar */}

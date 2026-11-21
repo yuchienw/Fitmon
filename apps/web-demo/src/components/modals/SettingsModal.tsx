@@ -181,16 +181,18 @@ export const SettingsModal: React.FC = () => {
           </div>
         </div>
 
-        {/* 組隊試玩開關（測試用，上線前移除） */}
+        {/* 組隊試玩開關與通知測試（測試用，上線前移除） */}
         {IS_DEMO && (
-          <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-3 space-y-2">
+          <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-3 space-y-3">
             <div className="text-xs font-black text-cyan-300">
-              組隊試玩開關（測試用，上線前移除）
+              組隊與通知試玩開關（測試用，上線前移除）
             </div>
+
+            {/* 未成年測試帳號 */}
             <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
               <div>
                 <div className="text-xs font-bold text-slate-200">未成年測試帳號</div>
-                <div className="text-[10px] text-slate-400">開啟後不會收到路人／陌生人的入隊請求</div>
+                <div className="text-[10px] text-slate-400">開啟後不會收到路人／陌生人的入隊請求與組隊邀請</div>
               </div>
               <button
                 data-testid="dev-minor-toggle"
@@ -203,6 +205,104 @@ export const SettingsModal: React.FC = () => {
               >
                 {store.devMinorTestAccount ? '開啟 ON' : '關閉 OFF'}
               </button>
+            </div>
+
+            {/* 模擬收件狀態 (非正式存檔欄位，僅試玩模擬收件狀態，Q19 隊友催促過濾測試) */}
+            <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
+              <div className="text-xs font-bold text-slate-200">
+                模擬收件人狀態（Q19 隊友提醒過濾測試）
+              </div>
+              <div className="text-[10px] text-slate-400">
+                非正式存檔欄位，任一開啟時隊友提醒通知隱藏且不計紅點
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                <button
+                  data-testid="dev-toggle-rest-day"
+                  onClick={() =>
+                    store.setDevRecipientNotifyDemo({
+                      isRestDay: !store.devRecipientNotifyDemo.isRestDay,
+                    })
+                  }
+                  className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                    store.devRecipientNotifyDemo.isRestDay
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  休息日: {store.devRecipientNotifyDemo.isRestDay ? 'ON' : 'OFF'}
+                </button>
+
+                <button
+                  data-testid="dev-toggle-caring-body"
+                  onClick={() =>
+                    store.setDevRecipientNotifyDemo({
+                      isCaringForBody: !store.devRecipientNotifyDemo.isCaringForBody,
+                    })
+                  }
+                  className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                    store.devRecipientNotifyDemo.isCaringForBody
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  照顧身體: {store.devRecipientNotifyDemo.isCaringForBody ? 'ON' : 'OFF'}
+                </button>
+
+                <button
+                  data-testid="dev-toggle-paused"
+                  onClick={() =>
+                    store.setDevRecipientNotifyDemo({
+                      isPaused: !store.devRecipientNotifyDemo.isPaused,
+                    })
+                  }
+                  className={`py-1.5 px-2 rounded-lg text-[11px] font-bold border transition ${
+                    store.devRecipientNotifyDemo.isPaused
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  暫停中: {store.devRecipientNotifyDemo.isPaused ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            </div>
+
+            {/* 通知中心測試種子 */}
+            <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
+              <div className="text-xs font-bold text-slate-200">通知測試資料</div>
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                <button
+                  data-testid="dev-seed-qa-mixed"
+                  onClick={() => {
+                    store.seedDemoNotifications('qa_mixed');
+                    store.showToast('已塞入綜合測試通知 (QA)');
+                  }}
+                  className="py-1.5 px-2 rounded-lg bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold"
+                >
+                  塞入綜合測試通知
+                </button>
+
+                <button
+                  data-testid="dev-seed-ten-plus"
+                  onClick={() => {
+                    store.seedDemoNotifications('ten_plus');
+                    store.showToast('已塞入 12 則通知 (測試 9+ 紅點)');
+                  }}
+                  className="py-1.5 px-2 rounded-lg bg-orange-950/50 hover:bg-orange-900/60 border border-orange-500/40 text-orange-300 text-xs font-bold"
+                >
+                  塞入 10+ 未讀 (紅點 9+)
+                </button>
+
+                <button
+                  data-testid="dev-clear-notifications"
+                  onClick={() => {
+                    store.clearNotifications();
+                    store.showToast('已清空所有通知');
+                  }}
+                  className="col-span-2 py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs font-bold"
+                >
+                  清空所有通知
+                </button>
+              </div>
             </div>
           </div>
         )}
