@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { calculateWorkoutExp, CalculationResult, ExerciseCategory } from '@fitmon/engine';
+import { calculateWorkoutExp, CalculationResult, ExerciseCategory } from '../../../../packages/engine/src/index.ts';
 import { ECONOMY_CONFIG, Locale } from '../config/economyConfig';
 import {
   CHECKIN_XP,
@@ -50,10 +50,15 @@ import {
   ReportLogItem,
   WorkoutSessionSportType,
   mapLegacyExerciseToSportType,
+  resolveInitialSessionSportType,
+  resolveSportTypeOnExerciseChange,
+  resolveSportTypeOnFirstSetLogged,
   computePersistedSetFields,
   finalizePreviousSetRest,
   isLoggedSetTimingComplete,
   isWorkoutSessionTimingComplete,
+  calculateWorkoutSessionSettlement,
+  toAdventureSportSkillType,
   selectIsRestDay,
   selectUnwellHalfUsed,
   selectSelfCheckCompleted,
@@ -115,11 +120,16 @@ export {
   regeneratePlayerCode,
   PLAYER_CODE_REGEN_COOLDOWN_MS,
   mapLegacyExerciseToSportType,
+  resolveInitialSessionSportType,
+  resolveSportTypeOnExerciseChange,
+  resolveSportTypeOnFirstSetLogged,
   computePersistedSetFields,
   finalizePreviousSetRest,
   isLoggedSetTimingComplete,
   isWorkoutSessionTimingComplete,
   evaluateStrengthSessionTiming,
+  calculateWorkoutSessionSettlement,
+  toAdventureSportSkillType,
   selectIsRestDay,
   selectUnwellHalfUsed,
   selectSelfCheckCompleted,
@@ -554,6 +564,7 @@ export interface GameState {
   // Saved Routines & Active Workout Focus Mode (V2-02, V2-06, V2-14, V2-15)
   savedRoutines: WorkoutTemplate[];
   isWorkoutFocusActive: boolean;
+  activeSessionSportType: WorkoutSessionSportType | null;
   workoutElapsedSeconds: number;
   activeTemplateName: string | null;
   templateQueue: TemplateQueueItem[];
@@ -1288,6 +1299,7 @@ export const useGameStore = create<GameState>()(
 
       savedRoutines: INITIAL_SAVED_ROUTINES,
       isWorkoutFocusActive: false,
+      activeSessionSportType: null,
       workoutElapsedSeconds: 0,
       activeTemplateName: null,
       templateQueue: [],
@@ -2183,10 +2195,14 @@ export const useGameStore = create<GameState>()(
             ];
 
         const firstItem = initialQueue[0];
+        // T4-D3 修正：自由訓練 (no routine) 初始為 null；課表則依 routine.sportType 或首動作推論並在 session 期間凍結
+        const startingSportType: WorkoutSessionSportType | null =
+          resolveInitialSessionSportType(routine);
 
         set({
           activeTab: 'workout',
           isWorkoutFocusActive: true,
+          activeSessionSportType: startingSportType,
           workoutElapsedSeconds: 0,
           activeTemplateName: routine ? routine.nameZh : '自由訓練課表',
           templateQueue: initialQueue,
@@ -2220,6 +2236,18 @@ export const useGameStore = create<GameState>()(
                 }
               : item
           );
+          // T4-D3 修正：若尚未記錄任何組數且為自由訓練，更換動作時更新 activeSessionSportType；記錄後凍結不變
+          const isRoutineSession =
+            Boolean(state.activeTemplateName) && state.activeTemplateName !== '自由訓練課表';
+          const nextSportType = resolveSportTypeOnExerciseChange(
+            state.activeSessionSportType,
+            newEx.id,
+            {
+              sessionSetsCount: state.sessionSets.length,
+              isRoutineSession,
+              unitLabel: newEx.unitLabel,
+            }
+          );
           return {
             selectedQueueItemId: queueId || null,
             selectedExerciseId: newExerciseId,
@@ -2227,6 +2255,7 @@ export const useGameStore = create<GameState>()(
             currentReps: newEx.defaultReps,
             currentRestConfigSec: newEx.defaultRestSec,
             templateQueue: updatedQueue,
+            activeSessionSportType: nextSportType,
           };
         });
         get().showToast(`🔄 已替換為：${newEx.nameZh}`);
@@ -2246,14 +2275,28 @@ export const useGameStore = create<GameState>()(
           weightKg: newEx.defaultWeightKg,
           restSeconds: newEx.defaultRestSec,
         };
-        set((state) => ({
-          templateQueue: [...state.templateQueue, newItem],
-          selectedQueueItemId: newItemId,
-          selectedExerciseId: newEx.id,
-          currentWeightKg: newEx.defaultWeightKg,
-          currentReps: newEx.defaultReps,
-          currentRestConfigSec: newEx.defaultRestSec,
-        }));
+        set((state) => {
+          const isRoutineSession =
+            Boolean(state.activeTemplateName) && state.activeTemplateName !== '自由訓練課表';
+          const nextSportType = resolveSportTypeOnExerciseChange(
+            state.activeSessionSportType,
+            newEx.id,
+            {
+              sessionSetsCount: state.sessionSets.length,
+              isRoutineSession,
+              unitLabel: newEx.unitLabel,
+            }
+          );
+          return {
+            templateQueue: [...state.templateQueue, newItem],
+            selectedQueueItemId: newItemId,
+            selectedExerciseId: newEx.id,
+            currentWeightKg: newEx.defaultWeightKg,
+            currentReps: newEx.defaultReps,
+            currentRestConfigSec: newEx.defaultRestSec,
+            activeSessionSportType: nextSportType,
+          };
+        });
         get().showToast(`➕ 已新增動作：${newEx.nameZh}`);
       },
 
@@ -2264,12 +2307,24 @@ export const useGameStore = create<GameState>()(
         const ex = EXERCISE_LIBRARY.find((e) => e.id === qItem.exerciseId);
         if (!ex) return;
         soundFX.playBlip();
+        const isRoutineSession =
+          Boolean(state.activeTemplateName) && state.activeTemplateName !== '自由訓練課表';
+        const nextSportType = resolveSportTypeOnExerciseChange(
+          state.activeSessionSportType,
+          ex.id,
+          {
+            sessionSetsCount: state.sessionSets.length,
+            isRoutineSession,
+            unitLabel: ex.unitLabel,
+          }
+        );
         set({
           selectedQueueItemId: qItem.id,
           selectedExerciseId: qItem.exerciseId,
           currentWeightKg: qItem.weightKg,
           currentReps: qItem.reps,
           currentRestConfigSec: qItem.restSeconds,
+          activeSessionSportType: nextSportType,
         });
       },
 
@@ -2285,6 +2340,18 @@ export const useGameStore = create<GameState>()(
             )
           : state.templateQueue.find((q) => q.exerciseId === exerciseId);
 
+        const isRoutineSession =
+          Boolean(state.activeTemplateName) && state.activeTemplateName !== '自由訓練課表';
+        const nextSportType = resolveSportTypeOnExerciseChange(
+          state.activeSessionSportType,
+          ex.id,
+          {
+            sessionSetsCount: state.sessionSets.length,
+            isRoutineSession,
+            unitLabel: ex.unitLabel,
+          }
+        );
+
         soundFX.playBlip();
         set({
           selectedQueueItemId: qItem ? qItem.id : null,
@@ -2292,6 +2359,7 @@ export const useGameStore = create<GameState>()(
           currentWeightKg: qItem ? qItem.weightKg : ex.defaultWeightKg,
           currentReps: qItem ? qItem.reps : ex.defaultReps,
           currentRestConfigSec: qItem ? qItem.restSeconds : ex.defaultRestSec,
+          activeSessionSportType: nextSportType,
         });
       },
 
@@ -2513,8 +2581,17 @@ export const useGameStore = create<GameState>()(
           });
         }
 
+        // T4-D3 修正：若 activeSessionSportType 仍為 null (自由訓練未更換動作)，在記錄第一組時推論並凍結
+        const sessionSportType: WorkoutSessionSportType =
+          resolveSportTypeOnFirstSetLogged(
+            state.activeSessionSportType,
+            ex.id,
+            ex.unitLabel
+          );
+
         set({
           sessionSets: [...sessionSets, newSet],
+          activeSessionSportType: sessionSportType,
           personalRecords: isPR
             ? { ...state.personalRecords, [ex.id]: state.currentWeightKg }
             : state.personalRecords,
@@ -2541,28 +2618,11 @@ export const useGameStore = create<GameState>()(
           return;
         }
 
-        // T4-D1 temporary compatibility input for calculateWorkoutExp:
-        // Cardio km and yoga seconds were previously persisted in weightKg.
-        // Reconstruct the legacy input number so settlement coins & XP stay unchanged.
-        // T4-D3 will introduce dedicated sport capacity formulas.
-        const calcResult = calculateWorkoutExp(
-          state.sessionSets.map((s) => ({
-            exerciseId: s.exerciseId,
-            muscleGroup: s.muscleGroup,
-            category: s.category,
-            weightKg:
-              s.unitLabel === 'km' && typeof s.distanceM === 'number'
-                ? s.distanceM / 1000
-                : s.unitLabel === '秒' && typeof s.durationSec === 'number'
-                ? s.durationSec
-                : s.weightKg,
-            reps: s.reps,
-          })),
-          {
-            hasWheyProtein: true,
-            hasPreWorkout: state.doubleCoinUntil > Date.now(),
-          }
-        );
+        // T4-D3: Option A settlement compatibility mapping & non-earning pure calculation
+        const calcResult = calculateWorkoutSessionSettlement(state.sessionSets, {
+          hasWheyProtein: true,
+          hasPreWorkout: state.doubleCoinUntil > Date.now(),
+        });
 
         // Workout coin drops go through grantCoins
         let settlementCoins = 0;
@@ -2644,16 +2704,24 @@ export const useGameStore = create<GameState>()(
         const routineTitle = state.activeTemplateName || '自由訓練課表';
         const topEx = state.sessionSets[0]?.exerciseNameZh || '綜合訓練';
 
-        const firstEx = EXERCISE_LIBRARY.find((e) => e.id === state.sessionSets[0]?.exerciseId);
-        const detectedSport: AdventureSportSkillType = firstEx?.sportType || 'strength';
-        const sessionSportType: WorkoutSessionSportType = mapLegacyExerciseToSportType(
-          state.sessionSets[0]?.exerciseId,
-          state.sessionSets[0]?.unitLabel
+        // T4-D3: 使用 session-level activeSessionSportType，避免 circuit_hiit 首組動作誤判為 strength
+        const sessionSportType: WorkoutSessionSportType =
+          state.activeSessionSportType ||
+          mapLegacyExerciseToSportType(
+            state.sessionSets[0]?.exerciseId,
+            state.sessionSets[0]?.unitLabel
+          );
+
+        // T4-D3: Adventure skill 僅對 strength/run/cycle/bodyweight 對應，其他新類型維持不變
+        const detectedSport: AdventureSportSkillType = toAdventureSportSkillType(
+          sessionSportType,
+          state.todaySportType
         );
 
-        // T4-D2: 計算暫停段落、休息佔比與有效性三條件 (第 2 階段由伺服器重算，不信任客戶端)
+        // T4-D2 / T4-D3: 計算暫停段落、休息佔比與有效性三條件 (第 2 階段由伺服器重算，不信任客戶端)
         const timingResult = evaluateStrengthSessionTiming(state.sessionSets, {
           sportType: sessionSportType,
+          activeSessionSportType: sessionSportType,
           loggingMode: 'live_focus',
         });
 
@@ -2703,6 +2771,7 @@ export const useGameStore = create<GameState>()(
 
         set({
           isWorkoutFocusActive: false,
+          activeSessionSportType: null,
           workoutElapsedSeconds: 0,
           currentSetStartedAt: null,
           restStartedAt: null,
@@ -2733,6 +2802,7 @@ export const useGameStore = create<GameState>()(
         soundFX.playBlip();
         set({
           isWorkoutFocusActive: false,
+          activeSessionSportType: null,
           workoutElapsedSeconds: 0,
           currentSetStartedAt: null,
           restStartedAt: null,
