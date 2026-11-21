@@ -19,6 +19,11 @@ import {
   type NotificationView,
   type RecipientNotifyContext,
 } from '../../game/notificationCenter';
+import {
+  previewSwitchSquadFromInvite,
+  type SquadSocialStateSnapshot,
+  type PreviewSwitchSquadResult,
+} from '../../game/squadInviteRules';
 import { IS_DEMO, DEMO_REPORT_DISCLAIMER } from '../../config/demo';
 import { getFriendProfile } from '../../config/catalogConfig';
 
@@ -83,6 +88,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     [friendIds]
   );
 
+  const [confirmSwitchModal, setConfirmSwitchModal] = useState<{
+    notificationId: string;
+    preview: PreviewSwitchSquadResult;
+  } | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+
   const handleAction = (id: string, action: 'join' | 'decline' | 'accept' | 'skip') => {
     if (actingId) return; // 防止連點
     setActingId(id);
@@ -90,6 +101,46 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     setTimeout(() => {
       setActingId(null);
     }, 400);
+  };
+
+  const executeJoin = (notifId: string) => {
+    handleAction(notifId, 'join');
+    setShowConfetti(true);
+    setTimeout(() => {
+      setShowConfetti(false);
+    }, 1200);
+  };
+
+  const handleJoinClick = (item: NotificationItem) => {
+    if (actingId) return;
+    const snapshot: SquadSocialStateSnapshot = {
+      playerId: 'self',
+      currentSquadId: store.currentSquadId,
+      isSquadLeader: store.isSquadLeader,
+      squadName: store.squadName,
+      squadMembers: store.squadMembers,
+      squadInvites: store.squadInvites,
+      friendIds: store.friendIds,
+      devMinorTestAccount: store.devMinorTestAccount,
+      squadJoinOrder: store.squadJoinOrder,
+      recentTeammates: store.recentTeammates,
+      inviteSendLog: store.inviteSendLog,
+      privacy: store.privacy,
+      blockedIds: store.blockedIds,
+      bossRewardClaimedWeekKey: store.bossRewardClaimedWeekKey,
+      notifications: store.notifications,
+      squadStage: store.squadStage,
+      squadBossHp: store.squadBossHp,
+    };
+    const preview = previewSwitchSquadFromInvite(snapshot, item.refId || item.id, Date.now());
+    if (preview.kind === 'confirm_5b' || preview.kind === 'confirm_5c') {
+      setConfirmSwitchModal({
+        notificationId: item.id,
+        preview,
+      });
+      return;
+    }
+    executeJoin(item.id);
   };
 
   const handleMenuClick = (actionName: 'block' | 'report') => {
@@ -305,7 +356,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <button
                   data-testid="notif-action-join"
                   disabled={isActing}
-                  onClick={() => handleAction(item.id, 'join')}
+                  onClick={() => handleJoinClick(item)}
                   className="h-[34px] px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center min-w-[64px]"
                 >
                   {isActing ? '加入中...' : '加入'}
@@ -510,7 +561,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               data-testid="notif-go-invite"
               onClick={() => {
                 store.setNotificationsOpen(false);
-                store.setActiveTab('plaza');
+                store.setInvitePanelOpen(true);
               }}
               className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black shadow-sm active:scale-95 transition"
             >
@@ -563,6 +614,65 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
           </>
         )}
       </div>
+
+      {/* 5b / 5c 換隊確認框 */}
+      {confirmSwitchModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#FFFCF7] border-2 border-[#F3C29A] rounded-2xl p-5 shadow-2xl space-y-3.5 text-[#29221E]">
+            <div className="text-base font-black text-center text-[#29221E]">
+              {confirmSwitchModal.preview.confirmTitle}
+            </div>
+
+            <div className="text-xs text-[#5C4A3E] leading-relaxed space-y-2">
+              <p>{confirmSwitchModal.preview.confirmBody}</p>
+
+              {confirmSwitchModal.preview.claimedNote && (
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold leading-relaxed">
+                  ⚠️ {confirmSwitchModal.preview.claimedNote}
+                </div>
+              )}
+
+              <p className="text-[11px] text-[#786B63] pt-1">
+                {confirmSwitchModal.preview.footerText}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                data-testid="confirm-switch-cancel"
+                onClick={() => setConfirmSwitchModal(null)}
+                className="py-2.5 rounded-xl bg-white border border-[#E5DCCB] text-[#5C4A3E] text-xs font-black hover:bg-slate-100 transition"
+              >
+                先不要
+              </button>
+              <button
+                data-testid="confirm-switch-accept"
+                onClick={() => {
+                  const notifId = confirmSwitchModal.notificationId;
+                  setConfirmSwitchModal(null);
+                  executeJoin(notifId);
+                }}
+                className="py-2.5 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white text-xs font-black shadow transition"
+              >
+                確定加入
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confetti 彩紙動畫 (Q26: 1.2 秒) */}
+      {showConfetti && (
+        <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden flex items-center justify-center">
+          <div className="absolute inset-0 bg-amber-500/10 backdrop-blur-[1px] animate-fade-in" />
+          <div className="text-center z-10 space-y-2">
+            <div className="text-5xl animate-bounce">🎉✨🎊</div>
+            <div className="text-lg font-black text-amber-600 bg-white/95 px-5 py-2 rounded-full shadow-xl border border-amber-300">
+              成功加入戰隊！
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

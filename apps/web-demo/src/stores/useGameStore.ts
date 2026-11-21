@@ -182,6 +182,9 @@ import {
   SquadSocialActionResult,
   SquadSocialResult,
   applySquadSocialAction,
+  applyAcceptInviteFromNotification,
+  previewSwitchSquadFromInvite,
+  getSquadInviteRowState,
   AUTO_REPLY_ACCEPT_RATE,
 } from '../game/squadInviteRules';
 
@@ -196,6 +199,9 @@ export {
   SQUAD_CANDIDATE_POOL,
   DEMO_FAKE_SQUADS,
   applySquadSocialAction,
+  applyAcceptInviteFromNotification,
+  previewSwitchSquadFromInvite,
+  getSquadInviteRowState,
   AUTO_REPLY_ACCEPT_RATE,
 };
 export type {
@@ -406,6 +412,7 @@ export interface GameState {
   shareStudioContext: 'workout_photo' | 'boss_victory';
   settingsOpen: boolean;
   notificationsOpen: boolean;
+  invitePanelOpen: boolean;
   // 非正式存檔欄位，僅試玩模擬收件狀態 (Q19)
   devRecipientNotifyDemo: {
     isRestDay: boolean;
@@ -554,6 +561,7 @@ export interface GameState {
   setSettingsOpen: (open: boolean) => void;
   setNotificationsOpen: (open: boolean) => void;
   toggleNotifications: () => void;
+  setInvitePanelOpen: (open: boolean) => void;
   setDevRecipientNotifyDemo: (
     patch: Partial<{ isRestDay: boolean; isCaringForBody: boolean; isPaused: boolean }>
   ) => void;
@@ -1047,6 +1055,13 @@ const getSquadSocialSnapshot = (state: GameState): SquadSocialStateSnapshot => (
   devMinorTestAccount: state.devMinorTestAccount,
   squadJoinOrder: state.squadJoinOrder,
   recentTeammates: state.recentTeammates,
+  inviteSendLog: state.inviteSendLog,
+  privacy: state.privacy,
+  blockedIds: state.blockedIds,
+  bossRewardClaimedWeekKey: state.bossRewardClaimedWeekKey,
+  notifications: state.notifications,
+  squadStage: state.squadStage,
+  squadBossHp: state.squadBossHp,
 });
 
 const getSquadMembershipSnapshot = (state: GameState): SquadMembershipStateSnapshot => ({
@@ -1082,6 +1097,7 @@ export const useGameStore = create<GameState>()(
       shareStudioContext: 'workout_photo',
       settingsOpen: false,
       notificationsOpen: false,
+      invitePanelOpen: false,
       // 非正式存檔欄位，僅試玩模擬收件狀態 (Q19)
       devRecipientNotifyDemo: {
         isRestDay: false,
@@ -1250,7 +1266,7 @@ export const useGameStore = create<GameState>()(
 
       setActiveTab: (tab) => {
         soundFX.playBlip();
-        set({ activeTab: tab, notificationsOpen: false });
+        set({ activeTab: tab, notificationsOpen: false, invitePanelOpen: false });
       },
 
       setLocale: (locale) => set({ locale }),
@@ -1301,6 +1317,11 @@ export const useGameStore = create<GameState>()(
         set((s) => ({ notificationsOpen: !s.notificationsOpen }));
       },
 
+      setInvitePanelOpen: (open) => {
+        soundFX.playBlip();
+        set({ invitePanelOpen: open });
+      },
+
       setDevRecipientNotifyDemo: (patch) => {
         set((s) => ({
           devRecipientNotifyDemo: {
@@ -1326,49 +1347,133 @@ export const useGameStore = create<GameState>()(
 
       applyNotificationAction: (id, action) => {
         soundFX.playBlip();
-        set((s) => {
-          const target = s.notifications.find((n) => n.id === id);
-          if (!target) return s;
+        const s = get();
+        const target = s.notifications.find((n) => n.id === id);
+        if (!target) return;
 
-          if (target.type === 'friend_request') {
-            if (action === 'accept') {
-              const res = acceptFriendRequest(
-                s,
-                { requestId: target.refId, actorId: target.actorId },
-                Date.now()
-              );
-              soundFX.playSetComplete();
-              return res.state;
-            }
-            if (action === 'skip') {
-              const res = skipFriendRequest(
-                s,
-                { requestId: target.refId, actorId: target.actorId },
-                Date.now()
-              );
-              return res.state;
-            }
+        if (target.type === 'friend_request') {
+          if (action === 'accept') {
+            const res = acceptFriendRequest(
+              s,
+              { requestId: target.refId, actorId: target.actorId },
+              Date.now()
+            );
+            soundFX.playSetComplete();
+            set(res.state);
+            return;
           }
+          if (action === 'skip') {
+            const res = skipFriendRequest(
+              s,
+              { requestId: target.refId, actorId: target.actorId },
+              Date.now()
+            );
+            set(res.state);
+            return;
+          }
+        }
 
-          let newStatus = target.status || 'info';
-          if (action === 'join') newStatus = 'accepted';
-          else if (action === 'decline') newStatus = 'declined';
-          else if (action === 'accept') newStatus = 'accepted';
-          else if (action === 'skip') newStatus = 'skipped';
-
-          const updated = s.notifications.map((n) => {
-            if (n.id === id) {
-              return { ...n, status: newStatus };
+        if (target.type === 'squad_invite') {
+          if (action === 'join') {
+            const res = applyAcceptInviteFromNotification(
+              getSquadSocialSnapshot(s),
+              target.refId || target.id,
+              Date.now()
+            );
+            if (res.ok) {
+              soundFX.playSetComplete();
+              if (res.patch) set(res.patch);
+              s.showToast(res.result?.toastMessage || '歡迎加入隊伍！');
+            } else {
+              if (res.patch) set(res.patch);
+              s.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
             }
-            // After 加入 on a squad_invite, other still-pending squad_invite items become invalid
-            if (action === 'join' && n.type === 'squad_invite' && (!n.status || n.status === 'pending')) {
-              return { ...n, status: 'invalid' };
-            }
-            return n;
-          });
+            return;
+          }
+          if (action === 'decline') {
+            const res = applySquadSocialAction(
+              getSquadSocialSnapshot(s),
+              {
+                type: 'declineInvite',
+                id: target.refId || target.id,
+                actorId: DEMO_PLAYER_ID,
+              },
+              Date.now()
+            );
+            const updatedNotifs = s.notifications.map((n) =>
+              n.id === id ? { ...n, status: 'declined' } : n
+            );
+            set({
+              ...(res.patch || {}),
+              notifications: updatedNotifs,
+            });
+            s.showToast(res.result?.toastMessage || '已拒絕邀請');
+            return;
+          }
+        }
 
-          return { notifications: updated };
+        if (target.type === 'join_request') {
+          if (action === 'accept') {
+            const res = applySquadSocialAction(
+              getSquadSocialSnapshot(s),
+              {
+                type: 'acceptRequest',
+                id: target.refId || target.id,
+                actorId: DEMO_PLAYER_ID,
+              },
+              Date.now()
+            );
+            if (res.ok) {
+              soundFX.playSetComplete();
+              const updatedNotifs = s.notifications.map((n) =>
+                n.id === id ? { ...n, status: 'accepted' } : n
+              );
+              set({
+                ...(res.patch || {}),
+                notifications: updatedNotifs,
+              });
+              s.showToast(res.result?.toastMessage || '已同意加入');
+            } else {
+              if (res.patch) set(res.patch);
+              s.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
+            }
+            return;
+          }
+          if (action === 'decline') {
+            const res = applySquadSocialAction(
+              getSquadSocialSnapshot(s),
+              {
+                type: 'declineRequest',
+                id: target.refId || target.id,
+                actorId: DEMO_PLAYER_ID,
+              },
+              Date.now()
+            );
+            const updatedNotifs = s.notifications.map((n) =>
+              n.id === id ? { ...n, status: 'declined' } : n
+            );
+            set({
+              ...(res.patch || {}),
+              notifications: updatedNotifs,
+            });
+            s.showToast(res.result?.toastMessage || '已拒絕請求');
+            return;
+          }
+        }
+
+        let newStatus = target.status || 'info';
+        if (action === 'join' || action === 'accept') newStatus = 'accepted';
+        else if (action === 'decline') newStatus = 'declined';
+        else if (action === 'skip') newStatus = 'skipped';
+
+        const updated = s.notifications.map((n) => {
+          if (n.id === id) {
+            return { ...n, status: newStatus };
+          }
+          return n;
         });
+
+        set({ notifications: updated });
       },
 
       clearNotifications: () => {
@@ -2804,7 +2909,7 @@ export const useGameStore = create<GameState>()(
       },
 
       // Squad Social Actions (T3-D3)
-      sendInvite: (toId, source = 'friend') => {
+      sendInvite: (toId, source: SquadSocialSource = 'code') => {
         const state = get();
         const id = crypto.randomUUID();
         const res = applySquadSocialAction(
@@ -2820,22 +2925,25 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
         state.showToast(res.result?.toastMessage || '已送出組隊邀請');
 
         // 測試用，上線前移除：若對方是假角色，2.5s 後自動以 80% 同意 / 20% 拒絕回應
-        const timer = setTimeout(() => {
-          pendingAutoReplyTimers.delete(id);
-          const current = get().squadInvites.find((i) => i.id === id);
-          if (current && current.status === 'pending') {
-            const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
-            get().resolvePendingAsFake({ id, accept });
-          }
-        }, 2500);
-        pendingAutoReplyTimers.set(id, timer);
+        if (IS_DEMO) {
+          const timer = setTimeout(() => {
+            pendingAutoReplyTimers.delete(id);
+            const current = get().squadInvites.find((i) => i.id === id);
+            if (current && current.status === 'pending') {
+              const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
+              get().resolvePendingAsFake({ id, accept });
+            }
+          }, 2500);
+          pendingAutoReplyTimers.set(id, timer);
+        }
       },
 
       sendJoinRequest: (squadId, source = 'code') => {
@@ -2853,22 +2961,25 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
         state.showToast(res.result?.toastMessage || '已送出入隊請求');
 
         // 測試用，上線前移除
-        const timer = setTimeout(() => {
-          pendingAutoReplyTimers.delete(id);
-          const current = get().squadInvites.find((i) => i.id === id);
-          if (current && current.status === 'pending') {
-            const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
-            get().resolvePendingAsFake({ id, accept });
-          }
-        }, 2500);
-        pendingAutoReplyTimers.set(id, timer);
+        if (IS_DEMO) {
+          const timer = setTimeout(() => {
+            pendingAutoReplyTimers.delete(id);
+            const current = get().squadInvites.find((i) => i.id === id);
+            if (current && current.status === 'pending') {
+              const accept = Math.random() < AUTO_REPLY_ACCEPT_RATE;
+              get().resolvePendingAsFake({ id, accept });
+            }
+          }, 2500);
+          pendingAutoReplyTimers.set(id, timer);
+        }
       },
 
       acceptInvite: (id) => {
@@ -2888,7 +2999,8 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
@@ -2912,7 +3024,8 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
@@ -2936,7 +3049,8 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
@@ -2960,7 +3074,8 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
@@ -2984,7 +3099,8 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
@@ -3006,7 +3122,8 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
@@ -3242,7 +3359,8 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
@@ -3271,7 +3389,8 @@ export const useGameStore = create<GameState>()(
           Date.now()
         );
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
         if (res.patch) set(res.patch);
@@ -3280,6 +3399,7 @@ export const useGameStore = create<GameState>()(
 
       // 測試用，上線前移除
       resolvePendingAsFake: ({ id, accept }) => {
+        if (!IS_DEMO) return;
         const state = get();
         const item = state.squadInvites.find((i) => i.id === id);
         if (!item || item.status !== 'pending') return;
@@ -3321,10 +3441,30 @@ export const useGameStore = create<GameState>()(
         }
 
         if (!res.ok) {
-          state.showToast(PUBLIC_JOIN_FAILURE);
+          if (res.patch) set(res.patch);
+          state.showToast(res.result?.publicMessage || PUBLIC_JOIN_FAILURE);
           return;
         }
-        if (res.patch) set(res.patch);
+
+        const now = Date.now();
+        const resultNotif: NotificationItem = {
+          id: `notif_res_${now}_${Math.random().toString(36).slice(2, 8)}`,
+          type: accept ? 'result_success' : 'result_failure',
+          actorId: item.toId,
+          squadName: item.squadName || state.squadName,
+          createdAt: now,
+          status: 'info',
+          refId: item.id,
+        };
+
+        const currentNotifs = res.patch?.notifications ?? state.notifications ?? [];
+        const nextNotifs = pruneNotifications([...currentNotifs, resultNotif], now);
+
+        set({
+          ...(res.patch || {}),
+          notifications: nextNotifs,
+        });
+
         if (accept) {
           state.showToast(res.result?.toastMessage || '🎉 對方已同意！');
         } else {

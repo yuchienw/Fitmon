@@ -115,6 +115,12 @@ export interface DemoSearchablePlayer {
   isMinor?: boolean;
   discoverableByCode?: boolean;
   blockedYou?: boolean;
+  inviteFrom?: 'everyone' | 'friends';
+  avatar?: string;
+  privacy?: {
+    inviteFrom?: 'everyone' | 'friends';
+    discoverableByCode?: boolean;
+  };
 }
 
 // 測試用假陌生人搜尋名錄（上線前移除，IS_DEMO 為 false 時整包為空陣列）
@@ -127,6 +133,7 @@ export const DEMO_PLAYER_DIRECTORY: DemoSearchablePlayer[] = IS_DEMO
         level: 18,
         isMinor: false,
         discoverableByCode: true,
+        inviteFrom: 'everyone',
       },
       {
         id: 'user_jun',
@@ -135,6 +142,7 @@ export const DEMO_PLAYER_DIRECTORY: DemoSearchablePlayer[] = IS_DEMO
         level: 25,
         isMinor: false,
         discoverableByCode: true,
+        inviteFrom: 'everyone',
       },
       {
         id: 'user_leo',
@@ -143,6 +151,7 @@ export const DEMO_PLAYER_DIRECTORY: DemoSearchablePlayer[] = IS_DEMO
         level: 22,
         isMinor: false,
         discoverableByCode: false, // 隱藏（搜不到）
+        inviteFrom: 'everyone',
       },
       {
         id: 'user_tree',
@@ -151,6 +160,7 @@ export const DEMO_PLAYER_DIRECTORY: DemoSearchablePlayer[] = IS_DEMO
         level: 4,
         isMinor: true, // 未成年（搜不到）
         discoverableByCode: true,
+        inviteFrom: 'friends',
       },
     ]
   : [];

@@ -20,6 +20,7 @@ import { UnwellSheet } from './components/sheets/UnwellSheet';
 import { DisclaimerSheet } from './components/sheets/DisclaimerSheet';
 import { CheckInResultModal } from './components/sheets/CheckInResultModal';
 import { LowStaminaSheet } from './components/sheets/LowStaminaSheet';
+import { InvitePanel } from './components/social/InvitePanel';
 
 export const App: React.FC = () => {
   const {
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
     tickGlobalTimers,
     toastMessage,
     notificationsOpen,
+    invitePanelOpen,
   } = useGameStore();
 
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -177,6 +179,9 @@ export const App: React.FC = () => {
         <DisclaimerSheet />
         <CheckInResultModal />
         <LowStaminaSheet />
+
+        {/* Squad Invite Panel (T3-D8) */}
+        {invitePanelOpen && <InvitePanel />}
       </div>
     </div>
   );
