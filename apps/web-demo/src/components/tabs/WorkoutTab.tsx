@@ -33,6 +33,17 @@ import {
 } from '../../config/catalogConfig';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
+import {
+  evaluateImplausibleSession,
+  type ImplausibleEvaluationResult,
+} from '../../game/implausibleCapsEvaluator';
+import {
+  mapLegacyExerciseToSportType,
+  type WorkoutSessionSportType,
+} from '../../game/workoutRecord';
+import { evaluateStrengthSessionTiming } from '../../game/strengthSessionTiming';
+import { ImplausibleSheet } from '../modals/ImplausibleSheet';
+import { WalkToRunSheet } from '../modals/WalkToRunSheet';
 
 type RoutineCategoryTab = 'favorite' | 'my_custom' | 'referenced' | 'recommended';
 
@@ -59,6 +70,22 @@ export const WorkoutTab: React.FC = () => {
 
   // Focus mode derived & UI states
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [implausibleSheetState, setImplausibleSheetState] = useState<{
+    isOpen: boolean;
+    evaluation: ImplausibleEvaluationResult | null;
+    sessionSummary?: {
+      durationMinutes?: number;
+      distanceKm?: number;
+      weightKg?: number;
+      reps?: number;
+      totalSets?: number;
+      sportType?: string;
+    };
+  }>({ isOpen: false, evaluation: null });
+  const [walkToRunSheetState, setWalkToRunSheetState] = useState<{
+    isOpen: boolean;
+    evaluation: ImplausibleEvaluationResult | null;
+  }>({ isOpen: false, evaluation: null });
   const [restMenuOpen, setRestMenuOpen] = useState(false);
   const [showGoldFlash, setShowGoldFlash] = useState(false);
   const [isCardInputFocused, setIsCardInputFocused] = useState(false);
@@ -370,6 +397,120 @@ export const WorkoutTab: React.FC = () => {
     }
   };
 
+  const handleSettleWorkout = () => {
+    if (store.sessionSets.length === 0) {
+      store.showToast('請至少完成 1 組動作再結算');
+      return;
+    }
+
+    const sessionSportType: WorkoutSessionSportType =
+      store.activeSessionSportType ||
+      mapLegacyExerciseToSportType(
+        store.sessionSets[0]?.exerciseId,
+        store.sessionSets[0]?.unitLabel
+      );
+
+    const timingResult = evaluateStrengthSessionTiming(store.sessionSets, {
+      sportType: sessionSportType,
+      activeSessionSportType: sessionSportType,
+      loggingMode: 'live_focus',
+    });
+
+    const computedTotalDurationSec =
+      !timingResult.timingIncomplete && typeof timingResult.totalDurationSec === 'number'
+        ? timingResult.totalDurationSec
+        : Math.max(0, store.workoutElapsedSeconds);
+
+    const totalDistanceM = store.sessionSets.reduce((acc, s) => acc + (s.distanceM || 0), 0);
+    const totalDurationSecFromSets = store.sessionSets.reduce(
+      (acc, s) => acc + (s.durationSec || 0),
+      0
+    );
+
+    const evaluation = evaluateImplausibleSession(
+      {
+        sportType: sessionSportType,
+        totalDurationSec: computedTotalDurationSec,
+        durationSec: totalDurationSecFromSets > 0 ? totalDurationSecFromSets : computedTotalDurationSec,
+        distanceM: totalDistanceM,
+        sets: store.sessionSets,
+        totalSets: store.sessionSets.length,
+        timestamp: Date.now(),
+      },
+      {
+        otherDaySessions: store.workoutHistory,
+      }
+    );
+
+    if (evaluation.flagReason !== null) {
+      const maxWeight = Math.max(...store.sessionSets.map((s) => s.weightKg || 0));
+      const maxReps = Math.max(...store.sessionSets.map((s) => s.reps || 0));
+      setImplausibleSheetState({
+        isOpen: true,
+        evaluation,
+        sessionSummary: {
+          durationMinutes: Math.max(1, Math.round(computedTotalDurationSec / 60)),
+          distanceKm: totalDistanceM > 0 ? Math.round((totalDistanceM / 1000) * 10) / 10 : undefined,
+          weightKg: maxWeight > 0 ? maxWeight : undefined,
+          reps: maxReps > 0 ? maxReps : undefined,
+          totalSets: store.sessionSets.length,
+          sportType: sessionSportType,
+        },
+      });
+      return;
+    }
+
+    if (evaluation.suggestSportType === 'run') {
+      setWalkToRunSheetState({
+        isOpen: true,
+        evaluation,
+      });
+      return;
+    }
+
+    store.finishWorkoutSession();
+  };
+
+  const handleEditImplausible = () => {
+    setImplausibleSheetState({ isOpen: false, evaluation: null });
+  };
+
+  const handleSaveAnywayImplausible = () => {
+    setImplausibleSheetState({ isOpen: false, evaluation: null });
+    store.finishWorkoutSession();
+  };
+
+  const handleChangeToRun = () => {
+    setWalkToRunSheetState({ isOpen: false, evaluation: null });
+    store.showToast('已改成跑步，這筆照樣算數');
+    store.finishWorkoutSession({ sportTypeOverride: 'run' });
+  };
+
+  const handleKeepWalk = () => {
+    setWalkToRunSheetState({ isOpen: false, evaluation: null });
+    store.finishWorkoutSession();
+  };
+
+  const evaluationSheets = (
+    <>
+      {/* T4-D6: Implausible and Walk-to-Run Sheets */}
+      <ImplausibleSheet
+        isOpen={implausibleSheetState.isOpen}
+        evaluation={implausibleSheetState.evaluation}
+        sessionSummary={implausibleSheetState.sessionSummary}
+        onEdit={handleEditImplausible}
+        onSaveAnyway={handleSaveAnywayImplausible}
+      />
+
+      <WalkToRunSheet
+        isOpen={walkToRunSheetState.isOpen}
+        evaluation={walkToRunSheetState.evaluation}
+        onChangeToRun={handleChangeToRun}
+        onKeepWalk={handleKeepWalk}
+      />
+    </>
+  );
+
   const selectedExercise: ExerciseItem =
     EXERCISE_LIBRARY.find((e) => e.id === store.selectedExerciseId) || EXERCISE_LIBRARY[0];
 
@@ -472,7 +613,7 @@ export const WorkoutTab: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => store.finishWorkoutSession()}
+              onClick={handleSettleWorkout}
               disabled={store.sessionSets.length === 0}
               className={`retro-btn px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1 transition ${
                 store.sessionSets.length > 0
@@ -1014,7 +1155,7 @@ export const WorkoutTab: React.FC = () => {
                   data-testid="focus-cancel-settle"
                   onClick={() => {
                     setShowCancelConfirm(false);
-                    store.finishWorkoutSession();
+                    handleSettleWorkout();
                   }}
                   className="w-full py-2.5 px-4 rounded-xl border-2 border-amber-500 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 font-black text-sm active:scale-95 transition"
                 >
@@ -1153,6 +1294,9 @@ export const WorkoutTab: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* T4-D6: Implausible and Walk-to-Run Sheets in Focus Mode */}
+        {evaluationSheets}
       </div>
     );
   }
@@ -1820,6 +1964,9 @@ export const WorkoutTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* T4-D6: Implausible and Walk-to-Run Sheets */}
+      {evaluationSheets}
     </div>
   );
 };

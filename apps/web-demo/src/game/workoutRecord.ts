@@ -512,3 +512,95 @@ export function selectOnboardingSortieHintSeen(state: {
     state.onboardingSortieHintSeenAt.trim().length > 0
   );
 }
+
+/**
+ * 動作組顯示量數值計算 (純函式)
+ * 依 unitLabel 解析該組應顯示之數值：
+ * - km: distanceM / 1000（數字型），否則退回 weightKg
+ * - 秒: durationSec（數字型），否則退回 weightKg
+ * - 分鐘: durationSec / 60（數字型），否則退回 weightKg
+ * - 公尺 或 m: distanceM（數字型），否則退回 weightKg
+ * - 其他（kg 等）：weightKg
+ */
+export function getSetDisplayAmount(
+  set?: {
+    weightKg?: number | null;
+    distanceM?: number | null;
+    durationSec?: number | null;
+  } | null,
+  unitLabel?: string | null
+): number {
+  if (!set || typeof set !== 'object') return 0;
+  const unit = (unitLabel || '').trim();
+  const lowerUnit = unit.toLowerCase();
+  const fallbackWeight =
+    typeof set.weightKg === 'number' && Number.isFinite(set.weightKg) ? set.weightKg : 0;
+
+  if (unit === 'km' || lowerUnit === 'km') {
+    if (typeof set.distanceM === 'number' && Number.isFinite(set.distanceM)) {
+      return set.distanceM / 1000;
+    }
+    return fallbackWeight;
+  }
+
+  if (unit === '秒') {
+    if (typeof set.durationSec === 'number' && Number.isFinite(set.durationSec)) {
+      return set.durationSec;
+    }
+    return fallbackWeight;
+  }
+
+  if (unit === '分鐘') {
+    if (typeof set.durationSec === 'number' && Number.isFinite(set.durationSec)) {
+      return set.durationSec / 60;
+    }
+    return fallbackWeight;
+  }
+
+  if (unit === '公尺' || unit === 'm' || lowerUnit === 'm') {
+    if (typeof set.distanceM === 'number' && Number.isFinite(set.distanceM)) {
+      return set.distanceM;
+    }
+    return fallbackWeight;
+  }
+
+  return fallbackWeight;
+}
+
+/**
+ * 格式化顯示數值純函式：
+ * 去除多餘小數與浮點誤差（例如 6.5、10），保留至多 2 位小數
+ */
+export function formatDisplayAmount(val: number): string {
+  if (!Number.isFinite(val)) return '0';
+  const rounded = Math.round((val + Number.EPSILON) * 100) / 100;
+  return String(rounded);
+}
+
+/**
+ * 動作紀錄摘要格式化純函式 (formatExerciseLogSummary)
+ * 供歷史記錄列表卡片 UI 顯示：
+ * 回傳像 `1組 · 10km`、`1組 · 45秒`、`4組 · 100kg`。
+ * 空組時避免 Math.max 產生 -Infinity，回傳 `0組` 或 `0組 · 0{unit}`。
+ */
+export function formatExerciseLogSummary(log?: {
+  unitLabel?: string | null;
+  sets?: Array<{
+    weightKg?: number | null;
+    distanceM?: number | null;
+    durationSec?: number | null;
+  }> | null;
+} | null): string {
+  const sets = Array.isArray(log?.sets) ? log.sets : [];
+  const unit = (log?.unitLabel || '').trim();
+
+  if (sets.length === 0) {
+    return unit ? `0組 · 0${unit}` : '0組';
+  }
+
+  const values = sets.map((s) => getSetDisplayAmount(s, unit));
+  const maxVal = Math.max(...values);
+  const formattedVal = formatDisplayAmount(maxVal);
+
+  return `${sets.length}組 · ${formattedVal}${unit}`;
+}

@@ -21,6 +21,9 @@ import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
 import { MyPlayerCodeCard } from '../social/MyPlayerCodeCard';
 import { FriendsView } from '../social/FriendsView';
 import { PrivacySafetyView } from '../social/PrivacySafetyView';
+import { evaluateImplausibleSession } from '../../game/implausibleCapsEvaluator';
+import { EditFlaggedSessionModal } from '../modals/EditFlaggedSessionModal';
+import { formatExerciseLogSummary } from '../../game/workoutRecord';
 
 type MeSubTab = 'history' | 'charts' | 'trophies';
 type HistoryViewMode = 'calendar' | 'weekly';
@@ -39,6 +42,7 @@ export const AnalyticsTab: React.FC = () => {
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [chartType, setChartType] = useState<ChartMetricType>('volume');
+  const [editingFlaggedSession, setEditingFlaggedSession] = useState<WorkoutSessionRecord | null>(null);
   const { biometrics } = store;
 
   // Mifflin-St Jeor BMR & TDEE
@@ -693,6 +697,112 @@ export const AnalyticsTab: React.FC = () => {
                 const sDate = getSessionDate(session, sIdx);
                 const sMmdd = `${sDate.getMonth() + 1}/${String(sDate.getDate()).padStart(2, '0')}`;
                 const sWk = weekdayNames[sDate.getDay()];
+                const evaluation = evaluateImplausibleSession(session, {
+                  otherDaySessions: store.workoutHistory,
+                  now: sDate,
+                });
+                const isFlagged = evaluation.flagReason !== null;
+
+                if (isFlagged) {
+                  return (
+                    <div
+                      key={session.id}
+                      onClick={() => store.setSelectedHistorySessionId(session.id)}
+                      style={{ backgroundColor: '#FFFBF0', borderColor: '#F5D58A' }}
+                      className="retro-box rounded-2xl p-3.5 space-y-2.5 cursor-pointer transition group border-2 border-[#F5D58A] shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 text-[11px] font-mono text-amber-900 font-bold flex-wrap">
+                            <span>📅 {sMmdd} (週{sWk}) · {session.dateLabel}</span>
+                            <span>·</span>
+                            <span className="flex items-center gap-0.5 text-amber-800">
+                              <Clock className="w-3 h-3" />
+                              {session.durationMinutes}分
+                            </span>
+                            <span
+                              data-testid="history-flagged-badge"
+                              className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 ml-1"
+                            >
+                              暫不算打卡・可以修正
+                            </span>
+                          </div>
+                          <h3 className="text-sm font-black text-slate-900 mt-1">
+                            {session.routineName}
+                          </h3>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingFlaggedSession(session);
+                            }}
+                            className="px-2.5 py-1 rounded-xl border-2 border-amber-500 bg-amber-100 hover:bg-amber-200 text-amber-900 font-black text-xs shadow-sm transition active:scale-95"
+                          >
+                            修改
+                          </button>
+                          <div className="flex items-center gap-0.5 text-xs font-black text-amber-800 shrink-0">
+                            <span>明細</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Reason sentence from row 52 */}
+                      <div className="p-2.5 rounded-xl bg-amber-100/70 border border-amber-300/80 text-amber-950 font-bold text-xs leading-relaxed">
+                        {evaluation.copy?.message}
+                      </div>
+
+                      {/* Exercise Thumbnails Preview Strip */}
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                        {session.exerciseLogs.map((log, i) => {
+                          const exObj =
+                            EXERCISE_LIBRARY.find((e) => e.id === log.exerciseId) ||
+                            EXERCISE_LIBRARY[0];
+                          return (
+                            <div
+                              key={i}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                store.setInspectedExerciseId(exObj.id);
+                              }}
+                              className="px-2 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 flex items-center gap-1.5 shrink-0 cursor-pointer transition"
+                              title={`點擊查看【${exObj.nameZh}】動作說明`}
+                            >
+                              <ExerciseThumbnail exercise={exObj} size={26} />
+                              <div className="text-[10px]">
+                                <div className="font-bold text-slate-900 flex items-center gap-1">
+                                  <span>{log.exerciseNameZh}</span>
+                                  <span className="text-[9px] text-amber-700">📖</span>
+                                </div>
+                                <div className="font-mono text-amber-800 font-bold">
+                                  {formatExerciseLogSummary(log)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Bottom Summary Strip */}
+                      <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-amber-200/90 text-slate-600">
+                        <span>
+                          組數 <strong className="text-slate-900">{session.totalSets}組</strong>
+                        </span>
+                        <span>
+                          容量{' '}
+                          <strong className="text-emerald-700">
+                            {session.totalVolume.toLocaleString()} kg
+                          </strong>
+                        </span>
+                        <span className="text-amber-800 font-bold">+{session.coinsEarned}🪙</span>
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                 <div
                   key={session.id}
@@ -743,8 +853,7 @@ export const AnalyticsTab: React.FC = () => {
                               <span className="text-[9px] text-cyan-400">📖</span>
                             </div>
                             <div className="font-mono text-cyan-300">
-                              {log.sets.length}組 · {Math.max(...log.sets.map((s) => s.weightKg))}
-                              {log.unitLabel}
+                              {formatExerciseLogSummary(log)}
                             </div>
                           </div>
                         </div>
@@ -1184,6 +1293,15 @@ export const AnalyticsTab: React.FC = () => {
       )}
         </>
       )}
+
+      {/* Edit Flagged Session Modal (T4-D6) */}
+      <EditFlaggedSessionModal
+        isOpen={editingFlaggedSession !== null}
+        session={editingFlaggedSession}
+        otherDaySessions={store.workoutHistory}
+        onClose={() => setEditingFlaggedSession(null)}
+        onSave={(sessionId, updates) => store.updateWorkoutHistorySession(sessionId, updates)}
+      />
     </div>
   );
 };
