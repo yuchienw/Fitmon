@@ -26,6 +26,7 @@ export interface EvaluatedSet {
 
 export interface EvaluateStrengthSessionTimingOptions {
   sportType?: string | null;
+  activeSessionSportType?: string | null;
   loggingMode?: string | null;
 }
 
@@ -106,18 +107,19 @@ export function evaluateStrengthSessionTiming(
         sessionSets?: Array<EvaluatedSet>;
         sets?: Array<EvaluatedSet>;
         sportType?: string | null;
+        activeSessionSportType?: string | null;
         loggingMode?: string | null;
       },
   options?: EvaluateStrengthSessionTimingOptions
 ): StrengthSessionTimingResult {
-  // 1. 萃取 sets 與選項
+  // 1. 萃取 sets 與選項 (支援 session-level activeSessionSportType)
   let sets: Array<EvaluatedSet>;
   let sportType: string;
   let loggingMode: string;
 
   if (Array.isArray(setsOrSession)) {
     sets = setsOrSession;
-    sportType = options?.sportType ?? 'strength';
+    sportType = options?.activeSessionSportType ?? options?.sportType ?? 'strength';
     loggingMode = options?.loggingMode ?? 'live_focus';
   } else if (setsOrSession && typeof setsOrSession === 'object') {
     if (Array.isArray(setsOrSession.sessionSets)) {
@@ -131,11 +133,16 @@ export function evaluateStrengthSessionTiming(
     } else {
       sets = [];
     }
-    sportType = options?.sportType ?? setsOrSession.sportType ?? 'strength';
+    sportType =
+      options?.activeSessionSportType ??
+      options?.sportType ??
+      setsOrSession.activeSessionSportType ??
+      setsOrSession.sportType ??
+      'strength';
     loggingMode = options?.loggingMode ?? setsOrSession.loggingMode ?? 'live_focus';
   } else {
     sets = [];
-    sportType = options?.sportType ?? 'strength';
+    sportType = options?.activeSessionSportType ?? options?.sportType ?? 'strength';
     loggingMode = options?.loggingMode ?? 'live_focus';
   }
 

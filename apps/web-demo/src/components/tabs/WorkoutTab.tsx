@@ -617,15 +617,31 @@ export const WorkoutTab: React.FC = () => {
                     ? '重量 kg'
                     : selectedExercise.unitLabel === 'km'
                     ? '距離 km'
+                    : selectedExercise.unitLabel === '公尺'
+                    ? '距離 公尺'
+                    : selectedExercise.unitLabel === '秒'
+                    ? '秒數 秒'
+                    : selectedExercise.unitLabel === '分鐘'
+                    ? '時長 分鐘'
                     : `數值 ${selectedExercise.unitLabel}`}
                 </span>
                 <div className="flex items-center justify-between w-full gap-1">
                   <button
-                    onClick={() =>
+                    onClick={() => {
+                      const stepVal =
+                        selectedExercise.unitLabel === 'km'
+                          ? 0.5
+                          : selectedExercise.unitLabel === '公尺'
+                          ? 50
+                          : selectedExercise.unitLabel === '分鐘'
+                          ? 5
+                          : selectedExercise.unitLabel === '秒'
+                          ? 5
+                          : 2.5;
                       store.setCurrentWeight(
-                        Math.max(0, Number((store.currentWeightKg - (selectedExercise.unitLabel === 'km' ? 0.5 : 2.5)).toFixed(1)))
-                      )
-                    }
+                        Math.max(0, Number((store.currentWeightKg - stepVal).toFixed(1)))
+                      );
+                    }}
                     className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
                   >
                     <Minus className="w-4 h-4" />
@@ -646,11 +662,21 @@ export const WorkoutTab: React.FC = () => {
                     className="w-full text-center bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg py-1.5 text-xl font-black font-mono text-white outline-none"
                   />
                   <button
-                    onClick={() =>
+                    onClick={() => {
+                      const stepVal =
+                        selectedExercise.unitLabel === 'km'
+                          ? 0.5
+                          : selectedExercise.unitLabel === '公尺'
+                          ? 50
+                          : selectedExercise.unitLabel === '分鐘'
+                          ? 5
+                          : selectedExercise.unitLabel === '秒'
+                          ? 5
+                          : 2.5;
                       store.setCurrentWeight(
-                        Number((store.currentWeightKg + (selectedExercise.unitLabel === 'km' ? 0.5 : 2.5)).toFixed(1))
-                      )
-                    }
+                        Number((store.currentWeightKg + stepVal).toFixed(1))
+                      );
+                    }}
                     className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-white active:scale-90 shrink-0"
                   >
                     <Plus className="w-4 h-4" />
@@ -664,7 +690,9 @@ export const WorkoutTab: React.FC = () => {
                 className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center"
               >
                 <span className="text-xs text-slate-300 font-black mb-1">
-                  {selectedExercise.sportType === 'cardio' ? '趟數 / 組數' : '次數 Reps'}
+                  {['cardio', 'run', 'cycle', 'swim'].includes(selectedExercise.sportType)
+                    ? '趟數 / 組數'
+                    : '次數 Reps'}
                 </span>
                 <div className="flex items-center justify-between w-full gap-1">
                   <button
@@ -1032,19 +1060,26 @@ export const WorkoutTab: React.FC = () => {
               </div>
 
               {/* Filter & Search */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                 {(
                   [
                     { id: 'all', label: '全部' },
                     { id: 'strength', label: '🏋️ 重訓' },
-                    { id: 'cardio', label: '🏃 有氧' },
                     { id: 'bodyweight', label: '🤸 徒手' },
+                    { id: 'run', label: '🏃 跑步' },
+                    { id: 'walk', label: '🚶 快走' },
+                    { id: 'cycle', label: '🚴 單車' },
+                    { id: 'swim', label: '🏊 游泳' },
+                    { id: 'yoga_stretch', label: '🧘 瑜珈' },
+                    { id: 'ball', label: '⚽ 球類' },
+                    { id: 'circuit_hiit', label: '⚡ 循環HIIT' },
+                    { id: 'custom', label: '🎯 自訂' },
                   ] as const
                 ).map((t) => (
                   <button
                     key={t.id}
                     onClick={() => setSwapSportFilter(t.id)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-black ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black shrink-0 whitespace-nowrap ${
                       swapSportFilter === t.id
                         ? 'bg-cyan-500 text-slate-950'
                         : 'bg-slate-900 text-slate-400 border border-slate-800'
@@ -1666,19 +1701,26 @@ export const WorkoutTab: React.FC = () => {
               {/* BOTTOM HALF (50%): Search & Add Exercise Library */}
               <div className="min-h-0 flex flex-col rounded-xl bg-slate-950/80 border border-slate-800 p-2.5">
                 <div className="flex items-center justify-between gap-1 shrink-0 mb-1.5">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
                     {(
                       [
                         { id: 'all', label: '全部' },
                         { id: 'strength', label: '重訓' },
-                        { id: 'cardio', label: '有氧' },
                         { id: 'bodyweight', label: '徒手' },
+                        { id: 'run', label: '跑步' },
+                        { id: 'walk', label: '快走' },
+                        { id: 'cycle', label: '單車' },
+                        { id: 'swim', label: '游泳' },
+                        { id: 'yoga_stretch', label: '瑜珈' },
+                        { id: 'ball', label: '球類' },
+                        { id: 'circuit_hiit', label: '循環HIIT' },
+                        { id: 'custom', label: '自訂' },
                       ] as const
                     ).map((f) => (
                       <button
                         key={f.id}
                         onClick={() => setBuilderSportFilter(f.id)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-black shrink-0 whitespace-nowrap ${
                           builderSportFilter === f.id
                             ? 'bg-cyan-500 text-slate-950'
                             : 'bg-slate-900 text-slate-400'
