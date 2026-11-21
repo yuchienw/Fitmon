@@ -45,14 +45,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
   const devRecipientNotifyDemo = useGameStore((s) => s.devRecipientNotifyDemo);
   const devMinorTestAccount = useGameStore((s) => s.devMinorTestAccount);
   const friendIds = useGameStore((s) => s.friendIds);
+  const blockedIds = useGameStore((s) => s.blockedIds);
 
   const recipientCtx: RecipientNotifyContext = useMemo(
     () => ({
       ...devRecipientNotifyDemo,
       isMinor: devMinorTestAccount,
       friendIds,
+      blockedIds: blockedIds || [],
     }),
-    [devRecipientNotifyDemo, devMinorTestAccount, friendIds]
+    [devRecipientNotifyDemo, devMinorTestAccount, friendIds, blockedIds]
   );
 
   const unreadCountNum = useMemo(() => {

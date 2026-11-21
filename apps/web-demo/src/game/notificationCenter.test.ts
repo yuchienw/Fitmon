@@ -48,6 +48,7 @@ describe('NotificationCenter Pure Functions (T3-D7)', () => {
       isPaused: false,
       isMinor: false,
       friendIds: ['friend_akai'],
+      blockedIds: [],
     };
 
     test('visible and counts as unread when all three receiver flags are false', () => {
@@ -310,6 +311,7 @@ describe('NotificationCenter Pure Functions (T3-D7)', () => {
         isPaused: false,
         isMinor: true,
         friendIds: ['friend_akai', 'friend_alice'],
+        blockedIds: [],
       };
 
       const res = visibleNotifications(
@@ -335,6 +337,7 @@ describe('NotificationCenter Pure Functions (T3-D7)', () => {
         isPaused: false,
         isMinor: false,
         friendIds: ['friend_akai', 'friend_alice'],
+        blockedIds: [],
       };
 
       const res = visibleNotifications(
@@ -373,6 +376,7 @@ describe('NotificationCenter Pure Functions (T3-D7)', () => {
         isPaused: false,
         isMinor: false,
         friendIds: ['friend_akai'],
+        blockedIds: [],
       };
 
       const resBefore = visibleNotifications(items, ctx, baseNow);
@@ -495,6 +499,7 @@ describe('NotificationCenter Pure Functions (T3-D7)', () => {
         isPaused: false,
         isMinor: false,
         friendIds: ['friend_akai', 'friend_alice', 'friend_chloe'],
+        blockedIds: [],
       };
 
       const res = visibleNotifications(
@@ -518,6 +523,32 @@ describe('NotificationCenter Pure Functions (T3-D7)', () => {
       assert.equal(res.general[0].id, 'result_1'); // 30m ago
       assert.equal(res.general[1].id, 'handled_inv'); // 1h ago
       assert.equal(res.general[2].id, 'expired_inv'); // 26h ago
+    });
+
+    test('T3-D10: blockedIds hides notifications of all types and does not count toward unread count', () => {
+      const blockedActor = 'bad_user_99';
+      const items: NotificationItem[] = [
+        { id: 'inv_blocked', type: 'squad_invite', actorId: blockedActor, createdAt: baseNow, status: 'pending' },
+        { id: 'join_blocked', type: 'join_request', actorId: blockedActor, createdAt: baseNow, status: 'pending' },
+        { id: 'freq_blocked', type: 'friend_request', actorId: blockedActor, createdAt: baseNow, status: 'pending' },
+        { id: 'nudge_blocked', type: 'nudge', actorId: blockedActor, createdAt: baseNow },
+        { id: 'result_blocked', type: 'result_success', actorId: blockedActor, createdAt: baseNow },
+        { id: 'normal_inv', type: 'squad_invite', actorId: 'friend_akai', createdAt: baseNow, status: 'pending' },
+      ];
+
+      const ctx: RecipientNotifyContext = {
+        isRestDay: false,
+        isCaringForBody: false,
+        isPaused: false,
+        isMinor: false,
+        friendIds: ['friend_akai'],
+        blockedIds: [blockedActor],
+      };
+
+      const res = visibleNotifications(items, ctx, baseNow);
+      assert.equal(res.all.length, 1);
+      assert.equal(res.all[0].id, 'normal_inv');
+      assert.equal(unreadCount(res.all), 1);
     });
   });
 });

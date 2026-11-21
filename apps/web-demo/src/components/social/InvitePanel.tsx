@@ -11,8 +11,9 @@ import {
   formatSquadShareText,
 } from '../../game/squadInviteRules';
 import { searchPlayerByCode } from '../../game/friendSocial';
-import { DEMO_PLAYER_DIRECTORY } from '../../config/demo';
+import { DEMO_PLAYER_DIRECTORY, IS_DEMO } from '../../config/demo';
 import { ADVENTURE_BOSS_CATALOG, getFriendProfile } from '../../config/catalogConfig';
+import { DemoDevTag } from './DemoDevTag';
 
 type TabType = 'friends' | 'recent' | 'code' | 'share' | 'in_person';
 
@@ -450,8 +451,11 @@ export const InvitePanel: React.FC = () => {
                           {prof.avatar}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-black text-[#29221E] truncate">
-                            {prof.nickname}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-sm font-black text-[#29221E] truncate">
+                              {prof.nickname}
+                            </span>
+                            {IS_DEMO && <DemoDevTag text="試玩角色" />}
                           </div>
                           <div className="text-xs font-bold text-[#786B63]">
                             Lv. {prof.level}
@@ -495,8 +499,11 @@ export const InvitePanel: React.FC = () => {
                           {prof.avatar}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-black text-[#29221E] truncate">
-                            {prof.nickname}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-sm font-black text-[#29221E] truncate">
+                              {prof.nickname}
+                            </span>
+                            {IS_DEMO && <DemoDevTag text="試玩角色" />}
                           </div>
                           <div className="text-xs font-bold text-[#786B63]">
                             Lv. {prof.level}
@@ -551,7 +558,7 @@ export const InvitePanel: React.FC = () => {
                         🐱
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-black text-[#29221E]">
                             {searchResult.nickname}
                           </span>
@@ -560,6 +567,7 @@ export const InvitePanel: React.FC = () => {
                               不是你的好友
                             </span>
                           )}
+                          {IS_DEMO && <DemoDevTag text="試玩角色" />}
                         </div>
                         <div className="text-xs font-bold text-[#786B63]">
                           Lv. {searchResult.level}

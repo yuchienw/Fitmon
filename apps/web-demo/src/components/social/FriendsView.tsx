@@ -28,29 +28,11 @@ import {
 import { DEMO_NICKNAME_FALLBACKS } from '../../game/notificationCenter';
 import { DEMO_PLAYER_ID } from '../../game/persistMigrate';
 import { IS_DEMO, DEMO_REPORT_DISCLAIMER } from '../../config/demo';
+import { DemoDevTag } from './DemoDevTag';
+import { BlockConfirmModal } from './BlockConfirmModal';
+import { ReportModal } from './ReportModal';
 
-// 9.4 / 10c 試玩版標籤元件
-export const DemoDevTag: React.FC<{ text: string }> = ({ text }) => {
-  if (!IS_DEMO) return null;
-  return (
-    <span
-      className="inline-flex items-stretch rounded overflow-hidden text-[10px] font-black border border-dashed border-[#A16207] whitespace-nowrap align-middle select-none shrink-0"
-      title="上線前移除"
-    >
-      <span
-        style={{
-          width: 8,
-          background:
-            'repeating-linear-gradient(-45deg,#FDE047 0 4px,#29221E 4px 8px)',
-        }}
-      />
-      <span className="bg-[#FEF9C3] text-[#713F12] px-1 py-0.5">{text}</span>
-      <span className="bg-[#29221E] text-[#FEF9C3] px-1 py-0.5 font-normal">
-        上線前移除
-      </span>
-    </span>
-  );
-};
+export { DemoDevTag };
 
 export const FriendsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const store = useGameStore();
@@ -68,6 +50,8 @@ export const FriendsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     nickname: string;
     isSameSquad: boolean;
   } | null>(null);
+  const [blockingTarget, setBlockingTarget] = useState<{ id: string; nickname: string } | null>(null);
+  const [reportingTarget, setReportingTarget] = useState<{ id: string; nickname: string } | null>(null);
 
   // 輔助解析玩家名稱與等級
   const resolveInfo = (id: string) => {
@@ -603,7 +587,7 @@ export const FriendsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <button
                           onClick={() => {
                             setActiveMenuId(null);
-                            store.showToast('已封鎖此玩家');
+                            setBlockingTarget({ id: friend.id, nickname: friend.nickname });
                           }}
                           data-testid="friend-menu-block"
                           className="w-full px-3 py-1.5 text-left text-xs font-bold text-[#5C4A3E] hover:bg-slate-100 flex items-center gap-1.5"
@@ -615,7 +599,7 @@ export const FriendsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <button
                           onClick={() => {
                             setActiveMenuId(null);
-                            store.showToast(IS_DEMO ? DEMO_REPORT_DISCLAIMER : '已收到檢舉');
+                            setReportingTarget({ id: friend.id, nickname: friend.nickname });
                           }}
                           data-testid="friend-menu-report"
                           className="w-full px-3 py-1.5 text-left text-xs font-bold text-[#5C4A3E] hover:bg-slate-100 flex items-center gap-1.5"
@@ -677,6 +661,29 @@ export const FriendsView: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
           </div>
         </div>
+      )}
+      {/* 5. 封鎖確認框 */}
+      {blockingTarget && (
+        <BlockConfirmModal
+          isOpen={!!blockingTarget}
+          targetId={blockingTarget.id}
+          targetNickname={blockingTarget.nickname}
+          onCancel={() => setBlockingTarget(null)}
+          onConfirm={() => {
+            store.blockPlayerAction(blockingTarget.id);
+            setBlockingTarget(null);
+          }}
+        />
+      )}
+
+      {/* 6. 檢舉彈窗 */}
+      {reportingTarget && (
+        <ReportModal
+          isOpen={!!reportingTarget}
+          targetId={reportingTarget.id}
+          targetNickname={reportingTarget.nickname}
+          onClose={() => setReportingTarget(null)}
+        />
       )}
     </div>
   );

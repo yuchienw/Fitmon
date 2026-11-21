@@ -27,11 +27,16 @@ import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
 import { getFriendRequestView } from '../../game/friendSocial';
 import { DEMO_PLAYER_ID } from '../../game/persistMigrate';
 import { IS_DEMO, DEMO_REPORT_DISCLAIMER } from '../../config/demo';
+import { DemoDevTag } from '../social/DemoDevTag';
+import { BlockConfirmModal } from '../social/BlockConfirmModal';
+import { ReportModal } from '../social/ReportModal';
 
 export const UserProfileModal: React.FC = () => {
   const store = useGameStore();
   const profileId = store.selectedProfileId;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   if (!profileId) return null;
 
@@ -54,11 +59,12 @@ export const UserProfileModal: React.FC = () => {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h3 className="text-base font-black text-white flex items-center gap-1">
+              <h3 className="text-base font-black text-white flex items-center gap-1.5 flex-wrap">
                 <span>{profile.nameZh}</span>
                 {profile.isVerified && (
                   <BadgeCheck className="w-4 h-4 text-cyan-400 fill-cyan-950" />
                 )}
+                {IS_DEMO && <DemoDevTag text="試玩角色" />}
               </h3>
             </div>
             <div className="text-xs font-bold text-amber-300 mt-0.5">{profile.titleZh}</div>
@@ -136,8 +142,9 @@ export const UserProfileModal: React.FC = () => {
                   <button
                     onClick={() => {
                       setMenuOpen(false);
-                      store.showToast('已封鎖此玩家');
+                      setShowBlockConfirm(true);
                     }}
+                    data-testid="profile-menu-block"
                     className="w-full px-3 py-1.5 text-left text-xs font-bold text-slate-300 hover:bg-slate-800 flex items-center gap-1.5"
                   >
                     <Ban className="w-3.5 h-3.5 text-rose-400" />
@@ -146,8 +153,9 @@ export const UserProfileModal: React.FC = () => {
                   <button
                     onClick={() => {
                       setMenuOpen(false);
-                      store.showToast(IS_DEMO ? DEMO_REPORT_DISCLAIMER : '已收到檢舉');
+                      setShowReport(true);
                     }}
+                    data-testid="profile-menu-report"
                     className="w-full px-3 py-1.5 text-left text-xs font-bold text-slate-300 hover:bg-slate-800 flex items-center gap-1.5"
                   >
                     <Flag className="w-3.5 h-3.5 text-amber-400" />
@@ -298,6 +306,34 @@ export const UserProfileModal: React.FC = () => {
               </div>
             ))}
           </div>
+        )}
+
+        {/* 封鎖確認框 */}
+        {showBlockConfirm && (
+          <BlockConfirmModal
+            isOpen={showBlockConfirm}
+            targetId={profile.id}
+            targetNickname={profile.nameZh}
+            onCancel={() => setShowBlockConfirm(false)}
+            onConfirm={() => {
+              store.blockPlayerAction(profile.id);
+              setShowBlockConfirm(false);
+              store.setSelectedProfileId(null);
+            }}
+          />
+        )}
+
+        {/* 檢舉彈窗 */}
+        {showReport && (
+          <ReportModal
+            isOpen={showReport}
+            targetId={profile.id}
+            targetNickname={profile.nameZh}
+            onClose={() => setShowReport(false)}
+            onReported={() => {
+              store.setSelectedProfileId(null);
+            }}
+          />
         )}
       </div>
     </div>

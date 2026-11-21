@@ -64,6 +64,12 @@ import {
   removeFriend,
   type PlayerSearchResult,
 } from '../game/friendSocial';
+import {
+  blockPlayer,
+  unblockPlayer,
+  reportPlayer,
+  updatePrivacySettings,
+} from '../game/privacySafety';
 import { IS_DEMO, DEMO_PLAYER_DIRECTORY } from '../config/demo';
 
 export type {
@@ -678,6 +684,17 @@ export interface GameState {
   regeneratePlayerCodeAction: () => boolean;
   seedIncomingFriendRequest: () => void;
   seedRecentTeammates: () => void;
+
+  // Privacy & Safety Actions (T3-D10)
+  blockPlayerAction: (targetId: string) => void;
+  unblockPlayerAction: (targetId: string) => void;
+  reportPlayerAction: (params: {
+    targetId: string;
+    reason: string;
+    details?: string;
+    alsoBlock?: boolean;
+  }) => void;
+  updatePrivacyAction: (patch: Partial<PlayerPrivacySettings>) => void;
 
   // 測試用，上線前移除
   simulateIncomingJoinRequest: (params?: { fromId?: string; source?: SquadSocialSource }) => void;
@@ -1338,6 +1355,7 @@ export const useGameStore = create<GameState>()(
           ...s.devRecipientNotifyDemo,
           isMinor: s.devMinorTestAccount,
           friendIds: s.friendIds,
+          blockedIds: s.blockedIds || [],
         };
         const visible = visibleNotifications(s.notifications, ctx, now);
         const visibleIds = visible.all.map((item) => item.id);
@@ -3331,6 +3349,51 @@ export const useGameStore = create<GameState>()(
         ];
         set({ recentTeammates: sampleTeammates });
         get().showToast('已塞入最近隊友測試資料');
+      },
+
+      // Privacy & Safety Actions (T3-D10)
+      blockPlayerAction: (targetId: string) => {
+        const s = get();
+        const res = blockPlayer(s, { targetId }, Date.now());
+        set({
+          blockedIds: res.state.blockedIds,
+          friendIds: res.state.friendIds,
+          recentTeammates: res.state.recentTeammates,
+          squadInvites: res.state.squadInvites,
+          friendRequests: res.state.friendRequests,
+          notifications: res.state.notifications,
+        });
+        get().showToast('已封鎖此玩家');
+      },
+
+      unblockPlayerAction: (targetId: string) => {
+        const s = get();
+        const res = unblockPlayer(s, { targetId }, Date.now());
+        set({
+          blockedIds: res.state.blockedIds,
+        });
+        get().showToast('已解除封鎖');
+      },
+
+      reportPlayerAction: ({ targetId, reason, details, alsoBlock = true }) => {
+        const s = get();
+        const res = reportPlayer(s, { targetId, reason, details, alsoBlock }, Date.now());
+        set({
+          reportLog: res.state.reportLog,
+          blockedIds: res.state.blockedIds,
+          friendIds: res.state.friendIds,
+          recentTeammates: res.state.recentTeammates,
+          squadInvites: res.state.squadInvites,
+          friendRequests: res.state.friendRequests,
+          notifications: res.state.notifications,
+        });
+      },
+
+      updatePrivacyAction: (patch: Partial<PlayerPrivacySettings>) => {
+        const s = get();
+        if (s.devMinorTestAccount) return;
+        const res = updatePrivacySettings(s, patch, { isMinor: false });
+        set({ privacy: res.state.privacy });
       },
 
       // 測試用，上線前移除
