@@ -1,20 +1,46 @@
 import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../../stores/useGameStore';
 import { xpToNext } from '../../config/economy';
-import { formatResetCountdown } from '../../game/day';
+import { formatResetCountdown, getLocalDayKey } from '../../game/day';
 import { WeekStrip } from './WeekStrip';
+import {
+  accumulateDayProgress,
+  formatAltDistanceHint,
+  getSessionDayKey,
+} from '../../game/dayProgress';
 
-export const TodayHeroCard: React.FC = () => {
+export interface TodayHeroCardProps {
+  now?: number | Date;
+}
+
+export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) => {
   const store = useGameStore();
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [, setTick] = useState(0);
 
-  // Refresh every 30s as specified
+  // 定期 30 秒觸發更新，確保倒數計時與進度隨時間推進更新
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setNowMs(Date.now());
+      setTick((t) => t + 1);
     }, 30000);
     return () => window.clearInterval(timer);
   }, []);
+
+  // 從其他分頁切換回「房間」(home) 時立即觸發更新，確保時間緊跟當下
+  useEffect(() => {
+    if (store.activeTab === 'home') {
+      setTick((t) => t + 1);
+    }
+  }, [store.activeTab]);
+
+  // 進度與顯示用的基準時間：優先使用傳入的 now，若無則在渲染時讀取 Date.now()
+  // 避免卡在元件第一次 mount 的 Date.now()，時鐘推進後可精準對應日期
+  // 純函式 accumulateDayProgress 不在內部呼叫 Date.now()，由呼叫端傳入 nowMs
+  const nowMs =
+    propNow !== undefined
+      ? typeof propNow === 'number'
+        ? propNow
+        : propNow.getTime()
+      : Date.now();
 
   const checkedIn = store.isCheckedInToday(nowMs);
   const bossDone = store.isBossDoneToday(nowMs);
@@ -25,6 +51,20 @@ export const TodayHeroCard: React.FC = () => {
   const exp = store.exp;
   const maxExp = xpToNext(level);
   const expPercent = Math.min(100, Math.max(0, (exp / maxExp) * 100));
+
+  // T4-D5: 當天累加進度即時計算 (純函式，傳入 nowMs)
+  const todayKey = getLocalDayKey(nowMs);
+  const daySessions = store.workoutHistory.filter(
+    (s, idx) => getSessionDayKey(s, idx, nowMs) === todayKey
+  );
+  const dayProgress = accumulateDayProgress(store.workoutHistory, {
+    dayKey: todayKey,
+    now: nowMs,
+  });
+
+  // 只要當天還沒達到 T4-D5 門檻（!dayProgress.met）且當天有紀錄（daySessions.length > 0），
+  // 就顯示進度提示，不要再用 !checkedIn 擋住。達標（met === true）後區塊仍要消失。
+  const showProgress = !dayProgress.met && daySessions.length > 0;
 
   // Teammates who worked out today
   const activeTeammates = store.squadMembers.filter(
@@ -58,12 +98,74 @@ export const TodayHeroCard: React.FC = () => {
         <div className="text-[11.5px] font-extrabold text-[#786B63]">今天</div>
         <div className="text-[17px] font-black leading-snug mt-0.5">
           {!checkedIn
-            ? '今天還沒動，動一下就能出擊'
+            ? showProgress && dayProgress.primary_hint
+              ? dayProgress.primary_hint
+              : '今天還沒動，動一下就能出擊'
             : !bossDone
             ? '可以出擊了'
             : '今天已出擊，明天 00:00 再來'}
         </div>
       </div>
+
+      {/* Day Progress Hint (T1-D4 / T4-D5) */}
+      {showProgress && (
+        <div
+          data-testid="day-progress-hint"
+          style={{
+            backgroundColor: '#FFFDF8',
+            borderColor: '#E5DCCB',
+          }}
+          className="rounded-xl border-[1.5px] p-2.5 space-y-2"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[13.5px] font-black text-[#29221E]">
+              今天的運動 {Math.min(10, dayProgress.minutes_done)}／10 分
+            </span>
+            <span
+              style={{
+                backgroundColor: '#FEF3C7',
+                color: '#92400E',
+                borderColor: '#F5C45A',
+              }}
+              className="px-1.5 py-0.5 rounded-md border text-[10.5px] font-black"
+            >
+              可以累加
+            </span>
+          </div>
+
+          {/* 10-segment Progress Bar */}
+          <div className="flex gap-1">
+            {Array.from({ length: 10 }).map((_, idx) => {
+              const isFilled = idx < dayProgress.minutes_done;
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    backgroundColor: isFilled ? '#EA580C' : '#EFE8DC',
+                    borderColor: isFilled ? '#C2410C' : '#E5DCCB',
+                  }}
+                  className="flex-1 h-2.5 rounded-[3px] border"
+                />
+              );
+            })}
+          </div>
+
+          {/* Subtext: primary hint + alt distance secondary hint */}
+          <div className="text-[12px] text-[#786B63] leading-relaxed">
+            {dayProgress.primary_hint && (
+              <span className="font-black text-[#C2410C] mr-1">
+                {dayProgress.primary_hint}
+              </span>
+            )}
+            {dayProgress.alt_distance && dayProgress.alt_distance.remaining_m > 0 && (
+              <span className="text-[#786B63]">
+                {dayProgress.primary_hint ? '・' : ''}
+                {formatAltDistanceHint(dayProgress.alt_distance)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 2. Embedded Info Box: Damage Multiplier + WeekStrip + Thin Level Bar */}
       <div

@@ -35,7 +35,11 @@ const STAGE_OPTIONS: {
   { id: 'titan', label: '泰坦', icon: Crown },
 ];
 
-export const HomeTab: React.FC = () => {
+export interface HomeTabProps {
+  now?: number | Date;
+}
+
+export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
   const store = useGameStore();
   const [quizOpen, setQuizOpen] = useState(false);
   const [devPreviewOpen, setDevPreviewOpen] = useState(false);
@@ -130,7 +134,7 @@ export const HomeTab: React.FC = () => {
       </div>
 
       {/* 2. TODAY HERO CARD (Directly below PixelRoomCanvas) */}
-      <TodayHeroCard />
+      <TodayHeroCard now={now} />
 
       {/* 3. COMPACT RPG DAILY BOUNTY BOARD (今日懸賞) */}
       <div className="retro-box rounded-2xl p-3 space-y-2">

@@ -2779,6 +2779,8 @@ export const useGameStore = create<GameState>()(
         );
 
         // Finishing a workout session counts as the day's check-in ONLY if countsTowardCheckin is true
+        // 註記 (T4-D5 / T1-D2 / T1-D3)：這是舊的「結算就打卡」路徑，本單維持現況不改發獎時機。
+        // 未來達標發獎與打卡按鈕移除歸 T1-D2 / T1-D3 正式實作。
         let checkinRes: CheckinResultData | null = null;
         if (!state.isCheckedInToday() && implausibleEval.countsTowardCheckin) {
           checkinRes = state.checkin({
