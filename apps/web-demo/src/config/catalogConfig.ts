@@ -5,7 +5,17 @@ export type AvatarBodyStage = 'beginner' | 'powerlifter' | 'aesthetic' | 'titan'
 export type AvatarExpression = 'smile' | 'strain' | 'cool' | 'cry';
 export type EquipSlot = 'hair' | 'face' | 'top' | 'bottom' | 'accessory';
 export type RoomSlot = 'wallpaper' | 'floor' | 'slotLeft' | 'slotCenter' | 'slotRight';
-export type SportType = 'strength' | 'cardio' | 'bodyweight';
+export type SportType =
+  | 'strength'
+  | 'bodyweight'
+  | 'run'
+  | 'walk'
+  | 'cycle'
+  | 'swim'
+  | 'yoga_stretch'
+  | 'ball'
+  | 'circuit_hiit'
+  | 'custom';
 
 export interface CombatStat {
   type: 'phy' | 'mag' | 'support';
@@ -275,6 +285,7 @@ export interface WorkoutTemplate {
   category: 'favorite' | 'my_custom' | 'referenced' | 'recommended';
   authorName?: string;
   tagZh: string;
+  sportType?: SportType;
   exercises: RoutineExerciseConfig[];
 }
 
@@ -953,12 +964,12 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
     ],
   },
 
-  // 有氧運動 (Cardio - V2-06 泛運動支援)
+  // 跑步運動 (Run - V2-06 / T4-D3)
   {
     id: 'cardio_incline_run',
     nameZh: '坡度跑步機 / Zone 2 慢跑',
     nameEn: 'Incline Treadmill Run / Walk',
-    sportType: 'cardio',
+    sportType: 'run',
     muscleGroup: 'legs',
     muscleLabelZh: '心肺耐力 / 下肢',
     primaryMusclesZh: '心肺有氧系統、股四頭肌、腓腸肌、比目魚肌',
@@ -978,11 +989,12 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
       '高坡度健走時切勿雙手緊抓扶手後仰，以免失去有氧效益',
     ],
   },
+  // 單車運動 (Cycle - V2-06 / T4-D3)
   {
     id: 'cardio_hiit_bike',
     nameZh: '飛輪單車 HIIT 間歇衝刺',
     nameEn: 'HIIT Stationary Spin Bike',
-    sportType: 'cardio',
+    sportType: 'cycle',
     muscleGroup: 'legs',
     muscleLabelZh: '心肺燃脂 / 股四頭',
     primaryMusclesZh: '股四頭肌、臀大肌、心肺有氧/無氧代謝系統',
@@ -1003,11 +1015,11 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
     ],
   },
 
-  // 徒手 / 核心 / 瑜珈 (Bodyweight & Mobility - V2-06)
+  // 徒手自重 (Bodyweight - V2-06 / T4-D3 拆分動態流瑜珈)
   {
     id: 'bw_plank_core',
-    nameZh: '徒手棒式核心 / 動態流瑜珈',
-    nameEn: 'Core Plank & Mobility Flow',
+    nameZh: '徒手棒式核心',
+    nameEn: 'Core Plank Hold',
     sportType: 'bodyweight',
     muscleGroup: 'core',
     muscleLabelZh: '腹橫肌 / 核心穩定',
@@ -1026,6 +1038,156 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
       '收緊臀部與腹橫肌（骨盆微後傾），嚴防塌腰傷及下背椎間盤',
       '手肘正對肩膀下方，推起前鋸肌使肩胛骨飽滿不塌陷',
       '保持自然深長橫膈膜呼吸，切勿憋氣',
+    ],
+  },
+
+  // 瑜珈／伸展 (Yoga & Stretch - T4-D3 新增)
+  {
+    id: 'yoga_dynamic_flow',
+    nameZh: '動態流瑜珈',
+    nameEn: 'Dynamic Flow Yoga',
+    sportType: 'yoga_stretch',
+    muscleGroup: 'core',
+    muscleLabelZh: '核心身心 / 柔軟伸展',
+    primaryMusclesZh: '核心肌群、全身關節活動度、平衡與身心呼吸',
+    secondaryMusclesZh: '脊椎伸展肌群、肩髖關節肌群',
+    equipmentZh: '專業瑜珈墊',
+    category: 'isolation',
+    neuralMultiplier: 1.0,
+    defaultWeightKg: 20,
+    defaultReps: 1,
+    defaultRestSec: 60,
+    unitLabel: '分鐘',
+    iconType: 'yoga',
+    safetyCues: [
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+    ],
+  },
+
+  // 快走／健走 (Walk - T4-D3 新增)
+  {
+    id: 'walk_brisk',
+    nameZh: '快走／健走',
+    nameEn: 'Brisk Walking',
+    sportType: 'walk',
+    muscleGroup: 'legs',
+    muscleLabelZh: '心肺耐力 / 下肢有氧',
+    primaryMusclesZh: '心肺有氧系統、下肢耐力、臀腿肌群',
+    secondaryMusclesZh: '核心肌群、小腿肌群',
+    equipmentZh: '室外步道 / 跑步機',
+    category: 'compound_secondary',
+    neuralMultiplier: 1.2,
+    defaultWeightKg: 3,
+    defaultReps: 1,
+    defaultRestSec: 60,
+    unitLabel: 'km',
+    iconType: 'run',
+    safetyCues: [
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+    ],
+  },
+
+  // 游泳 (Swim - T4-D3 新增，距離單位為公尺，絕非 km)
+  {
+    id: 'swim_freestyle',
+    nameZh: '游泳',
+    nameEn: 'Swimming',
+    sportType: 'swim',
+    muscleGroup: 'back',
+    muscleLabelZh: '全身心肺 / 關節友善',
+    primaryMusclesZh: '全身心肺系統、背闊肌、胸大肌、肩袖肌群',
+    secondaryMusclesZh: '下肢打水肌群、核心穩定肌群',
+    equipmentZh: '標準泳池 (25m/50m)',
+    category: 'compound_secondary',
+    neuralMultiplier: 1.4,
+    defaultWeightKg: 500,
+    defaultReps: 1,
+    defaultRestSec: 60,
+    unitLabel: '公尺',
+    iconType: 'run',
+    safetyCues: [
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+    ],
+  },
+
+  // 球類運動 (Ball - T4-D3 新增)
+  {
+    id: 'ball_sports',
+    nameZh: '球類',
+    nameEn: 'Ball Sports',
+    sportType: 'ball',
+    muscleGroup: 'legs',
+    muscleLabelZh: '敏捷爆發 / 全身心肺',
+    primaryMusclesZh: '心肺耐力、下肢變向敏捷、爆發力',
+    secondaryMusclesZh: '核心旋轉肌群、上肢協調肌群',
+    equipmentZh: '各類球場與專用球具',
+    category: 'compound_secondary',
+    neuralMultiplier: 1.3,
+    defaultWeightKg: 30,
+    defaultReps: 1,
+    defaultRestSec: 60,
+    unitLabel: '分鐘',
+    iconType: 'run',
+    safetyCues: [
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+    ],
+  },
+
+  // 循環訓練／HIIT (Circuit & HIIT - T4-D3 新增)
+  {
+    id: 'circuit_hiit',
+    nameZh: '循環訓練／HIIT',
+    nameEn: 'Circuit & HIIT Training',
+    sportType: 'circuit_hiit',
+    muscleGroup: 'core',
+    muscleLabelZh: '高強度間歇 / 心肺代謝',
+    primaryMusclesZh: '無氧乳酸耐受、高心率代謝、全身大肌群循環',
+    secondaryMusclesZh: '核心穩定、爆發肌力',
+    equipmentZh: '綜合自重 / 啞鈴 / 壺鈴',
+    category: 'compound_secondary',
+    neuralMultiplier: 1.5,
+    defaultWeightKg: 20,
+    defaultReps: 1,
+    defaultRestSec: 60,
+    unitLabel: '分鐘',
+    iconType: 'bike',
+    safetyCues: [
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+    ],
+  },
+
+  // 自訂運動 (Custom - T4-D3 新增)
+  {
+    id: 'custom_workout',
+    nameZh: '自訂',
+    nameEn: 'Custom Workout',
+    sportType: 'custom',
+    muscleGroup: 'core',
+    muscleLabelZh: '自訂運動項目',
+    primaryMusclesZh: '自訂目標肌群',
+    secondaryMusclesZh: '全身協調與心肺',
+    equipmentZh: '自備運動器材',
+    category: 'isolation',
+    neuralMultiplier: 1.0,
+    defaultWeightKg: 20,
+    defaultReps: 1,
+    defaultRestSec: 60,
+    unitLabel: '分鐘',
+    iconType: 'yoga',
+    safetyCues: [
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
+      '動作說明與安全提示待教練確認',
     ],
   },
 ];

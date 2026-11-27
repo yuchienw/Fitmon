@@ -1,3 +1,10 @@
+import {
+  calculateWorkoutExp,
+  type WorkoutSetInput,
+  type CalculationResult,
+  type SupplementBuffs,
+} from '../../../../packages/engine/src/index.ts';
+
 /**
  * FitMon 多種運動紀錄資料模型純函式與選擇器 (T4-D1)
  */
@@ -44,13 +51,72 @@ export const STRENGTH_EXERCISE_IDS = new Set([
 ]);
 
 /**
- * 舊項目／型錄運動類型對應純函式 (T4-D1 提案規範)：
+ * 型錄動作與歷史 ID 對應運動類型查找表 (T4-D3)
+ */
+export const SPORT_TYPE_BY_EXERCISE_ID: Record<string, WorkoutSessionSportType> = {
+  // 9 strength exercises
+  barbell_squat: 'strength',
+  barbell_bench_press: 'strength',
+  conventional_deadlift: 'strength',
+  overhead_press: 'strength',
+  pull_ups: 'strength',
+  barbell_row: 'strength',
+  leg_press: 'strength',
+  lateral_raise: 'strength',
+  dumbbell_curl: 'strength',
+  lat_pulldown: 'strength',
+
+  // run
+  cardio_incline_run: 'run',
+  treadmill_run: 'run',
+
+  // cycle
+  cardio_hiit_bike: 'cycle',
+  cycle: 'cycle',
+
+  // bodyweight
+  bw_plank_core: 'bodyweight',
+
+  // yoga_stretch
+  yoga_dynamic_flow: 'yoga_stretch',
+  yoga_flow: 'yoga_stretch',
+  yoga_stretch: 'yoga_stretch',
+
+  // walk
+  walk_brisk: 'walk',
+  walk: 'walk',
+
+  // swim
+  swim_freestyle: 'swim',
+  swim: 'swim',
+
+  // ball
+  ball_sports: 'ball',
+  ball: 'ball',
+
+  // circuit_hiit
+  circuit_hiit: 'circuit_hiit',
+
+  // custom
+  custom_workout: 'custom',
+  custom: 'custom',
+};
+
+/**
+ * 舊項目／型錄運動類型對應純函式 (T4-D1 / T4-D3 規範)：
  * - 9 strength exercises → strength
  * - cardio_incline_run (及歷史 treadmill_run) → run
  * - cardio_hiit_bike → cycle
- * - bw_plank_core → bodyweight (本單不拆分瑜珈；由 T4-D3 處理)
+ * - bw_plank_core → bodyweight (維持 bodyweight)
+ * - yoga_dynamic_flow → yoga_stretch
+ * - walk_brisk → walk
+ * - swim_freestyle → swim
+ * - ball_sports → ball
+ * - circuit_hiit → circuit_hiit
+ * - custom_workout → custom
  * - 若 unitLabel 為 'km' 且 id 未知，推論為 run
  * - 若 unitLabel 為 '秒'，推論為 bodyweight
+ * - 若 unitLabel 為 '公尺' 或 'm'，推論為 swim (絕不得誤判為 strength)
  * - 預設 strength
  */
 export function mapLegacyExerciseToSportType(
@@ -60,17 +126,8 @@ export function mapLegacyExerciseToSportType(
   const id = exerciseId ? exerciseId.trim() : '';
   const unit = unitLabel ? unitLabel.trim() : '';
 
-  if (STRENGTH_EXERCISE_IDS.has(id)) {
-    return 'strength';
-  }
-  if (id === 'cardio_incline_run' || id === 'treadmill_run') {
-    return 'run';
-  }
-  if (id === 'cardio_hiit_bike') {
-    return 'cycle';
-  }
-  if (id === 'bw_plank_core') {
-    return 'bodyweight';
+  if (id && SPORT_TYPE_BY_EXERCISE_ID[id]) {
+    return SPORT_TYPE_BY_EXERCISE_ID[id];
   }
 
   if (unit === 'km') {
@@ -79,8 +136,63 @@ export function mapLegacyExerciseToSportType(
   if (unit === '秒') {
     return 'bodyweight';
   }
+  if (unit === '公尺' || unit === 'm') {
+    return 'swim';
+  }
 
   return 'strength';
+}
+
+/**
+ * 裁決專注訓練模式起始時的 activeSessionSportType (T4-D3 修正)：
+ * 1. 自由訓練 (no routine): 回傳 null，不強制指定為 strength。
+ * 2. 由課表起始 (routine): 優先取 routine.sportType，次取課表首個動作的推論類型，並在 session 期間凍結。
+ */
+export function resolveInitialSessionSportType(routine?: {
+  sportType?: WorkoutSessionSportType;
+  exercises?: { exerciseId: string; unitLabel?: string }[];
+} | null): WorkoutSessionSportType | null {
+  if (!routine) return null;
+  if (routine.sportType) return routine.sportType;
+  const firstEx = routine.exercises?.[0];
+  return mapLegacyExerciseToSportType(firstEx?.exerciseId, firstEx?.unitLabel);
+}
+
+/**
+ * 裁決當切換／替換選定動作或首個隊列動作時的 activeSessionSportType (T4-D3 修正)：
+ * 1. 若已經有記錄組數 (sessionSetsCount > 0)，不允許變更 (維持凍結)。
+ * 2. 若為課表訓練 (isRoutineSession: true) 且原本已綁定課表類型，維持凍結，避免循環訓練內含深蹲時誤判為 strength。
+ * 3. 自由訓練且尚未記錄任何組數時 (sessionSetsCount === 0)，依據替換／切換後的動作推論並更新類型。
+ */
+export function resolveSportTypeOnExerciseChange(
+  currentSportType: WorkoutSessionSportType | null,
+  newExerciseId: string,
+  options: {
+    sessionSetsCount: number;
+    isRoutineSession?: boolean;
+    unitLabel?: string | null;
+  }
+): WorkoutSessionSportType | null {
+  if (options.sessionSetsCount > 0) {
+    return currentSportType;
+  }
+  if (options.isRoutineSession && currentSportType !== null) {
+    return currentSportType;
+  }
+  return mapLegacyExerciseToSportType(newExerciseId, options.unitLabel);
+}
+
+/**
+ * 裁決記錄第一組動作時的 activeSessionSportType (T4-D3 修正)：
+ * 1. 若 activeSessionSportType 已有值 (例如來自課表或組前替換)，維持該值並凍結。
+ * 2. 若仍為 null (自由訓練且未更換動作)，以該組動作的推論類型填入並凍結。
+ */
+export function resolveSportTypeOnFirstSetLogged(
+  currentSportType: WorkoutSessionSportType | null,
+  loggedExerciseId: string,
+  unitLabel?: string | null
+): WorkoutSessionSportType {
+  return currentSportType || mapLegacyExerciseToSportType(loggedExerciseId, unitLabel);
 }
 
 /**
@@ -166,6 +278,8 @@ export function isWorkoutSessionTimingComplete(session: {
  * 純函式：計算寫入時的持久化欄位
  * - km: distanceM = inputWeightKg * 1000, weightKg = 0
  * - 秒: durationSec = inputWeightKg, weightKg = 0
+ * - 公尺 / m: distanceM = inputWeightKg, weightKg = 0 (游泳等公尺單位)
+ * - 分鐘: durationSec = inputWeightKg * 60, weightKg = 0 (瑜珈、球類、HIIT等分鐘單位)
  * - 其他 (如 kg): weightKg = inputWeightKg
  */
 export function computePersistedSetFields(
@@ -189,9 +303,145 @@ export function computePersistedSetFields(
       durationSec: Math.round(numericVal),
     };
   }
+  if (unitLabel === '公尺' || unitLabel === 'm') {
+    return {
+      weightKg: 0,
+      distanceM: Math.round(numericVal),
+    };
+  }
+  if (unitLabel === '分鐘') {
+    return {
+      weightKg: 0,
+      durationSec: Math.round(numericVal * 60),
+    };
+  }
   return {
     weightKg: numericVal,
   };
+}
+
+export interface SettlementSetInputSource {
+  exerciseId: string;
+  muscleGroup?: 'legs' | 'chest' | 'back' | 'shoulders' | 'arms' | 'core';
+  category?: any;
+  unitLabel?: string;
+  weightKg?: number;
+  reps: number;
+  distanceM?: number;
+  durationSec?: number;
+}
+
+/**
+ * 純函式：將新格式動作組還原為舊版結算輸入格式 (toLegacySettlementInput - T4-D3)
+ * 讀取 distanceM / durationSec (與 unitLabel)，還原過去存放在 weightKg 的數值：
+ * - km: distanceM / 1000
+ * - 秒: durationSec
+ * - 其他: weightKg
+ */
+export function toLegacySettlementInput(set: SettlementSetInputSource): WorkoutSetInput {
+  let reconstructedWeight = typeof set.weightKg === 'number' ? set.weightKg : 0;
+  if (set.unitLabel === 'km' && typeof set.distanceM === 'number') {
+    reconstructedWeight = set.distanceM / 1000;
+  } else if (set.unitLabel === '秒' && typeof set.durationSec === 'number') {
+    reconstructedWeight = set.durationSec;
+  }
+
+  return {
+    exerciseId: set.exerciseId,
+    muscleGroup: set.muscleGroup || 'core',
+    category: set.category || 'isolation',
+    weightKg: reconstructedWeight,
+    reps: typeof set.reps === 'number' ? set.reps : 0,
+  };
+}
+
+/**
+ * 既有 12 項可參與結算發獎之動作 ID (包含歷史別名)
+ */
+export const LEGACY_EARNING_EXERCISE_IDS = new Set([
+  'barbell_squat',
+  'barbell_bench_press',
+  'conventional_deadlift',
+  'overhead_press',
+  'pull_ups',
+  'barbell_row',
+  'leg_press',
+  'lateral_raise',
+  'dumbbell_curl',
+  'lat_pulldown',
+  'cardio_incline_run',
+  'treadmill_run',
+  'cardio_hiit_bike',
+  'bw_plank_core',
+]);
+
+export function isLegacyEarningExercise(exerciseId?: string | null): boolean {
+  if (!exerciseId) return false;
+  return LEGACY_EARNING_EXERCISE_IDS.has(exerciseId.trim());
+}
+
+/**
+ * 訓練結算計算純函式 (calculateWorkoutSessionSettlement - T4-D3)
+ * - 對於既有 12 項動作：透過 toLegacySettlementInput 轉換後由 calculateWorkoutExp 結算，
+ *   保證結算金幣、經驗值與總生容量與改版前 100% 完全相同。
+ * - 對於新類型 (walk, swim, ball, circuit_hiit, custom 以及新拆分的動態流瑜珈)：
+ *   // TODO: 待 T4-D3 運動容量與負荷公式定案 (Pending product capacity decision)
+ *   目前為 non-earning：結算金幣 0、經驗值 0。
+ *   避免因 calculateWorkoutExp 之 Math.max(1, floor(exp/10)) 誤發底限 1 金幣。
+ */
+export function calculateWorkoutSessionSettlement(
+  sets: SettlementSetInputSource[],
+  buffs: SupplementBuffs = { hasWheyProtein: true }
+): CalculationResult {
+  const earningSets = sets.filter((s) => isLegacyEarningExercise(s.exerciseId));
+
+  if (earningSets.length === 0) {
+    // TODO: T4-D3 運動容量公式待定案，新類型暫不發放結算金幣與經驗值 (non-earning)
+    return {
+      totalRawVolume: 0,
+      totalExperience: 0,
+      totalCoins: 0,
+      isCriticalHit: false,
+      setBreakdowns: [],
+    };
+  }
+
+  const legacyInputs = earningSets.map(toLegacySettlementInput);
+  return calculateWorkoutExp(legacyInputs, buffs);
+}
+
+export type AdventureSportSkillType = 'strength' | 'cardio' | 'bodyweight';
+
+/**
+ * 訓練類型轉換至冒險技能類型純函式 (toAdventureSportSkillType - T4-D3)
+ * - strength → strength
+ * - run, cycle (原 catalog cardio) → cardio (觸發有氧技)
+ * - bodyweight (bw_plank_core) → bodyweight (觸發核心技)
+ * - walk, swim, yoga_stretch, ball, circuit_hiit, custom → 維持當前今日冒險技能不變 (待教練/產品定案)
+ */
+export function toAdventureSportSkillType(
+  sportType: WorkoutSessionSportType | string | null | undefined,
+  currentSkillType: AdventureSportSkillType = 'cardio'
+): AdventureSportSkillType {
+  switch (sportType) {
+    case 'strength':
+      return 'strength';
+    case 'run':
+    case 'cycle':
+    case 'cardio':
+      return 'cardio';
+    case 'bodyweight':
+      return 'bodyweight';
+    case 'walk':
+    case 'swim':
+    case 'yoga_stretch':
+    case 'ball':
+    case 'circuit_hiit':
+    case 'custom':
+    default:
+      // 教練與產品尚未定案：保持原有的冒險技能類型不變
+      return currentSkillType;
+  }
 }
 
 /**
