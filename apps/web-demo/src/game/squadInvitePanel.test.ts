@@ -1155,6 +1155,18 @@ describe('T3-D8 Squad Invite Rules & Invite Panel Logic', () => {
       assert.ok(!text.includes('消磨血量'));
       assert.ok(!text.includes('fitmon.app'));
     });
+
+    it('formats exact Q23 no-code share text without remaining HP or boss damage', () => {
+      const text = formatSquadShareText('小明', '百岳登山隊');
+      assert.equal(
+        text,
+        '小明 邀你加入 FitMon 隊伍「百岳登山隊」，一起打這週的 Boss！點連結：https://yuchienw.github.io/Fitmon/'
+      );
+      assert.ok(!text.includes('剩餘'));
+      assert.ok(!text.includes('HP'));
+      assert.ok(!text.includes('消磨血量'));
+      assert.ok(!text.includes('fitmon.app'));
+    });
   });
 
   describe('7. Bell Notification Integration (Incoming Invites & Switch)', () => {

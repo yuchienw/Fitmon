@@ -1528,7 +1528,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* MODAL C: LINE / IG 8-BIT 緊急討伐召集令 MODAL                      */}
       {/* ================================================================= */}
-      {store.shareRaidModalOpen && (
+      {!store.devMinorTestAccount && store.shareRaidModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="retro-box w-full max-w-sm rounded-2xl p-4 bg-slate-950 border-2 border-amber-400 space-y-3 relative">
             <button
@@ -1571,7 +1571,7 @@ export const PlazaTab: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => {
-                  const shareText = `🚨【FitMon 戰隊緊急討伐令】\n我們固定隊伍正在共同討伐 Stage ${store.squadStage}【${bossTemplate.nameZh}】（剩餘 ${currentHp} HP），有機會掉落隱藏神裝【${bossTemplate.hiddenLoot.nameZh}】！\n#拯救全隊就差你 快去運動打卡：\nhttps://yuchienw.github.io/Fitmon/`;
+                  const shareText = formatSquadShareText(store.nickname, store.squadName);
                   if (navigator.clipboard) {
                     navigator.clipboard.writeText(shareText);
                   }
