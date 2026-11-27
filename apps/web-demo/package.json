@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node --test --experimental-strip-types src/game/persistMigrate.test.ts src/game/workoutRecord.test.ts src/game/notificationCenter.test.ts src/game/friendSocial.test.ts src/game/squadMembership.test.ts src/game/squadInvitePanel.test.ts src/game/privacySafety.test.ts",
+    "test": "node --test --experimental-strip-types src/game/persistMigrate.test.ts src/game/workoutRecord.test.ts src/game/notificationCenter.test.ts src/game/friendSocial.test.ts src/game/squadMembership.test.ts src/game/squadInvitePanel.test.ts src/game/privacySafety.test.ts src/features/adventure/battle/battleHeroScale.test.ts",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",
     "cap:ios": "npx cap open ios",

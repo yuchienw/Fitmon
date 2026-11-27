@@ -3,6 +3,9 @@ import { AdventureBoss, AvatarBodyStage, EquipSlot } from '../../../config/catal
 import { drawBossSprite, drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { TeammatePeekCard } from '../../../components/adventure/TeammatePeekCard';
 import { useGameStore } from '../../../stores/useGameStore';
+import { getBattleHeroScale } from './battleHeroScale.ts';
+
+export { getBattleHeroScale } from './battleHeroScale.ts';
 
 export const LUNGE_MS = 180;
 export const BOSS_HIT_MS = 200;
@@ -217,7 +220,7 @@ export const BattleStageCanvas: React.FC<BattleStageCanvasProps> = ({
           const w = sizeRef.current.w;
           const h = sizeRef.current.h;
           const floorY = h * 0.8;
-          const scale = Math.max(1.85, Math.min(w / 165, h / 210, 2.5));
+          const scale = getBattleHeroScale(w, h);
           const teammateScale = scale * 0.65;
           const total = Math.min(3, drawProps.teammates!.length);
           const heroBaseX = Math.round(w * 0.42);
@@ -342,7 +345,7 @@ export function paintArena(
     }
   }
 
-  const scale = Math.max(1.85, Math.min(w / 165, h / 210, 2.5));
+  const scale = getBattleHeroScale(w, h);
   const heroBaseX = Math.round(w * 0.42);
 
   // 1. Draw Teammates FIRST (scale 0.65, in back-left and direct-rear, sorted by ty ascending)
