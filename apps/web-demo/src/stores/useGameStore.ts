@@ -62,6 +62,12 @@ import {
   selectOnboardingSortieHintSeen,
 } from '../game/persistMigrate';
 import {
+  evaluateStrengthSessionTiming,
+  type StrengthSessionTimingResult,
+  type StrengthSessionTimingConditions,
+  type PauseSegment,
+} from '../game/strengthSessionTiming';
+import {
   pruneNotifications,
   visibleNotifications,
   unreadCount,
@@ -94,6 +100,9 @@ export type {
   PlayerPrivacySettings,
   ReportLogItem,
   WorkoutSessionSportType,
+  StrengthSessionTimingResult,
+  StrengthSessionTimingConditions,
+  PauseSegment,
 };
 export {
   NOTIFICATIONS_CAP,
@@ -110,6 +119,7 @@ export {
   finalizePreviousSetRest,
   isLoggedSetTimingComplete,
   isWorkoutSessionTimingComplete,
+  evaluateStrengthSessionTiming,
   selectIsRestDay,
   selectUnwellHalfUsed,
   selectSelfCheckCompleted,
@@ -2633,8 +2643,6 @@ export const useGameStore = create<GameState>()(
 
         const routineTitle = state.activeTemplateName || '自由訓練課表';
         const topEx = state.sessionSets[0]?.exerciseNameZh || '綜合訓練';
-        const durationMin = Math.max(1, Math.round(state.workoutElapsedSeconds / 60));
-        const totalDurationSec = Math.max(0, state.workoutElapsedSeconds);
 
         const firstEx = EXERCISE_LIBRARY.find((e) => e.id === state.sessionSets[0]?.exerciseId);
         const detectedSport: AdventureSportSkillType = firstEx?.sportType || 'strength';
@@ -2643,30 +2651,19 @@ export const useGameStore = create<GameState>()(
           state.sessionSets[0]?.unitLabel
         );
 
-        // Phase 2 will recompute restSec on server
-        let totalRestSec = 0;
-        let sessionTimingIncomplete = false;
-        for (let i = 0; i < state.sessionSets.length; i++) {
-          const s = state.sessionSets[i];
-          if (
-            s.timingIncomplete ||
-            typeof s.startedAt !== 'number' ||
-            typeof s.completedAt !== 'number'
-          ) {
-            sessionTimingIncomplete = true;
-          }
-          if (typeof s.restTimerElapsedSec === 'number') {
-            totalRestSec += s.restTimerElapsedSec;
-          } else if (i < state.sessionSets.length - 1) {
-            // Trailing rest on last set is optional, but non-last sets must have restTimerElapsedSec
-            sessionTimingIncomplete = true;
-          }
-        }
+        // T4-D2: 計算暫停段落、休息佔比與有效性三條件 (第 2 階段由伺服器重算，不信任客戶端)
+        const timingResult = evaluateStrengthSessionTiming(state.sessionSets, {
+          sportType: sessionSportType,
+          loggingMode: 'live_focus',
+        });
 
-        const restShare =
-          !sessionTimingIncomplete && totalDurationSec > 0
-            ? Math.min(1, Math.max(0, totalRestSec / totalDurationSec))
-            : undefined;
+        // 總時長：計時完整時以第一組 startedAt 到最後一組 completedAt 扣除暫停段為準；未完整時 fallback 至 workoutElapsedSeconds
+        const computedTotalDurationSec =
+          !timingResult.timingIncomplete && typeof timingResult.totalDurationSec === 'number'
+            ? timingResult.totalDurationSec
+            : Math.max(0, state.workoutElapsedSeconds);
+
+        const durationMin = Math.max(1, Math.round(computedTotalDurationSec / 60));
 
         const totalDistanceM = state.sessionSets.reduce((acc, s) => acc + (s.distanceM || 0), 0);
         const totalDurationSecFromSets = state.sessionSets.reduce(
@@ -2674,6 +2671,7 @@ export const useGameStore = create<GameState>()(
           0
         );
 
+        // 第 2 階段由伺服器重算，不信任客戶端
         const sessionRecord: WorkoutSessionRecord = {
           id: `hist_${Date.now()}`,
           dateLabel: '今日 剛剛',
@@ -2691,11 +2689,12 @@ export const useGameStore = create<GameState>()(
           source: 'in_app',
           loggingMode: 'live_focus',
           endedUnwell: false,
-          pauseSegments: [],
-          totalDurationSec,
-          restSec: totalRestSec,
-          restShare,
-          timingIncomplete: sessionTimingIncomplete,
+          // 第 2 階段由伺服器重算，不信任客戶端
+          pauseSegments: timingResult.pauseSegments,
+          totalDurationSec: computedTotalDurationSec,
+          restSec: timingResult.restSec ?? 0,
+          restShare: timingResult.restShare,
+          timingIncomplete: timingResult.timingIncomplete,
           ...(totalDistanceM > 0 ? { distanceM: totalDistanceM } : {}),
           ...(totalDurationSecFromSets > 0 ? { durationSec: totalDurationSecFromSets } : {}),
         };
