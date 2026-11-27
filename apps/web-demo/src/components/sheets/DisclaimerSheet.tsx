@@ -4,8 +4,8 @@ import { useGameStore } from '../../stores/useGameStore';
 export const DisclaimerSheet: React.FC = () => {
   const store = useGameStore();
 
-  // Shown while disclaimerAcceptedAt is null or disclaimerOpen is explicitly true
-  const isVisible = store.disclaimerAcceptedAt === null || store.disclaimerOpen;
+  // Shown only when disclaimerOpen is explicitly true
+  const isVisible = store.disclaimerOpen;
   if (!isVisible) return null;
 
   const handleAcknowledge = () => {

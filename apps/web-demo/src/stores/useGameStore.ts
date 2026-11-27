@@ -571,6 +571,10 @@ export interface GameState {
   setUnwellSheetOpen: (open: boolean) => void;
   disclaimerOpen: boolean;
   setDisclaimerOpen: (open: boolean) => void;
+  pendingDisclaimerAction: (() => void) | null;
+  requestWithDisclaimer: (action: () => void) => void;
+  bossLockedSheetOpen: boolean;
+  setBossLockedSheetOpen: (open: boolean) => void;
   lowStaminaSheet: { stamina: number; required: number } | null;
   setLowStaminaSheet: (data: { stamina: number; required: number } | null) => void;
 
@@ -1279,12 +1283,27 @@ export const useGameStore = create<GameState>()(
       checkinResult: null,
       unwellSheetOpen: false,
       disclaimerOpen: false,
+      pendingDisclaimerAction: null,
+      bossLockedSheetOpen: false,
       lowStaminaSheet: null,
 
       setCheckinSheetOpen: (open) => set({ checkinSheetOpen: open }),
       setCheckinResult: (res) => set({ checkinResult: res }),
       setUnwellSheetOpen: (open) => set({ unwellSheetOpen: open }),
-      setDisclaimerOpen: (open) => set({ disclaimerOpen: open }),
+      setDisclaimerOpen: (open) =>
+        set({
+          disclaimerOpen: open,
+          pendingDisclaimerAction: open ? get().pendingDisclaimerAction : null,
+        }),
+      requestWithDisclaimer: (action) => {
+        const state = get();
+        if (state.disclaimerAcceptedAt !== null) {
+          action();
+        } else {
+          set({ disclaimerOpen: true, pendingDisclaimerAction: action });
+        }
+      },
+      setBossLockedSheetOpen: (open) => set({ bossLockedSheetOpen: open }),
       setLowStaminaSheet: (data) => set({ lowStaminaSheet: data }),
 
       equipped: {
@@ -2098,7 +2117,15 @@ export const useGameStore = create<GameState>()(
       },
 
       acceptDisclaimer: () => {
-        set({ disclaimerAcceptedAt: Date.now(), disclaimerOpen: false });
+        const pending = get().pendingDisclaimerAction;
+        set({
+          disclaimerAcceptedAt: Date.now(),
+          disclaimerOpen: false,
+          pendingDisclaimerAction: null,
+        });
+        if (pending) {
+          pending();
+        }
       },
 
       useConsumableItem: (id) => {
@@ -2196,6 +2223,12 @@ export const useGameStore = create<GameState>()(
       },
 
       startWorkoutFocus: (routine) => {
+        if (get().disclaimerAcceptedAt === null) {
+          get().requestWithDisclaimer(() => {
+            get().startWorkoutFocus(routine);
+          });
+          return;
+        }
         soundFX.playSetComplete();
         const now = Date.now();
         const firstCfg = routine?.exercises[0];
@@ -3139,7 +3172,7 @@ export const useGameStore = create<GameState>()(
           return null;
         }
 
-        // 擋「今天有動」空按領獎：先以當日紀錄跑判定
+        // 舊手動打卡判定：先以當日紀錄跑判定
         const validity = evaluateCheckinValidity({
           sessions: state.workoutHistory,
           dayKey: todayKey,

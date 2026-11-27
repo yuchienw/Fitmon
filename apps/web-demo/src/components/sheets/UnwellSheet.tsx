@@ -8,7 +8,6 @@ export const UnwellSheet: React.FC = () => {
 
   const handleAcknowledge = () => {
     store.setUnwellSheetOpen(false);
-    store.setCheckinSheetOpen(true);
   };
 
   return (
@@ -71,7 +70,7 @@ export const UnwellSheet: React.FC = () => {
           }}
           className="mt-3 rounded-xl border border-dashed p-2.5 text-center text-xs font-bold text-[#786B63]"
         >
-          打卡不受影響。準備好了再回來按「今天有動」。
+          今天不會跳提醒，隊友也不會催你。已經存的紀錄不受影響。
         </div>
 
         {/* Primary button: 我知道了 */}

@@ -8,6 +8,10 @@ import {
   formatAltDistanceHint,
   getSessionDayKey,
 } from '../../game/dayProgress';
+import {
+  formatTodaySessionSummary,
+  getTodayHeroCardState,
+} from '../../game/todayCardState';
 
 export interface TodayHeroCardProps {
   now?: number | Date;
@@ -32,9 +36,6 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
     }
   }, [store.activeTab]);
 
-  // 進度與顯示用的基準時間：優先使用傳入的 now，若無則在渲染時讀取 Date.now()
-  // 避免卡在元件第一次 mount 的 Date.now()，時鐘推進後可精準對應日期
-  // 純函式 accumulateDayProgress 不在內部呼叫 Date.now()，由呼叫端傳入 nowMs
   const nowMs =
     propNow !== undefined
       ? typeof propNow === 'number'
@@ -62,26 +63,41 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
     now: nowMs,
   });
 
-  // 只要當天還沒達到 T4-D5 門檻（!dayProgress.met）且當天有紀錄（daySessions.length > 0），
-  // 就顯示進度提示，不要再用 !checkedIn 擋住。達標（met === true）後區塊仍要消失。
-  const showProgress = !dayProgress.met && daySessions.length > 0;
+  const cardState = getTodayHeroCardState({
+    checkedIn,
+    bossDone,
+    daySessionsCount: daySessions.length,
+    dayProgressMet: dayProgress.met,
+  });
+
+  // T4-D5 既有「再 X 分鐘就算數」進度提示（progress 狀態且尚未達標時顯示，達標後消失）
+  const showProgress = cardState === 'progress';
 
   // Teammates who worked out today
   const activeTeammates = store.squadMembers.filter(
     (m) => m.hasWorkedOutToday && !m.isSuspectedCheater
   );
 
-  const handleCheckinClick = () => {
-    if (store.disclaimerAcceptedAt === null) {
-      store.setDisclaimerOpen(true);
-    } else {
-      store.setCheckinSheetOpen(true);
-    }
+  const handleGoToWorkout = () => {
+    store.requestWithDisclaimer(() => {
+      store.setActiveTab('workout');
+    });
   };
 
   const handleGoToAdventure = () => {
     store.setActiveTab('plaza');
   };
+
+  const handleRestClick = () => {
+    // 休息確認與休息日卡歸 T1-D5，本單只放 D3a 入口但不發明 D5 文案／狀態
+    store.showToast('休息也是訓練的一部分');
+  };
+
+  const handleUnwellClick = () => {
+    store.setUnwellSheetOpen(true);
+  };
+
+  const todaySummary = cardState === 'ready' ? formatTodaySessionSummary(daySessions) : null;
 
   return (
     <div
@@ -92,18 +108,30 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
       }}
       className="rounded-2xl border-[1.5px] p-3.5 space-y-3 text-[#29221E]"
       data-testid="today-hero-card"
+      data-state={cardState}
     >
       {/* 1. Header & State Title */}
       <div>
-        <div className="text-[11.5px] font-extrabold text-[#786B63]">今天</div>
+        <div className="flex items-center text-[11.5px] font-extrabold text-[#786B63]">
+          <span>今天</span>
+          {(cardState === 'ready' || cardState === 'sortied') && (
+            <span
+              style={{
+                backgroundColor: '#E8F5EE',
+                color: '#0F7A55',
+                borderColor: '#B9E3CF',
+              }}
+              className="ml-1.5 text-[10.5px] font-extrabold px-1.5 py-0.2 rounded-full border"
+            >
+              今日已打卡
+            </span>
+          )}
+        </div>
         <div className="text-[17px] font-black leading-snug mt-0.5">
-          {!checkedIn
-            ? showProgress && dayProgress.primary_hint
-              ? dayProgress.primary_hint
-              : '今天還沒動，動一下就能出擊'
-            : !bossDone
-            ? '可以出擊了'
-            : '今天已出擊，明天 00:00 再來'}
+          {cardState === 'idle' && '今天還沒動，動一下就能出擊'}
+          {cardState === 'progress' && (dayProgress.primary_hint || '今天還沒動，動一下就能出擊')}
+          {cardState === 'ready' && '可以出擊了'}
+          {cardState === 'sortied' && '今天已出擊，明天 00:00 再來'}
         </div>
       </div>
 
@@ -167,7 +195,7 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
         </div>
       )}
 
-      {/* 2. Embedded Info Box: Damage Multiplier + WeekStrip + Thin Level Bar */}
+      {/* 2. Embedded Info Box: Today's Summary (ready only) + Damage Multiplier + WeekStrip + Thin Level Bar */}
       <div
         style={{
           backgroundColor: '#FFFDF8',
@@ -175,6 +203,34 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
         }}
         className="rounded-xl border-[1.5px] p-2.5 space-y-2"
       >
+        {/* D3b: Ready state workout summary tags (有資料才顯示) */}
+        {todaySummary && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span
+              style={{
+                backgroundColor: '#F4EFE6',
+                color: '#786B63',
+                borderColor: '#E5DCCB',
+              }}
+              className="text-[10.5px] font-extrabold px-1.5 py-0.5 rounded-md border"
+            >
+              {todaySummary.primaryLabel}
+            </span>
+            {todaySummary.additionalCount > 0 && (
+              <span
+                style={{
+                  backgroundColor: '#F4EFE6',
+                  color: '#786B63',
+                  borderColor: '#E5DCCB',
+                }}
+                className="text-[10.5px] font-extrabold px-1.5 py-0.5 rounded-md border"
+              >
+                +{todaySummary.additionalCount} 筆
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Damage line */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[13.5px] font-black text-[#29221E]">
@@ -225,113 +281,259 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
         </div>
       </div>
 
-      {/* 3. Teammate Row */}
-      <div
-        onClick={handleGoToAdventure}
-        style={{
-          backgroundColor: '#FFFDF8',
-          borderColor: '#E5DCCB',
-        }}
-        className="cursor-pointer rounded-xl border-[1.5px] p-2 flex items-center justify-between gap-2 active:scale-[0.99] transition"
-      >
-        <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-extrabold text-[#786B63]">隊友今天</div>
-          {store.squadMembers.length === 0 ? (
-            <div className="text-[11.5px] text-[#786B63] mt-0.5">
-              隊伍尚無隊友，邀請朋友一起打
-            </div>
-          ) : activeTeammates.length > 0 ? (
-            <div className="flex items-center gap-1.5 mt-1">
-              <div className="flex items-center -space-x-1">
-                {activeTeammates.slice(0, 3).map((m, idx) => {
-                  const colors = ['#FDE68A', '#BBF7D0', '#FED7AA'];
-                  const initial = m.nameZh.trim().charAt(0) || '友';
-                  return (
-                    <div
-                      key={m.id || idx}
-                      style={{
-                        backgroundColor: colors[idx % colors.length],
-                        borderColor: '#E5DCCB',
-                        color: '#5C4333',
-                      }}
-                      className="w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center text-[10px] font-black shadow-xs"
-                    >
-                      {initial}
-                    </div>
-                  );
-                })}
+      {/* 3. Teammate Row (ready / sortied 保留；idle / progress 依 D3a 隱藏) */}
+      {(cardState === 'ready' || cardState === 'sortied') && (
+        <div
+          onClick={handleGoToAdventure}
+          style={{
+            backgroundColor: '#FFFDF8',
+            borderColor: '#E5DCCB',
+          }}
+          className="cursor-pointer rounded-xl border-[1.5px] p-2 flex items-center justify-between gap-2 active:scale-[0.99] transition"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] font-extrabold text-[#786B63]">隊友今天</div>
+            {store.squadMembers.length === 0 ? (
+              <div className="text-[11.5px] text-[#786B63] mt-0.5">
+                隊伍尚無隊友，邀請朋友一起打
               </div>
-              <span className="text-[11.5px] text-[#786B63]">
-                {activeTeammates.length} 位也打卡了
-              </span>
-            </div>
-          ) : (
-            <div className="text-[11.5px] text-[#786B63] mt-0.5">
-              查看隊友
-            </div>
-          )}
+            ) : activeTeammates.length > 0 ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="flex items-center -space-x-1">
+                  {activeTeammates.slice(0, 3).map((m, idx) => {
+                    const colors = ['#FDE68A', '#BBF7D0', '#FED7AA'];
+                    const initial = m.nameZh.trim().charAt(0) || '友';
+                    return (
+                      <div
+                        key={m.id || idx}
+                        style={{
+                          backgroundColor: colors[idx % colors.length],
+                          borderColor: '#E5DCCB',
+                          color: '#5C4333',
+                        }}
+                        className="w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center text-[10px] font-black shadow-xs"
+                      >
+                        {initial}
+                      </div>
+                    );
+                  })}
+                </div>
+                <span className="text-[11.5px] text-[#786B63]">
+                  {activeTeammates.length} 位也打卡了
+                </span>
+              </div>
+            ) : (
+              <div className="text-[11.5px] text-[#786B63] mt-0.5">
+                查看隊友
+              </div>
+            )}
+          </div>
+          <span className="text-[12px] font-black text-[#C2410C] shrink-0">
+            {store.squadMembers.length === 0 ? '邀請' : '查看'}
+          </span>
         </div>
-        <span className="text-[12px] font-black text-[#C2410C] shrink-0">
-          {store.squadMembers.length === 0 ? '邀請' : '查看'}
-        </span>
-      </div>
+      )}
 
-      {/* 4. Subtitle / Helper / Countdown */}
-      <div className="text-center text-[11.5px] text-[#786B63]">
-        {!checkedIn ? (
-          '有動就算數，散步也算、5 分鐘也算'
-        ) : !bossDone ? (
-          '今天已打卡，出擊 1 次，午夜重置'
-        ) : (
-          formatResetCountdown(nextResetAt, nowMs)
-        )}
-      </div>
+      {/* 4. Subtitle / Helper (idle & progress) */}
+      {(cardState === 'idle' || cardState === 'progress') && (
+        <div className="text-center text-[11.5px] text-[#786B63] pt-0.5">
+          任何運動都算，一天加起來滿 10 分鐘就算數
+        </div>
+      )}
 
-      {/* 5. Buttons */}
-      {!checkedIn ? (
-        <div className="flex items-center gap-2">
-          {/* Primary: 打卡 */}
+      {/* 5. Actions / CTAs per state */}
+      {cardState === 'idle' && (
+        <div className="space-y-2.5">
           <button
             type="button"
-            onClick={handleCheckinClick}
+            data-testid="today-cta-workout"
+            onClick={handleGoToWorkout}
             style={{
               background: 'linear-gradient(#FB923C, #EA580C)',
               boxShadow: '0 4px 0 #B8460A',
             }}
-            className="flex-[1.5] py-2.5 rounded-xl text-white font-black text-sm active:translate-y-0.5 transition"
+            className="w-full py-3 rounded-2xl text-white font-black text-base active:translate-y-0.5 transition cursor-pointer"
           >
-            打卡
+            去運動
           </button>
 
-          {/* Secondary outlined: 出擊 (never locked, opens checkin sheet) */}
+          {/* D3a: 次要小按鈕「今天休息」「我不舒服」 */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              data-testid="today-chip-rest"
+              onClick={handleRestClick}
+              style={{
+                backgroundColor: '#FFFDF8',
+                borderColor: '#E5DCCB',
+                color: '#5C4A3E',
+                boxShadow: '0 2px 0 #E5DCCB',
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border-[1.5px] text-[12.5px] font-extrabold active:translate-y-0.5 transition cursor-pointer"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#8A6A4E"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M4 9h12v6a5 5 0 01-5 5H9a5 5 0 01-5-5z" fill="#F5E6CC" />
+                <path d="M16 11h2a2 2 0 010 4h-2M8 3c0 2 2 2 2 4M12 3c0 2 2 2 2 4" />
+              </svg>
+              <span>今天休息</span>
+            </button>
+
+            <button
+              type="button"
+              data-testid="today-chip-unwell"
+              onClick={handleUnwellClick}
+              style={{
+                backgroundColor: '#FFF8F8',
+                borderColor: '#EBD3D8',
+                color: '#8E3B4C',
+                boxShadow: '0 2px 0 #E5DCCB',
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border-[1.5px] text-[12.5px] font-extrabold active:translate-y-0.5 transition cursor-pointer"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="#E8A3B0"
+                stroke="#8E3B4C"
+                strokeWidth="1.6"
+              >
+                <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
+              </svg>
+              <span>我不舒服</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {cardState === 'progress' && (
+        <div className="space-y-2.5">
           <button
             type="button"
-            onClick={handleCheckinClick}
+            data-testid="today-cta-continue"
+            onClick={handleGoToWorkout}
             style={{
-              backgroundColor: '#FFFDF8',
-              borderColor: '#EA580C',
-              color: '#C2410C',
-              boxShadow: '0 3px 0 #E7C4A8',
+              background: 'linear-gradient(#FB923C, #EA580C)',
+              boxShadow: '0 4px 0 #B8460A',
             }}
-            className="flex-1 py-2.5 rounded-xl border-[1.5px] font-black text-sm active:translate-y-0.5 transition"
+            className="w-full py-3 rounded-2xl text-white font-black text-base active:translate-y-0.5 transition cursor-pointer"
           >
-            出擊
+            繼續運動
           </button>
+
+          {/* D4: 次要小按鈕「今天休息」「我不舒服」 */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              data-testid="today-chip-rest"
+              onClick={handleRestClick}
+              style={{
+                backgroundColor: '#FFFDF8',
+                borderColor: '#E5DCCB',
+                color: '#5C4A3E',
+                boxShadow: '0 2px 0 #E5DCCB',
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border-[1.5px] text-[12.5px] font-extrabold active:translate-y-0.5 transition cursor-pointer"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#8A6A4E"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M4 9h12v6a5 5 0 01-5 5H9a5 5 0 01-5-5z" fill="#F5E6CC" />
+                <path d="M16 11h2a2 2 0 010 4h-2M8 3c0 2 2 2 2 4M12 3c0 2 2 2 2 4" />
+              </svg>
+              <span>今天休息</span>
+            </button>
+
+            <button
+              type="button"
+              data-testid="today-chip-unwell"
+              onClick={handleUnwellClick}
+              style={{
+                backgroundColor: '#FFF8F8',
+                borderColor: '#EBD3D8',
+                color: '#8E3B4C',
+                boxShadow: '0 2px 0 #E5DCCB',
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border-[1.5px] text-[12.5px] font-extrabold active:translate-y-0.5 transition cursor-pointer"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="#E8A3B0"
+                stroke="#8E3B4C"
+                strokeWidth="1.6"
+              >
+                <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
+              </svg>
+              <span>我不舒服</span>
+            </button>
+          </div>
         </div>
-      ) : !bossDone ? (
-        <button
-          type="button"
-          onClick={handleGoToAdventure}
-          style={{
-            background: 'linear-gradient(#34D399, #10B981)',
-            boxShadow: '0 4px 0 #0B8A60',
-            color: '#0F2A1E',
-          }}
-          className="w-full py-2.5 rounded-xl font-black text-sm active:translate-y-0.5 transition"
-        >
-          去出擊
-        </button>
-      ) : null}
+      )}
+
+      {cardState === 'ready' && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            data-testid="today-cta-sortie"
+            onClick={handleGoToAdventure}
+            style={{
+              background: 'linear-gradient(#34D399, #10B981)',
+              boxShadow: '0 4px 0 #0B8A60',
+              color: '#0F2A1E',
+            }}
+            className="w-full py-3 rounded-2xl font-black text-base active:translate-y-0.5 transition cursor-pointer"
+          >
+            去出擊
+          </button>
+          <div className="text-center text-[11.5px] text-[#786B63]">
+            還想動？
+            <button
+              type="button"
+              data-testid="today-link-log-again"
+              onClick={handleGoToWorkout}
+              className="font-bold text-[#C2410C] hover:underline cursor-pointer mx-0.5"
+            >
+              再記一筆運動
+            </button>
+            （今天的獎勵已領）
+          </div>
+        </div>
+      )}
+
+      {cardState === 'sortied' && (
+        <div className="space-y-1.5 pt-1">
+          <div className="text-center text-[12px] font-bold text-[#786B63]">
+            {formatResetCountdown(nextResetAt, nowMs)}
+          </div>
+          <div className="text-center text-[11.5px] text-[#786B63]">
+            <button
+              type="button"
+              data-testid="today-link-log-again"
+              onClick={handleGoToWorkout}
+              className="font-bold text-[#C2410C] hover:underline cursor-pointer mr-0.5"
+            >
+              再記一筆運動
+            </button>
+            ・只存紀錄
+          </div>
+        </div>
+      )}
     </div>
   );
 };
