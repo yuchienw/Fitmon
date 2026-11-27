@@ -73,6 +73,21 @@ import {
   type PauseSegment,
 } from '../game/strengthSessionTiming';
 import {
+  evaluateImplausibleSession,
+  formatEvaluationNumber,
+  type FlagReason,
+  type FlagDetail,
+  type EvaluationCopy,
+  type ImplausibleEvaluationResult,
+  type EvaluateSessionInput,
+  type EvaluateSetInput,
+  type EvaluateImplausibleSessionOptions,
+} from '../game/implausibleCapsEvaluator';
+import {
+  DEFAULT_IMPLAUSIBLE_CAPS,
+  type ImplausibleCapsConfig,
+} from '../config/implausibleCaps';
+import {
   pruneNotifications,
   visibleNotifications,
   unreadCount,
@@ -108,6 +123,14 @@ export type {
   StrengthSessionTimingResult,
   StrengthSessionTimingConditions,
   PauseSegment,
+  FlagReason,
+  FlagDetail,
+  EvaluationCopy,
+  ImplausibleEvaluationResult,
+  EvaluateSessionInput,
+  EvaluateSetInput,
+  EvaluateImplausibleSessionOptions,
+  ImplausibleCapsConfig,
 };
 export {
   NOTIFICATIONS_CAP,
@@ -128,6 +151,9 @@ export {
   isLoggedSetTimingComplete,
   isWorkoutSessionTimingComplete,
   evaluateStrengthSessionTiming,
+  evaluateImplausibleSession,
+  formatEvaluationNumber,
+  DEFAULT_IMPLAUSIBLE_CAPS,
   calculateWorkoutSessionSettlement,
   toAdventureSportSkillType,
   selectIsRestDay,
@@ -724,8 +750,10 @@ export interface GameState {
   tickGlobalTimers: () => void;
   setRestTimer: (seconds: number) => void;
   logWorkoutSet: () => void;
-  finishWorkoutSession: () => void;
+  setActiveSessionSportType: (sportType: WorkoutSessionSportType | null) => void;
+  finishWorkoutSession: (options?: { sportTypeOverride?: WorkoutSessionSportType }) => void;
   discardWorkoutSession: () => void;
+  updateWorkoutHistorySession: (id: string, updates: Partial<WorkoutSessionRecord>) => void;
 
   // Social & Adventure Actions (V2.9)
   toggleFriend: (profileId: string) => void;
@@ -2611,7 +2639,11 @@ export const useGameStore = create<GameState>()(
         }
       },
 
-      finishWorkoutSession: () => {
+      setActiveSessionSportType: (sportType) => {
+        set({ activeSessionSportType: sportType });
+      },
+
+      finishWorkoutSession: (options?: { sportTypeOverride?: WorkoutSessionSportType }) => {
         const state = get();
         if (state.sessionSets.length === 0) {
           state.showToast('請至少完成 1 組動作再結算');
@@ -2629,16 +2661,6 @@ export const useGameStore = create<GameState>()(
         if (calcResult.totalCoins > 0) {
           const grant = state.grantCoins(calcResult.totalCoins, 'workout');
           settlementCoins = grant.granted;
-        }
-
-        // Finishing a workout session counts as the day's check-in
-        let checkinRes: CheckinResultData | null = null;
-        if (!state.isCheckedInToday()) {
-          checkinRes = state.checkin({
-            type: '重訓',
-            minutes: Math.max(1, Math.round(state.workoutElapsedSeconds / 60)),
-            intensity: '中等',
-          });
         }
 
         const newPRs = Array.from(
@@ -2706,6 +2728,7 @@ export const useGameStore = create<GameState>()(
 
         // T4-D3: 使用 session-level activeSessionSportType，避免 circuit_hiit 首組動作誤判為 strength
         const sessionSportType: WorkoutSessionSportType =
+          options?.sportTypeOverride ||
           state.activeSessionSportType ||
           mapLegacyExerciseToSportType(
             state.sessionSets[0]?.exerciseId,
@@ -2738,6 +2761,32 @@ export const useGameStore = create<GameState>()(
           (acc, s) => acc + (s.durationSec || 0),
           0
         );
+
+        // T4-D6: 判定不合理上限 (第 2 階段由伺服器重算，不信任客戶端)
+        const implausibleEval = evaluateImplausibleSession(
+          {
+            sportType: sessionSportType,
+            totalDurationSec: computedTotalDurationSec,
+            durationSec: totalDurationSecFromSets > 0 ? totalDurationSecFromSets : computedTotalDurationSec,
+            distanceM: totalDistanceM,
+            sets: state.sessionSets,
+            totalSets: state.sessionSets.length,
+            timestamp: Date.now(),
+          },
+          {
+            otherDaySessions: state.workoutHistory,
+          }
+        );
+
+        // Finishing a workout session counts as the day's check-in ONLY if countsTowardCheckin is true
+        let checkinRes: CheckinResultData | null = null;
+        if (!state.isCheckedInToday() && implausibleEval.countsTowardCheckin) {
+          checkinRes = state.checkin({
+            type: '重訓',
+            minutes: Math.max(1, Math.round(state.workoutElapsedSeconds / 60)),
+            intensity: '中等',
+          });
+        }
 
         // 第 2 階段由伺服器重算，不信任客戶端
         const sessionRecord: WorkoutSessionRecord = {
@@ -2814,6 +2863,13 @@ export const useGameStore = create<GameState>()(
           selectedQueueItemId: null,
         });
         get().showToast('已退出專注模式');
+      },
+
+      updateWorkoutHistorySession: (id: string, updates: Partial<WorkoutSessionRecord>) => {
+        soundFX.playBlip();
+        set((state) => ({
+          workoutHistory: state.workoutHistory.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+        }));
       },
 
       // ================= SOCIAL ACTIONS WITH ANTI-ABUSE CAPS (V2-12, V2-16) =================

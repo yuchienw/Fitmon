@@ -12,6 +12,8 @@ import {
   selectOnboardingCompleted,
   selectOnboardingWorkoutHintSeen,
   selectOnboardingSortieHintSeen,
+  formatExerciseLogSummary,
+  getSetDisplayAmount,
 } from './workoutRecord.ts';
 
 describe('WorkoutRecord Pure Functions & Selectors (T4-D1)', () => {
@@ -300,6 +302,139 @@ describe('WorkoutRecord Pure Functions & Selectors (T4-D1)', () => {
       assert.equal(selectOnboardingSortieHintSeen({ onboardingSortieHintSeenAt: '' }), false);
       assert.equal(selectOnboardingSortieHintSeen({ onboardingSortieHintSeenAt: '   ' }), false);
       assert.equal(selectOnboardingSortieHintSeen({}), false);
+    });
+  });
+
+  describe('formatExerciseLogSummary', () => {
+    test('新跑步／快走：unitLabel: "km", weightKg: 0, distanceM: 10000 -> 摘要含 "10km", 不是 "0km"', () => {
+      const summary = formatExerciseLogSummary({
+        unitLabel: 'km',
+        sets: [{ weightKg: 0, distanceM: 10000 }],
+      });
+      assert.equal(summary, '1組 · 10km');
+      assert.match(summary, /10km/);
+      assert.notEqual(summary, '1組 · 0km');
+      assert.doesNotMatch(summary, /(^|[^\d])0km/);
+    });
+
+    test('新棒式：unitLabel: "秒", weightKg: 0, durationSec: 45 -> 摘要含 "45秒", 不是 "0秒"', () => {
+      const summary = formatExerciseLogSummary({
+        unitLabel: '秒',
+        sets: [{ weightKg: 0, durationSec: 45 }],
+      });
+      assert.equal(summary, '1組 · 45秒');
+      assert.match(summary, /45秒/);
+      assert.doesNotMatch(summary, /0秒/);
+    });
+
+    test('舊列後退：unitLabel: "km", weightKg: 5, 沒有 distanceM -> 仍顯示 "5km"', () => {
+      const summary = formatExerciseLogSummary({
+        unitLabel: 'km',
+        sets: [{ weightKg: 5 }],
+      });
+      assert.equal(summary, '1組 · 5km');
+    });
+
+    test('舊棒式：unitLabel: "秒", weightKg: 60, 沒有 durationSec -> 仍顯示 "60秒"', () => {
+      const summary = formatExerciseLogSummary({
+        unitLabel: '秒',
+        sets: [{ weightKg: 60 }],
+      });
+      assert.equal(summary, '1組 · 60秒');
+    });
+
+    test('重訓：unitLabel 為 kg 之類、weightKg: 100 -> 仍顯示最大重量，例如 "4組 · 100kg"', () => {
+      const summary = formatExerciseLogSummary({
+        unitLabel: 'kg',
+        sets: [
+          { weightKg: 70 },
+          { weightKg: 100 },
+          { weightKg: 90 },
+          { weightKg: 80 },
+        ],
+      });
+      assert.equal(summary, '4組 · 100kg');
+    });
+
+    test('空組時不讓 Math.max 變成 -Infinity，回傳合理後備 (0組 或 0組 · 0{unit})', () => {
+      assert.equal(formatExerciseLogSummary({ unitLabel: 'km', sets: [] }), '0組 · 0km');
+      assert.equal(formatExerciseLogSummary({ unitLabel: 'kg', sets: [] }), '0組 · 0kg');
+      assert.equal(formatExerciseLogSummary({ unitLabel: '', sets: [] }), '0組');
+      assert.equal(formatExerciseLogSummary({ sets: [] }), '0組');
+      assert.equal(formatExerciseLogSummary(null), '0組');
+      assert.equal(formatExerciseLogSummary(undefined), '0組');
+    });
+
+    test('適度去掉多餘小數 (例如 6.5、10)', () => {
+      const res1 = formatExerciseLogSummary({
+        unitLabel: 'km',
+        sets: [{ weightKg: 0, distanceM: 6500 }],
+      });
+      assert.equal(res1, '1組 · 6.5km');
+
+      const res2 = formatExerciseLogSummary({
+        unitLabel: 'km',
+        sets: [{ weightKg: 0, distanceM: 10000 }],
+      });
+      assert.equal(res2, '1組 · 10km');
+    });
+
+    test('支援 分鐘 與 公尺/m 單位及其舊列後退', () => {
+      // 新分鐘
+      const minNew = formatExerciseLogSummary({
+        unitLabel: '分鐘',
+        sets: [{ weightKg: 0, durationSec: 1800 }],
+      });
+      assert.equal(minNew, '1組 · 30分鐘');
+
+      // 舊分鐘
+      const minOld = formatExerciseLogSummary({
+        unitLabel: '分鐘',
+        sets: [{ weightKg: 20 }],
+      });
+      assert.equal(minOld, '1組 · 20分鐘');
+
+      // 新公尺
+      const mNew = formatExerciseLogSummary({
+        unitLabel: '公尺',
+        sets: [{ weightKg: 0, distanceM: 500 }],
+      });
+      assert.equal(mNew, '1組 · 500公尺');
+
+      // 新 m
+      const mLetterNew = formatExerciseLogSummary({
+        unitLabel: 'm',
+        sets: [{ weightKg: 0, distanceM: 400 }],
+      });
+      assert.equal(mLetterNew, '1組 · 400m');
+
+      // 舊公尺
+      const mOld = formatExerciseLogSummary({
+        unitLabel: '公尺',
+        sets: [{ weightKg: 300 }],
+      });
+      assert.equal(mOld, '1組 · 300公尺');
+    });
+
+    test('多組取各組顯示量後取 max', () => {
+      const multiRun = formatExerciseLogSummary({
+        unitLabel: 'km',
+        sets: [
+          { weightKg: 0, distanceM: 3000 },
+          { weightKg: 0, distanceM: 5000 },
+        ],
+      });
+      assert.equal(multiRun, '2組 · 5km');
+
+      const multiPlank = formatExerciseLogSummary({
+        unitLabel: '秒',
+        sets: [
+          { weightKg: 0, durationSec: 30 },
+          { weightKg: 0, durationSec: 60 },
+          { weightKg: 0, durationSec: 45 },
+        ],
+      });
+      assert.equal(multiPlank, '3組 · 60秒');
     });
   });
 });
