@@ -581,10 +581,16 @@ export function getSquadInviteRowState(
 /**
  * PM Q23 Share Copy
  * 站外分享文字格式：
+ * 含邀請碼：
  * {nickname} 邀你加入 FitMon 隊伍「{squadName}」，一起打這週的 Boss！輸入邀請碼 {code}，或點連結：https://yuchienw.github.io/Fitmon/
+ * 無邀請碼（討伐召集等）：
+ * {nickname} 邀你加入 FitMon 隊伍「${squadName}」，一起打這週的 Boss！點連結：https://yuchienw.github.io/Fitmon/
  */
-export function formatSquadShareText(nickname: string, squadName: string, code: string): string {
-  return `${nickname} 邀你加入 FitMon 隊伍「${squadName}」，一起打這週的 Boss！輸入邀請碼 ${code}，或點連結：https://yuchienw.github.io/Fitmon/`;
+export function formatSquadShareText(nickname: string, squadName: string, code?: string): string {
+  if (code && code.trim().length > 0) {
+    return `${nickname} 邀你加入 FitMon 隊伍「${squadName}」，一起打這週的 Boss！輸入邀請碼 ${code}，或點連結：https://yuchienw.github.io/Fitmon/`;
+  }
+  return `${nickname} 邀你加入 FitMon 隊伍「${squadName}」，一起打這週的 Boss！點連結：https://yuchienw.github.io/Fitmon/`;
 }
 
 export interface PreviewSwitchSquadResult {
