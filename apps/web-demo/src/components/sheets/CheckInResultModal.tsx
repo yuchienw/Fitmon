@@ -1,12 +1,16 @@
 import React from 'react';
 import { useGameStore } from '../../stores/useGameStore';
 import { WeekStrip } from '../home/WeekStrip';
+import { WEEKLY_CHEST_DAYS_REQUIRED } from '../../config/economy';
+import { getLocalDayKey, getWeekKey } from '../../game/day';
 
 export const CheckInResultModal: React.FC = () => {
   const store = useGameStore();
   const result = store.checkinResult;
 
   if (!result) return null;
+
+  const currentWeekKey = getWeekKey(getLocalDayKey());
 
   const handleGoToAdventure = () => {
     store.setCheckinResult(null);
@@ -30,6 +34,10 @@ export const CheckInResultModal: React.FC = () => {
     damageMultiplier,
     isRookieFloor,
   } = result;
+
+  const isChestReady =
+    daysThisWeek >= WEEKLY_CHEST_DAYS_REQUIRED &&
+    store.chestClaimedWeekKey !== currentWeekKey;
 
   return (
     <div
@@ -91,7 +99,7 @@ export const CheckInResultModal: React.FC = () => {
             style={{ color: leveledUp ? '#C2410C' : '#29221E' }}
             className="text-2xl font-black tracking-wide"
           >
-            {leveledUp ? `升上 Lv.${levelAfter}！` : '打卡成功'}
+            {leveledUp ? `升上 Lv.${levelAfter}！` : '今天算數了！'}
           </h2>
           <p className="text-xs text-[#786B63] font-bold mt-0.5">有動就算數</p>
         </div>
@@ -103,12 +111,17 @@ export const CheckInResultModal: React.FC = () => {
           </span>
           <div className="text-2xl font-black text-[#C2410C] mt-1 font-mono flex items-center justify-center gap-2">
             <span>+{xpGained} XP</span>
-            {result.coinsGranted !== undefined && result.coinsGranted > 0 && (
+            {result.coinsGranted !== undefined && (
               <span className="text-base font-bold text-amber-600 font-sans">
                 +{result.coinsGranted} 🪙
               </span>
             )}
           </div>
+          {result.capReached && result.coinsGranted === 0 && (
+            <p className="text-[11px] text-[#A8988B] mt-0.5 font-bold">
+              今日遊戲幣已達上限
+            </p>
+          )}
         </div>
 
         {/* Level Progression & Weekstrip Details Card */}
@@ -204,6 +217,15 @@ export const CheckInResultModal: React.FC = () => {
               可以出擊了
             </span>
           </div>
+
+          {/* Weekly Chest eligible line (工單 11:45 定案：只寫「本週寶箱可以開了」，不顯示其他數字細節) */}
+          {isChestReady && (
+            <div className="pt-0.5">
+              <span className="text-[13.5px] font-black text-amber-600">
+                本週寶箱可以開了
+              </span>
+            </div>
+          )}
 
           {/* Damage line */}
           <div className="flex items-center gap-1.5 flex-wrap">
