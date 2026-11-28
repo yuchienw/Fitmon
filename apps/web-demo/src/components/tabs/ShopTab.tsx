@@ -40,6 +40,7 @@ import {
 } from '../../config/catalogConfig';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
+import { useDevToolsEnabled } from '../../config/devTools';
 
 type MainShopCategory = 'avatar' | 'room' | 'consumables' | 'iap';
 type AvatarSubFilter = 'all' | EquipSlot;
@@ -47,6 +48,7 @@ type RoomSubFilter = 'all' | 'furniture' | 'pet' | 'wallpaper' | 'floor';
 
 export const ShopTab: React.FC = () => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
   const [category, setCategory] = useState<MainShopCategory>('avatar');
   const [avatarFilter, setAvatarFilter] = useState<AvatarSubFilter>('all');
   const [roomFilter, setRoomFilter] = useState<RoomSubFilter>('all');
@@ -646,7 +648,7 @@ export const ShopTab: React.FC = () => {
                         <Check className="w-3.5 h-3.5" />
                         <span>已擁有</span>
                       </div>
-                    ) : (
+                    ) : devToolsEnabled ? (
                       <button
                         onClick={() =>
                           setPendingIapSheet({
@@ -661,7 +663,7 @@ export const ShopTab: React.FC = () => {
                         <CreditCard className="w-3.5 h-3.5" />
                         <span>{pack.priceNtd}</span>
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
@@ -718,7 +720,7 @@ export const ShopTab: React.FC = () => {
       {/* =====================================================================
           4. SIMULATED APPLE APP STORE / GOOGLE PLAY IAP PAYMENT SHEET
          ===================================================================== */}
-      {pendingIapSheet && (
+      {devToolsEnabled && pendingIapSheet && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
           <div className="w-full max-w-sm retro-box rounded-3xl p-4 space-y-3.5 border-2 border-amber-400/70 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">

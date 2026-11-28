@@ -23,6 +23,7 @@ import { previewCappedReward } from '../../game/economyRules';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { TodayHeroCard } from '../home/TodayHeroCard';
 import { DAILY_SCIENCE_QUIZZES, AvatarBodyStage } from '../../config/catalogConfig';
+import { useDevToolsEnabled } from '../../config/devTools';
 
 const STAGE_OPTIONS: {
   id: AvatarBodyStage;
@@ -41,6 +42,7 @@ export interface HomeTabProps {
 
 export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
   const [quizOpen, setQuizOpen] = useState(false);
   const [devPreviewOpen, setDevPreviewOpen] = useState(false);
   const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
@@ -60,15 +62,17 @@ export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
         />
 
         {/* Floating Corner Dev/Physique Preview Trigger (Hidden until tapped) */}
-        <button
-          onClick={() => setDevPreviewOpen((v) => !v)}
-          className="game-stage-dark absolute bottom-14 right-2.5 z-20 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-400/50 text-amber-300 text-[10px] font-black flex items-center gap-1 shadow-lg active:scale-95 transition"
-        >
-          <Wrench className="w-3 h-3" aria-hidden="true" />
-          <span>體態預覽</span>
-        </button>
+        {devToolsEnabled && (
+          <button
+            onClick={() => setDevPreviewOpen((v) => !v)}
+            className="game-stage-dark absolute bottom-14 right-2.5 z-20 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-400/50 text-amber-300 text-[10px] font-black flex items-center gap-1 shadow-lg active:scale-95 transition"
+          >
+            <Wrench className="w-3 h-3" aria-hidden="true" />
+            <span>體態預覽</span>
+          </button>
+        )}
 
-        {devPreviewOpen && (
+        {devToolsEnabled && devPreviewOpen && (
           <div className="game-stage-dark absolute bottom-24 right-2.5 left-2.5 z-30 p-2.5 rounded-2xl bg-slate-950/95 backdrop-blur-md border-2 border-amber-400 shadow-2xl space-y-2">
             <div className="flex items-center justify-between text-[11px] font-black text-amber-300">
               <span className="flex items-center gap-1">

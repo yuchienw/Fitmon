@@ -25,6 +25,7 @@ import { TeammateStatusChip } from './TeammateStatusChip';
 import { usePrefersReducedMotion } from '../../features/adventure/battle/usePrefersReducedMotion';
 import { KickConfirmDialog } from './SquadMembershipDialog';
 import { DEMO_PLAYER_ID } from '../../game/squadInviteRules';
+import { useDevToolsEnabled } from '../../config/devTools';
 
 export type InspectContext = 'squad_confirm' | 'island' | 'tower' | 'list';
 
@@ -44,6 +45,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
   onSelectMember,
 }) => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
   const reducedMotion = usePrefersReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -435,7 +437,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
                       <Bell className="h-3.5 w-3.5" />
                       <span>敲他 ({member.nudgedCount})</span>
                     </button>
-                  ) : (
+                  ) : devToolsEnabled ? (
                     <button
                       type="button"
                       onClick={() => store.simulateFriendWorkoutJoin(member.id)}
@@ -444,7 +446,7 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
                       <Zap className="h-3.5 w-3.5" />
                       <span>模擬運動</span>
                     </button>
-                  )}
+                  ) : null}
 
                   {member.isSuspectedCheater && (
                     <button

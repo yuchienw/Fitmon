@@ -28,6 +28,7 @@ import {
   DEMO_PLAYER_ID,
 } from '../../stores/useGameStore';
 import { IS_DEMO } from '../../config/demo';
+import { useDevToolsEnabled } from '../../config/devTools';
 
 import {
   ADVENTURE_BOSS_CATALOG,
@@ -56,6 +57,7 @@ type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
 
 export const PlazaTab: React.FC = () => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
   const streakDays = useGameStore(selectStreakDays);
   const [mainSubTab, setMainSubTab] = useState<AdventureMainSubTab>('raid');
 
@@ -209,19 +211,21 @@ export const PlazaTab: React.FC = () => {
             <span className="font-mono">{store.collectedBossLoots.length}</span>
           </button>
 
-          <button
-            onClick={() => setDevCheatOpen((v) => !v)}
-            className="px-2 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 active:scale-95 transition"
-          >
-            <Wrench className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span>外掛</span>
-          </button>
+          {devToolsEnabled && (
+            <button
+              onClick={() => setDevCheatOpen((v) => !v)}
+              className="px-2 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 active:scale-95 transition"
+            >
+              <Wrench className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>外掛</span>
+            </button>
+          )}
         </div>
       </div>
       )}
 
       {/* FLOATING DEV CHEAT POPOVER (Hidden until 🛠️ 外掛 is tapped) */}
-      {devCheatOpen && (
+      {devToolsEnabled && devCheatOpen && (
         <div className="absolute left-2 right-2 top-2 z-40 space-y-2.5 rounded-2xl border-2 border-cyan-400 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between text-xs font-black text-cyan-300">
             <span>🛠️ MVP 驗收測試外掛（運動判定 / 最後一擊斬殺測試）</span>
@@ -739,7 +743,7 @@ export const PlazaTab: React.FC = () => {
                 <div className="text-[10px] text-slate-400">
                   輸入邀請碼將對該隊伍送出入隊請求，需經該隊隊長同意（若該隊已邀請你，輸入將直接同意入隊）。
                 </div>
-                {IS_DEMO && DEMO_FAKE_SQUADS.length > 0 && (
+                {IS_DEMO && devToolsEnabled && DEMO_FAKE_SQUADS.length > 0 && (
                   <div className="text-[10px] text-amber-300/80 font-mono">
                     測試用代碼（上線前移除）：{DEMO_FAKE_SQUADS.map((s) => `${s.name} ${s.inviteCode}`).join(' · ')}
                   </div>
@@ -786,9 +790,9 @@ export const PlazaTab: React.FC = () => {
                   <span className="text-xs font-black text-white flex items-center gap-1.5">
                     <Bell className="w-4 h-4 text-cyan-400" />
                     組隊邀請與請求
-                    {IS_DEMO && <span className="text-[10px] text-slate-400 font-normal">（測試用，上線前移除）</span>}
+                    {IS_DEMO && devToolsEnabled && <span className="text-[10px] text-slate-400 font-normal">（測試用，上線前移除）</span>}
                   </span>
-                  {IS_DEMO && (
+                  {IS_DEMO && devToolsEnabled && (
                     <div className="flex items-center gap-1.5">
                       <button
                         data-testid="dev-simulate-request"
@@ -996,7 +1000,7 @@ export const PlazaTab: React.FC = () => {
                               >
                                 取消
                               </button>
-                              {IS_DEMO && (
+                              {IS_DEMO && devToolsEnabled && (
                                 <>
                                   <button
                                     data-testid={`dev-sim-accept-${item.id}`}

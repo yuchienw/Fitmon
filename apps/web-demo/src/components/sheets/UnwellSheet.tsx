@@ -63,6 +63,7 @@ export const UnwellSheet: React.FC = () => {
         </div>
 
         {/* Helper note */}
+        {/* // 「今天不會跳提醒，隊友也不會催你」暫時拿掉，T1-D5/D6a 做到後再放回 */}
         <div
           style={{
             backgroundColor: '#FAF6F0',
@@ -70,7 +71,7 @@ export const UnwellSheet: React.FC = () => {
           }}
           className="mt-3 rounded-xl border border-dashed p-2.5 text-center text-xs font-bold text-[#786B63]"
         >
-          今天不會跳提醒，隊友也不會催你。已經存的紀錄不受影響。
+          已經存的紀錄不受影響。
         </div>
 
         {/* Primary button: 我知道了 */}

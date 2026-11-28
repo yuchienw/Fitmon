@@ -4,6 +4,7 @@ import { useGameStore, resolveSquadMemberAvatar } from '../../../stores/useGameS
 import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../../game/pixelSpriteDrawer';
 import { getVenueForStage } from './venueConfig';
 import { AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
+import { useDevToolsEnabled } from '../../../config/devTools';
 
 interface ModeIslandCanvasProps {
   hero: {
@@ -259,6 +260,7 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
   onOpenDevCheat,
 }) => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
 
   const soloVenue = getVenueForStage(store.soloStage);
   const squadVenue = getVenueForStage(store.squadStage);
@@ -314,14 +316,16 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
           >
             <Gift className="h-3.5 w-3.5 text-rose-500" />
           </button>
-          <button
-            type="button"
-            onClick={onOpenDevCheat}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm active:scale-95"
-            title="測試外掛"
-          >
-            <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
+          {devToolsEnabled && (
+            <button
+              type="button"
+              onClick={onOpenDevCheat}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm active:scale-95"
+              title="測試外掛"
+            >
+              <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          )}
         </div>
       </div>
 
