@@ -571,3 +571,5 @@ export function accumulateDayProgress(
     primaryHint: primary_hint,
   };
 }
+
+export * from './todayProgressHint.ts';
