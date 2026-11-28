@@ -148,6 +148,12 @@ export const WardrobeModal: React.FC = () => {
                 </div>
               </div>
 
+              {/* Honest Damage / Cosmetic Hint (Frame c) */}
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-300 leading-relaxed">
+                裝備只是外觀，不會讓傷害變高。<br />
+                本週動越多天，傷害越高，動滿 3 天就到最高。
+              </div>
+
               {/* Owned Items Grid for Selected Slot */}
               <div className="grid grid-cols-2 gap-2.5">
                 {slotAvatarItems.map((item) => {
@@ -165,19 +171,9 @@ export const WardrobeModal: React.FC = () => {
                       <ItemSpriteThumbnail item={item} sizeClass="w-12 h-12" />
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-black text-white truncate">{item.nameZh}</div>
-                        {item.combatStat && (
-                          <div
-                            className={`text-[9px] font-black mt-0.5 ${
-                              item.combatStat.type === 'phy'
-                                ? 'text-orange-300'
-                                : item.combatStat.type === 'mag'
-                                ? 'text-cyan-300'
-                                : 'text-emerald-300'
-                            }`}
-                          >
-                            {item.combatStat.labelZh}
-                          </div>
-                        )}
+                        <div className="text-[10px] text-slate-400 font-bold mt-0.5">
+                          只是外觀，不會讓傷害變高
+                        </div>
                         <div className="text-[10px] font-bold mt-1 flex items-center gap-1">
                           {isEquipped ? (
                             <span className="text-emerald-400 flex items-center gap-0.5">

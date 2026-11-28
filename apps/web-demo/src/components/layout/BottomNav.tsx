@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, Dumbbell, ShoppingBag, Swords, BarChart3 } from 'lucide-react';
 import { MainTab, useGameStore } from '../../stores/useGameStore';
+import { filterVisibleQuests } from '../../game/questFilter';
 import { I18N } from '../../config/economyConfig';
 
 interface BottomNavProps {
@@ -20,7 +21,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
   } = store;
   const t = I18N[locale];
 
-  const claimableQuests = quests.filter((q) => !q.claimed && q.progress >= q.target).length;
+  const claimableQuests = filterVisibleQuests(quests).filter((q) => !q.claimed && q.progress >= q.target).length;
   const canStrikeBoss = store.isCheckedInToday() && !store.isBossDoneToday();
 
   // Core Gameplay Flow: 🏠小屋 ➔ 🏋️運動 ➔ 【⚔️冒險 (Center Hero)】 ➔ 🛍️商城 ➔ 📊紀錄

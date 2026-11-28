@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '../../stores/useGameStore';
 import { WeekStrip } from '../home/WeekStrip';
 import { WEEKLY_CHEST_DAYS_REQUIRED } from '../../config/economy';
 import { getLocalDayKey, getWeekKey } from '../../game/day';
+import { isWeeklyChestClaimable } from '../../game/economyRules';
 
 export const CheckInResultModal: React.FC = () => {
   const store = useGameStore();
+  // hook 要放在 early return 之前
+  const [justClaimedChest, setJustClaimedChest] = useState(false);
   const result = store.checkinResult;
 
   if (!result) return null;
@@ -35,9 +38,8 @@ export const CheckInResultModal: React.FC = () => {
     isRookieFloor,
   } = result;
 
-  const isChestReady =
-    daysThisWeek >= WEEKLY_CHEST_DAYS_REQUIRED &&
-    store.chestClaimedWeekKey !== currentWeekKey;
+  const isChestReady = isWeeklyChestClaimable(store, daysThisWeek);
+  const isChestClaimedThisWeek = store.chestClaimedWeekKey === currentWeekKey;
 
   return (
     <div
@@ -218,12 +220,28 @@ export const CheckInResultModal: React.FC = () => {
             </span>
           </div>
 
-          {/* Weekly Chest eligible line (工單 11:45 定案：只寫「本週寶箱可以開了」，不顯示其他數字細節) */}
-          {isChestReady && (
-            <div className="pt-0.5">
+          {/* Weekly Chest eligible line (工單 11:45 定案：只寫「本週寶箱可以開了」，不顯示其他數字細節；T7-A1 支援一步開寶箱) */}
+          {(isChestReady || justClaimedChest) && (
+            <div className="pt-0.5 flex items-center justify-between gap-2">
               <span className="text-[13.5px] font-black text-amber-600">
                 本週寶箱可以開了
               </span>
+              {justClaimedChest || isChestClaimedThisWeek ? (
+                <span className="text-xs font-black text-emerald-600">
+                  本週已領取
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    store.claimWeeklyChest();
+                    setJustClaimedChest(true);
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-xs font-black shadow-sm active:scale-95 cursor-pointer"
+                >
+                  開寶箱
+                </button>
+              )}
             </div>
           )}
 

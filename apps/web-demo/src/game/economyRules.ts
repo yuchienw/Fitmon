@@ -410,6 +410,14 @@ export function getDamageInfo(
 }
 
 /**
+ * Pure helper for displaying the rookie floor note ("新手週保底 ×1.2").
+ * Shown only when rookie floor is actually in effect (rookie week & days multiplier was < 1.2).
+ */
+export function shouldShowRookieFloorBadge(damageInfo: DamageInfoResult): boolean {
+  return Boolean(damageInfo.isRookieFloor);
+}
+
+/**
  * 1. checkin
  * Fixed +100 XP, level-up loop, lightweight log.
  */
@@ -683,32 +691,21 @@ export function bossAttack(
   const bossIndex = (stageNum - 1) % ADVENTURE_BOSS_CATALOG.length;
   const boss = ADVENTURE_BOSS_CATALOG[bossIndex];
 
-  // Gear attribute calculations
-  const equippedIds = Object.values(state.equipped || {});
-  let phyBonus = 0;
-  let magBonus = 0;
-  equippedIds.forEach((id) => {
-    const item = AVATAR_ITEMS.find((a) => a.id === id);
-    if (item?.combatStat) {
-      if (item.combatStat.type === 'phy') phyBonus += item.combatStat.value;
-      if (item.combatStat.type === 'mag') magBonus += item.combatStat.value;
-    }
-  });
-
-  // Base attack from quests (streakDays removed per security review)
-  const completedQuests = (state.quests || []).filter((q) => q.progress >= q.target).length;
+  // Base attack from quests (streakDays removed per security review; equipment is purely cosmetic)
+  // T7-A1: 排除 q_daily_workout，舊存檔忽略此 id
+  const completedQuests = (state.quests || []).filter(
+    (q: any) => q.id !== 'q_daily_workout' && q.progress >= q.target
+  ).length;
   const baseDmg = 340 + completedQuests * 60;
-
 
   let isWeaknessHit = false;
   let attackTypeLabel = '🥊 物理重擊';
-  let rawDmg = baseDmg + phyBonus * 4 + magBonus * 4;
+  let rawDmg = baseDmg;
   let nextComboBuff = state.activeTeamComboBuff;
   let lootChanceBoost = 1.0;
 
   if (state.todaySportType === 'strength') {
     attackTypeLabel = '🔨 重訓技【破甲重擊】';
-    rawDmg += phyBonus * 3;
     nextComboBuff = 'armor_break';
     if (boss.weakness === 'phy') {
       isWeaknessHit = true;
@@ -716,7 +713,6 @@ export function bossAttack(
     }
   } else if (state.todaySportType === 'cardio') {
     attackTypeLabel = '🔥 有氧技【燃脂魔焰】';
-    rawDmg += magBonus * 3;
     if (boss.weakness === 'mag') {
       isWeaknessHit = true;
       rawDmg = Math.round(rawDmg * boss.weaknessMultiplier);
@@ -987,6 +983,22 @@ export interface ClaimWeeklyChestRuleResult {
     coinsGranted: number;
     reward: typeof WEEKLY_CHEST_REWARD;
   };
+}
+
+/**
+ * 判定本週寶箱是否符合領取資格（動滿 3 天且本週尚未領取）
+ */
+export function isWeeklyChestClaimable(
+  state: { chestClaimedWeekKey: string | null },
+  daysThisWeek: number,
+  now: Date | number = Date.now()
+): boolean {
+  if (typeof daysThisWeek !== 'number' || daysThisWeek < WEEKLY_CHEST_DAYS_REQUIRED) {
+    return false;
+  }
+  const todayKey = getLocalDayKey(now);
+  const currentWeekKey = getWeekKey(todayKey);
+  return state.chestClaimedWeekKey !== currentWeekKey;
 }
 
 /**

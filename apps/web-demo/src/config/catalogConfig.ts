@@ -17,12 +17,6 @@ export type SportType =
   | 'circuit_hiit'
   | 'custom';
 
-export interface CombatStat {
-  type: 'phy' | 'mag' | 'support';
-  value: number;
-  labelZh: string;
-}
-
 export interface CosmeticItem {
   id: string;
   slot: EquipSlot | 'wallpaper' | 'floor' | 'ReadysetDecor';
@@ -35,7 +29,6 @@ export interface CosmeticItem {
   primaryColor: string;
   accentColor: string;
   badgeText?: string;
-  combatStat?: CombatStat;
 }
 
 export interface BossHiddenLoot {
@@ -95,7 +88,7 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
       nameZh: '波浪洋芋片脆皮盾',
       emoji: '🛡️',
       rarityLabel: '隱藏稀有 (25%)',
-      statDescZh: '🥊 物攻 +45 · 免疫沙發怠惰',
+      statDescZh: '稀有收藏 · 只是紀念品，不會加傷害',
     },
   },
   {
@@ -118,7 +111,7 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
       nameZh: '黑糖珍珠暴風法杖',
       emoji: '🪄',
       rarityLabel: '隱藏史詩 (20%)',
-      statDescZh: '🪄 魔攻 +55 · 有氧燃脂加速',
+      statDescZh: '史詩收藏 · 只是紀念品，不會加傷害',
     },
   },
   {
@@ -141,7 +134,7 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
       nameZh: '抗藍光覺醒護目鏡',
       emoji: '🥽',
       rarityLabel: '隱藏史詩 (18%)',
-      statDescZh: '🥊 物攻 +60 · 暴擊率 +15%',
+      statDescZh: '史詩收藏 · 只是紀念品，不會加傷害',
     },
   },
   {
@@ -164,7 +157,7 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
       nameZh: '熔岩莫札瑞拉披肩',
       emoji: '🧣',
       rarityLabel: '隱藏傳奇 (15%)',
-      statDescZh: '🪄 魔攻 +70 · 灼燒連攜 +25%',
+      statDescZh: '傳奇收藏 · 只是紀念品，不會加傷害',
     },
   },
   {
@@ -187,7 +180,7 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
       nameZh: '晨間粉碎巨型鬧鐘錘',
       emoji: '🔨',
       rarityLabel: '隱藏傳奇 (12%)',
-      statDescZh: '🥊 物攻 +85 · 首擊破甲翻倍',
+      statDescZh: '傳奇收藏 · 只是紀念品，不會加傷害',
     },
   },
   {
@@ -211,7 +204,7 @@ export const ADVENTURE_BOSS_CATALOG: AdventureBoss[] = [
       nameZh: '黃金脆皮霸王皇冠',
       emoji: '👑',
       rarityLabel: '神話限定 (10%)',
-      statDescZh: '⚡ 物魔雙攻 +100 · 全隊光環',
+      statDescZh: '神話收藏 · 只是紀念品，不會加傷害',
     },
   },
 ];
@@ -318,7 +311,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#ef4444',
     accentColor: '#271c19',
-    combatStat: { type: 'phy', value: 10, labelZh: '🥊 物攻 +10' },
   },
   {
     id: 'hair_spiky_gold',
@@ -329,7 +321,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'epic',
     primaryColor: '#facc15',
     accentColor: '#eab308',
-    combatStat: { type: 'phy', value: 40, labelZh: '🥊 物攻 +40' },
   },
   {
     id: 'hair_titan_crown',
@@ -341,7 +332,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#f59e0b',
     accentColor: '#ef4444',
     badgeText: '聯名',
-    combatStat: { type: 'phy', value: 65, labelZh: '🥊 物攻 +65' },
   },
   {
     id: 'hair_maple_cap',
@@ -352,7 +342,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#0284c7',
     accentColor: '#38bdf8',
-    combatStat: { type: 'mag', value: 25, labelZh: '🪄 魔攻 +25' },
   },
 
   // ================= 2. 臉部 / 表情飾品 (face) =================
@@ -365,7 +354,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#ffdfc4',
     accentColor: '#38bdf8',
-    combatStat: { type: 'support', value: 10, labelZh: '🛡️ 輔助 +10' },
   },
   {
     id: 'face_pixel_shades',
@@ -376,7 +364,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#0f172a',
     accentColor: '#38bdf8',
-    combatStat: { type: 'mag', value: 30, labelZh: '🪄 魔攻 +30' },
   },
   {
     id: 'face_fierce_grit',
@@ -387,7 +374,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#f43f5e',
     accentColor: '#ffffff',
-    combatStat: { type: 'phy', value: 25, labelZh: '🥊 物攻 +25' },
   },
 
   // ================= 3. 上衣 (top) =================
@@ -401,7 +387,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#ffdfc4',
     accentColor: '#f59e0b',
     badgeText: '秀肌肉',
-    combatStat: { type: 'phy', value: 20, labelZh: '🥊 物攻 +20' },
   },
   {
     id: 'top_black_tank',
@@ -412,7 +397,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#1e293b',
     accentColor: '#10b981',
-    combatStat: { type: 'phy', value: 15, labelZh: '🥊 物攻 +15' },
   },
   {
     id: 'top_crimson_sbd',
@@ -424,7 +408,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#991b1b',
     accentColor: '#f87171',
     badgeText: '熱門',
-    combatStat: { type: 'phy', value: 35, labelZh: '🥊 物攻 +35' },
   },
   {
     id: 'top_pump_cover',
@@ -435,7 +418,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#065f46',
     accentColor: '#34d399',
-    combatStat: { type: 'mag', value: 30, labelZh: '🪄 魔攻 +30' },
   },
   {
     id: 'top_spartan_cape',
@@ -447,7 +429,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#dc2626',
     accentColor: '#fbbf24',
     badgeText: '傳奇',
-    combatStat: { type: 'phy', value: 60, labelZh: '🥊 物攻 +60' },
   },
 
   // ================= 4. 下身 (bottom) =================
@@ -460,7 +441,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'common',
     primaryColor: '#1e3a8a',
     accentColor: '#60a5fa',
-    combatStat: { type: 'phy', value: 10, labelZh: '🥊 物攻 +10' },
   },
   {
     id: 'bottom_camo_joggers',
@@ -471,7 +451,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#3f6212',
     accentColor: '#a3e635',
-    combatStat: { type: 'mag', value: 25, labelZh: '🪄 魔攻 +25' },
   },
   {
     id: 'bottom_gold_tights',
@@ -482,20 +461,18 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'epic',
     primaryColor: '#312e81',
     accentColor: '#facc15',
-    combatStat: { type: 'support', value: 20, labelZh: '🛡️ 輔助 +20' },
   },
 
   // ================= 5. 手持裝備 (accessory) =================
   {
     id: 'acc_iron_dumbbell',
     slot: 'accessory',
-    nameZh: '鑄鐵 20kg 啞鈴',
+    nameZh: '鑄鐵啞鈴',
     nameEn: '20kg Iron Dumbbell',
     priceCoins: 0,
     rarity: 'common',
     primaryColor: '#64748b',
     accentColor: '#cbd5e1',
-    combatStat: { type: 'phy', value: 25, labelZh: '🥊 物攻 +25' },
   },
   {
     id: 'acc_protein_shaker',
@@ -506,7 +483,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     rarity: 'rare',
     primaryColor: '#10b981',
     accentColor: '#ecfdf5',
-    combatStat: { type: 'support', value: 25, labelZh: '🛡️ 輔助 +25' },
   },
   {
     id: 'acc_gold_barbell',
@@ -518,7 +494,6 @@ export const AVATAR_ITEMS: CosmeticItem[] = [
     primaryColor: '#f59e0b',
     accentColor: '#fef08a',
     badgeText: '尊榮',
-    combatStat: { type: 'phy', value: 80, labelZh: '🥊 物攻 +80' },
   },
 ];
 

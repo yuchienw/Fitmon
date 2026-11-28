@@ -13,6 +13,7 @@ import {
 import { useGameStore } from '../stores/useGameStore';
 import { AvatarBodyStage, EquipSlot, RoomSlot } from '../config/catalogConfig';
 import { drawPixelGymScene, VisitorAvatarConfig } from './pixelSpriteDrawer';
+import { useDevToolsEnabled } from '../config/devTools';
 
 const SPEECH_LINES = [
   '再一組深蹲就喝乳清！',
@@ -50,6 +51,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
 
   const activeCustom = customOverride || customAvatar;
   const bodyStage = activeCustom ? activeCustom.bodyStage : store.bodyStage;
@@ -259,7 +261,7 @@ export const PixelRoomCanvas: React.FC<PixelRoomCanvasProps> = ({
       {!compact && (
         <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
           <div>
-            {store.devRoomPoseOverride !== 'AUTO' && (
+            {devToolsEnabled && store.devRoomPoseOverride !== 'AUTO' && (
               <button
                 onClick={() => store.setSettingsOpen(true)}
                 className="pointer-events-auto bg-amber-500/20 hover:bg-amber-500/30 backdrop-blur-md px-2.5 py-1 rounded-full border border-amber-400/50 text-[10px] font-black text-amber-300 flex items-center gap-1 shadow"

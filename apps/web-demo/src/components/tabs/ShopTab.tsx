@@ -40,6 +40,8 @@ import {
 } from '../../config/catalogConfig';
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
+import { useDevToolsEnabled } from '../../config/devTools';
+import { HIDE_UNFINISHED } from '../../config/demo';
 
 type MainShopCategory = 'avatar' | 'room' | 'consumables' | 'iap';
 type AvatarSubFilter = 'all' | EquipSlot;
@@ -47,6 +49,7 @@ type RoomSubFilter = 'all' | 'furniture' | 'pet' | 'wallpaper' | 'floor';
 
 export const ShopTab: React.FC = () => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
   const [category, setCategory] = useState<MainShopCategory>('avatar');
   const [avatarFilter, setAvatarFilter] = useState<AvatarSubFilter>('all');
   const [roomFilter, setRoomFilter] = useState<RoomSubFilter>('all');
@@ -133,7 +136,7 @@ export const ShopTab: React.FC = () => {
           <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
             <div className="px-2.5 py-1 rounded-full bg-slate-950/85 border border-cyan-500/40 text-[10px] font-black text-cyan-300 flex items-center gap-1 shadow">
               <Eye className="w-3 h-3" />
-              <span>{hasTryOnChanges ? '試穿預覽中' : '點商品即時試穿'}</span>
+              <span>{hasTryOnChanges ? '試穿中・只是外觀，不會讓傷害變高' : '點商品即時試穿'}</span>
             </div>
 
             <button
@@ -327,6 +330,13 @@ export const ShopTab: React.FC = () => {
             : 'calc(100px + max(env(safe-area-inset-bottom, 0px), var(--safe-bottom, 0px)))',
         }}
       >
+        {category === 'avatar' && (
+          <div className="mb-3 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-300 leading-relaxed">
+            點商品可試穿。裝備只是外觀，不會讓傷害變高。<br />
+            本週動越多天，傷害越高，動滿 3 天就到最高。
+          </div>
+        )}
+
         {category === 'avatar' || category === 'room' ? (
           <div className="grid grid-cols-2 gap-2.5">
             {(category === 'avatar' ? filteredAvatarItems : filteredRoomItems).map((item) => {
@@ -393,17 +403,9 @@ export const ShopTab: React.FC = () => {
                     </div>
 
                     <div className="text-xs font-black text-white break-words leading-snug">{item.nameZh}</div>
-                    {item.combatStat && (
-                      <div
-                        className={`mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-black border ${
-                          item.combatStat.type === 'phy'
-                            ? 'bg-orange-500/20 border-orange-400/50 text-orange-300'
-                            : item.combatStat.type === 'mag'
-                            ? 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300'
-                            : 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
-                        }`}
-                      >
-                        {item.combatStat.labelZh}
+                    {!item.isRoomDecor && (
+                      <div className="text-[10px] text-slate-400 font-bold mt-1">
+                        只是外觀，不會讓傷害變高
                       </div>
                     )}
                   </div>
@@ -556,7 +558,12 @@ export const ShopTab: React.FC = () => {
 
             {/* Consumables Items */}
             <div className="space-y-2.5">
-              {CONSUMABLE_ITEMS.map((c: ConsumableItem) => {
+              {CONSUMABLE_ITEMS.filter((c: ConsumableItem) => {
+                if (c.id === 'gacha_ticket' && HIDE_UNFINISHED && !devToolsEnabled) {
+                  return false;
+                }
+                return true;
+              }).map((c: ConsumableItem) => {
                 const count = store.consumables[c.id] || 0;
                 return (
                   <div
@@ -646,7 +653,7 @@ export const ShopTab: React.FC = () => {
                         <Check className="w-3.5 h-3.5" />
                         <span>已擁有</span>
                       </div>
-                    ) : (
+                    ) : devToolsEnabled ? (
                       <button
                         onClick={() =>
                           setPendingIapSheet({
@@ -661,7 +668,7 @@ export const ShopTab: React.FC = () => {
                         <CreditCard className="w-3.5 h-3.5" />
                         <span>{pack.priceNtd}</span>
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
@@ -718,7 +725,7 @@ export const ShopTab: React.FC = () => {
       {/* =====================================================================
           4. SIMULATED APPLE APP STORE / GOOGLE PLAY IAP PAYMENT SHEET
          ===================================================================== */}
-      {pendingIapSheet && (
+      {devToolsEnabled && pendingIapSheet && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
           <div className="w-full max-w-sm retro-box rounded-3xl p-4 space-y-3.5 border-2 border-amber-400/70 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">

@@ -27,7 +27,8 @@ import {
   SQUAD_CAP,
   DEMO_PLAYER_ID,
 } from '../../stores/useGameStore';
-import { IS_DEMO } from '../../config/demo';
+import { IS_DEMO, HIDE_UNFINISHED } from '../../config/demo';
+import { useDevToolsEnabled } from '../../config/devTools';
 
 import {
   ADVENTURE_BOSS_CATALOG,
@@ -40,6 +41,8 @@ import {
 import { formatSquadShareText } from '../../game/squadInviteRules';
 import { AvatarPortraitCanvas } from '../../game/AvatarPortraitCanvas';
 import { bossSpriteUrl } from '../../game/pixelSpriteDrawer';
+import { getDamageInfo, shouldShowRookieFloorBadge } from '../../game/economyRules';
+import { DAMAGE_MULTIPLIER_BY_DAYS } from '../../config/economy';
 import { AdventureRaidPane } from '../../features/adventure/battle/AdventureRaidPane';
 import { AdventureModeSelect } from '../../features/adventure/flow/AdventureModeSelect';
 import { SquadConfirmScreen } from '../../features/adventure/flow/SquadConfirmScreen';
@@ -56,8 +59,11 @@ type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
 
 export const PlazaTab: React.FC = () => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
+  const showLadder = !HIDE_UNFINISHED || devToolsEnabled;
   const streakDays = useGameStore(selectStreakDays);
   const [mainSubTab, setMainSubTab] = useState<AdventureMainSubTab>('raid');
+  const effectiveSubTab = !showLadder && mainSubTab === 'ladder' ? 'raid' : mainSubTab;
 
   const [adventureMode, setAdventureMode] = useState<'solo' | 'squad'>('solo');
   const [adventureStep, setAdventureStep] = useState<
@@ -90,38 +96,16 @@ export const PlazaTab: React.FC = () => {
     { slot: 'bottom', labelZh: '下身' },
     { slot: 'accessory', labelZh: '手持' },
   ];
-  let phyBonus = 0;
-  let magBonus = 0;
-  let supportBonus = 0;
   const equippedGearDetails = slotLabels.map(({ slot, labelZh }) => {
     const id = store.equipped[slot];
     const item = AVATAR_ITEMS.find((a) => a.id === id);
-    if (item?.combatStat) {
-      if (item.combatStat.type === 'phy') phyBonus += item.combatStat.value;
-      if (item.combatStat.type === 'mag') magBonus += item.combatStat.value;
-      if (item.combatStat.type === 'support') supportBonus += item.combatStat.value;
-    }
     return {
       slot,
       slotLabelZh: labelZh,
-      nameZh: item?.nameZh || '基礎裝備',
-      statLabelZh: item?.combatStat?.labelZh || '基礎 +0',
-      statType: item?.combatStat?.type || 'phy',
+      nameZh: item?.nameZh || '基礎外觀',
     };
   });
-  const myPhyAtk = 20 + phyBonus;
-  const myMagAtk = 10 + magBonus;
-  const mySupportAtk = 10 + supportBonus;
-
-  const completedQuestsCount = store.quests.filter((q) => q.progress >= q.target).length;
-  const baseWorkoutAtk = 340 + completedQuestsCount * 60;
-  const phyNormalDmg = baseWorkoutAtk + phyBonus * 7 + magBonus * 4;
-
-  const magNormalDmg = baseWorkoutAtk + phyBonus * 4 + magBonus * 7;
-  const coreNormalDmg = Math.round((baseWorkoutAtk + phyBonus * 4 + magBonus * 4) * 1.4);
-  const minAttackDamage = Math.min(phyNormalDmg, magNormalDmg, coreNormalDmg);
-  const maxSoloCritDamage = Math.round(Math.max(phyNormalDmg, magNormalDmg) * 2.0);
-  const maxSquadComboDamage = Math.round(maxSoloCritDamage * 1.6);
+  const damageInfo = getDamageInfo(store);
 
   // Boss info calculation based on selected adventureMode ('solo' vs 'squad' — different monster strength!)
   const isSoloMode = adventureMode === 'solo';
@@ -157,8 +141,8 @@ export const PlazaTab: React.FC = () => {
   };
 
   return (
-    <div className={mainSubTab === 'raid' ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden' : 'relative space-y-2.5 p-3 pb-10'}>
-      {mainSubTab !== 'raid' && (
+    <div className={effectiveSubTab === 'raid' ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden' : 'relative space-y-2.5 p-3 pb-10'}>
+      {effectiveSubTab !== 'raid' && (
       <div className="flex items-center justify-between gap-1.5 flex-wrap">
         <div
           role="tablist"
@@ -167,18 +151,18 @@ export const PlazaTab: React.FC = () => {
         >
           {(
             [
-              { id: 'raid', label: '冒險', icon: Swords },
-              { id: 'combat_stats', label: '個人素質', icon: Sparkles },
+              { id: 'raid' as const, label: '冒險', icon: Swords },
+              { id: 'combat_stats' as const, label: '個人素質', icon: Sparkles },
               {
-                id: 'squad_invite',
+                id: 'squad_invite' as const,
                 label: `我的隊伍(${1 + store.squadMembers.length}/4)`,
                 icon: Users,
               },
-              { id: 'ladder', label: '天梯', icon: Trophy },
-            ] as const
+              ...(showLadder ? [{ id: 'ladder' as const, label: '天梯', icon: Trophy }] : []),
+            ]
           ).map((tab) => {
             const TabIcon = tab.icon;
-            const active = mainSubTab === tab.id;
+            const active = effectiveSubTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -209,19 +193,21 @@ export const PlazaTab: React.FC = () => {
             <span className="font-mono">{store.collectedBossLoots.length}</span>
           </button>
 
-          <button
-            onClick={() => setDevCheatOpen((v) => !v)}
-            className="px-2 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 active:scale-95 transition"
-          >
-            <Wrench className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span>外掛</span>
-          </button>
+          {devToolsEnabled && (
+            <button
+              onClick={() => setDevCheatOpen((v) => !v)}
+              className="px-2 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-300 text-[11px] font-black flex items-center gap-1 active:scale-95 transition"
+            >
+              <Wrench className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>外掛</span>
+            </button>
+          )}
         </div>
       </div>
       )}
 
       {/* FLOATING DEV CHEAT POPOVER (Hidden until 🛠️ 外掛 is tapped) */}
-      {devCheatOpen && (
+      {devToolsEnabled && devCheatOpen && (
         <div className="absolute left-2 right-2 top-2 z-40 space-y-2.5 rounded-2xl border-2 border-cyan-400 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between text-xs font-black text-cyan-300">
             <span>🛠️ MVP 驗收測試外掛（運動判定 / 最後一擊斬殺測試）</span>
@@ -300,7 +286,7 @@ export const PlazaTab: React.FC = () => {
         </div>
       )}
 
-      {mainSubTab === 'raid' && (
+      {effectiveSubTab === 'raid' && (
         <>
           {adventureStep === 'mode_select' && (
             <AdventureModeSelect
@@ -373,7 +359,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TAB 1.2: ⚡ 個人戰鬥素質 (獨立分頁：屬性傷害、裝備配裝、討伐生涯戰績) */}
       {/* ================================================================= */}
-      {mainSubTab === 'combat_stats' && (
+      {effectiveSubTab === 'combat_stats' && (
         <div className="space-y-3">
           {/* Header Card with Character Portrait */}
           <div className="retro-box rounded-2xl p-4 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 border-2 border-cyan-500/40 space-y-3">
@@ -420,136 +406,104 @@ export const PlazaTab: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-300 leading-relaxed bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
-              💡 戰鬥傷害取決於：<strong className="text-emerald-300">真實運動課表完成度</strong>、
-              <strong className="text-amber-300">連勝天數</strong>、
-              <strong className="text-cyan-300">穿戴配裝屬性</strong>與當日所選運動技能（重訓破甲／有氧魔焰／徒手聚氣）。
+            <p className="text-xs font-bold text-emerald-300 leading-relaxed bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+              本週動越多天，傷害越高，動滿 3 天就到最高。
             </p>
           </div>
 
-          {/* Section 1: Combat Attribute Breakdown & Damage Ranges */}
-          <div className="retro-box rounded-2xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black text-white flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-amber-400" />
-                <span>各屬性傷害與最大攻擊數值範圍</span>
-              </h3>
-              <span className="text-[10px] font-mono text-cyan-300 font-bold">
-                基礎運動力 {baseWorkoutAtk}
-              </span>
+          {/* Section 1: Weekly Damage & Multiplier Tiers (Frames d, rookie) */}
+          <div className="retro-box rounded-2xl p-4 space-y-3 bg-slate-900 border border-slate-800">
+            <div>
+              <div className="text-xs font-bold text-slate-400">本週傷害</div>
+              <div className="text-lg font-black text-white mt-0.5">
+                本週動了 {damageInfo.daysThisWeek} 天，傷害 ×{damageInfo.damageMultiplier.toFixed(1)}
+              </div>
+              {shouldShowRookieFloorBadge(damageInfo) && (
+                <div
+                  style={{
+                    color: '#92400E',
+                    fontWeight: 800,
+                    fontSize: '12.5px',
+                  }}
+                  className="mt-1"
+                >
+                  新手週保底 ×1.2
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-white flex items-center gap-1">
-                    <span>🥊 物理攻擊屬性</span>
-                  </span>
-                  <span className="text-xs font-mono font-black text-rose-400 px-2 py-0.5 rounded bg-rose-950/40 border border-rose-500/30">
-                    ATK {myPhyAtk}
-                  </span>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-300 leading-relaxed">
+              本週動越多天，傷害越高，動滿 3 天就到最高。
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div
+                className={`p-2.5 rounded-xl border text-center transition ${
+                  damageInfo.daysThisWeek === 1
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-200'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-300'
+                }`}
+              >
+                <div className="text-sm font-mono font-black text-amber-400">
+                  ×{DAMAGE_MULTIPLIER_BY_DAYS[1].toFixed(1)}
                 </div>
-                <div className="text-xs font-mono text-slate-300">
-                  重訓【破甲重擊】基傷：<strong className="text-amber-300 font-black">{phyNormalDmg} HP</strong>
-                </div>
-                <div className="text-[10px] text-slate-400">
-                  對「弱物理」Boss 自動觸發暴擊放大至 <span className="text-rose-300 font-bold">{(phyNormalDmg * 2.0).toFixed(0)} HP</span>
-                </div>
+                <div className="text-[10px] font-bold text-slate-400 mt-0.5">第 1 天</div>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-white flex items-center gap-1">
-                    <span>🪄 魔法攻擊屬性</span>
-                  </span>
-                  <span className="text-xs font-mono font-black text-cyan-300 px-2 py-0.5 rounded bg-cyan-950/40 border border-cyan-500/30">
-                    MATK {myMagAtk}
-                  </span>
+              <div
+                className={`p-2.5 rounded-xl border text-center transition ${
+                  damageInfo.daysThisWeek === 2
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-200'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-300'
+                }`}
+              >
+                <div className="text-sm font-mono font-black text-amber-400">
+                  ×{DAMAGE_MULTIPLIER_BY_DAYS[2].toFixed(1)}
                 </div>
-                <div className="text-xs font-mono text-slate-300">
-                  有氧【燃脂魔焰】基傷：<strong className="text-cyan-300 font-black">{magNormalDmg} HP</strong>
-                </div>
-                <div className="text-[10px] text-slate-400">
-                  隊友破甲後施放享 2.0x 連攜引爆至 <span className="text-cyan-200 font-bold">{(magNormalDmg * 2.0).toFixed(0)} HP</span>
-                </div>
+                <div className="text-[10px] font-bold text-slate-400 mt-0.5">第 2 天</div>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-white flex items-center gap-1">
-                    <span>🌪️ 核心暴擊與輔助</span>
-                  </span>
-                  <span className="text-xs font-mono font-black text-emerald-300 px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30">
-                    SUP {mySupportAtk}
-                  </span>
+              <div
+                className={`p-2.5 rounded-xl border text-center transition ${
+                  damageInfo.daysThisWeek >= 3
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-200'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-300'
+                }`}
+              >
+                <div className="text-sm font-mono font-black text-amber-400">
+                  ×{DAMAGE_MULTIPLIER_BY_DAYS[3].toFixed(1)}
                 </div>
-                <div className="text-xs font-mono text-slate-300">
-                  徒手【聚氣暴擊】基傷：<strong className="text-emerald-300 font-black">{coreNormalDmg} HP</strong>
-                </div>
-                <div className="text-[10px] text-slate-400">
-                  全屬性弱點全覆蓋，且享隱藏神裝掉率 <span className="text-emerald-200 font-bold">× 2.0 倍</span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-950/60 via-slate-900 to-slate-900 border border-amber-500/50 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-amber-300 flex items-center gap-1">
-                    <span>🎯 揮拳總傷害數值範圍</span>
-                  </span>
-                  <span className="text-[10px] font-bold text-amber-200 px-1.5 py-0.5 rounded bg-amber-500/20">
-                    弱點與連攜極限
-                  </span>
-                </div>
-                <div className="text-sm font-mono font-black text-white">
-                  {minAttackDamage.toLocaleString()} ～{' '}
-                  <span className="text-amber-300 text-base">
-                    {maxSquadComboDamage.toLocaleString()} HP
-                  </span>
-                </div>
-                <div className="text-[10px] text-slate-400">
-                  單人弱點極限 {maxSoloCritDamage.toLocaleString()} HP · 戰隊狂暴連攜最高可達 {maxSquadComboDamage.toLocaleString()} HP
-                </div>
+                <div className="text-[10px] font-bold text-slate-400 mt-0.5">第 3 天・最高</div>
               </div>
             </div>
+
+            <div className="text-[11px] text-slate-400">再依今天的運動技能計算。</div>
           </div>
 
-          {/* Section 2: Current Gear Loadout & Buffs */}
-          <div className="retro-box rounded-2xl p-4 space-y-3">
+          {/* Section 2: Currently Equipped (Cosmetic Only, Frame d) */}
+          <div className="retro-box rounded-2xl p-4 space-y-3 bg-slate-900 border border-slate-800">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-white flex items-center gap-1.5">
                 <Shirt className="w-4 h-4 text-cyan-400" />
-                <span>目前穿戴配裝清單（5 槽位屬性）</span>
+                <span>目前穿戴</span>
               </span>
-              <span className="text-[10px] font-mono text-amber-300 font-bold">
-                🎁 收集秘寶：{store.collectedBossLoots.length}/{ADVENTURE_BOSS_CATALOG.length} 件
+              <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] font-bold text-slate-400">
+                只是外觀
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {equippedGearDetails.map((g) => (
                 <div
                   key={g.slot}
                   onClick={() => store.setWardrobeModalOpen(true)}
-                  className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 cursor-pointer transition flex items-center justify-between gap-2"
+                  className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 cursor-pointer transition text-center"
                 >
-                  <div className="min-w-0">
-                    <span className="text-[10px] font-bold text-slate-400 block">
-                      {g.slotLabelZh}
-                    </span>
-                    <span className="text-xs font-black text-white truncate block">
-                      {g.nameZh}
-                    </span>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded-lg text-xs font-mono font-black shrink-0 ${
-                      g.statType === 'phy'
-                        ? 'bg-rose-950/60 text-rose-300 border border-rose-500/30'
-                        : g.statType === 'mag'
-                        ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/30'
-                        : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30'
-                    }`}
-                  >
-                    {g.statLabelZh}
+                  <span className="text-[10px] font-bold text-slate-400 block">
+                    {g.slotLabelZh}
+                  </span>
+                  <span className="text-xs font-black text-white truncate block mt-0.5">
+                    {g.nameZh}
                   </span>
                 </div>
               ))}
@@ -563,12 +517,15 @@ export const PlazaTab: React.FC = () => {
                 <Trophy className="w-4 h-4 text-amber-400" />
                 <span>生涯討伐數據與榮譽紀錄</span>
               </span>
-              <button
-                onClick={() => setMainSubTab('ladder')}
-                className="text-[11px] font-black text-cyan-400 hover:underline"
-              >
-                查看天梯榜單 ➔
-              </button>
+              {showLadder && (
+                <button
+                  type="button"
+                  onClick={() => setMainSubTab('ladder')}
+                  className="text-[11px] font-black text-cyan-400 hover:underline"
+                >
+                  查看天梯榜單 ➔
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
@@ -615,7 +572,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TAB 1.5: 🛡️ 我的隊伍（隊長邀請制 · 固定隊友共同消磨同一隻怪）          */}
       {/* ================================================================= */}
-      {mainSubTab === 'squad_invite' && (
+      {effectiveSubTab === 'squad_invite' && (
         <div className="space-y-3">
           {/* 1. CAPTAIN INVITE & SHARED PROGRESS EXPLANATION */}
           <div className="retro-box rounded-2xl p-3.5 space-y-3 border-2 border-cyan-500/40">
@@ -739,7 +696,7 @@ export const PlazaTab: React.FC = () => {
                 <div className="text-[10px] text-slate-400">
                   輸入邀請碼將對該隊伍送出入隊請求，需經該隊隊長同意（若該隊已邀請你，輸入將直接同意入隊）。
                 </div>
-                {IS_DEMO && DEMO_FAKE_SQUADS.length > 0 && (
+                {IS_DEMO && devToolsEnabled && DEMO_FAKE_SQUADS.length > 0 && (
                   <div className="text-[10px] text-amber-300/80 font-mono">
                     測試用代碼（上線前移除）：{DEMO_FAKE_SQUADS.map((s) => `${s.name} ${s.inviteCode}`).join(' · ')}
                   </div>
@@ -786,9 +743,9 @@ export const PlazaTab: React.FC = () => {
                   <span className="text-xs font-black text-white flex items-center gap-1.5">
                     <Bell className="w-4 h-4 text-cyan-400" />
                     組隊邀請與請求
-                    {IS_DEMO && <span className="text-[10px] text-slate-400 font-normal">（測試用，上線前移除）</span>}
+                    {IS_DEMO && devToolsEnabled && <span className="text-[10px] text-slate-400 font-normal">（測試用，上線前移除）</span>}
                   </span>
-                  {IS_DEMO && (
+                  {IS_DEMO && devToolsEnabled && (
                     <div className="flex items-center gap-1.5">
                       <button
                         data-testid="dev-simulate-request"
@@ -996,7 +953,7 @@ export const PlazaTab: React.FC = () => {
                               >
                                 取消
                               </button>
-                              {IS_DEMO && (
+                              {IS_DEMO && devToolsEnabled && (
                                 <>
                                   <button
                                     data-testid={`dev-sim-accept-${item.id}`}
@@ -1051,9 +1008,6 @@ export const PlazaTab: React.FC = () => {
                       </span>
                       <span className="text-xs font-black text-white break-words">
                         {store.nickname}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 text-[10px] font-bold">
-                        🥊物攻 {myPhyAtk} / 🪄魔攻 {myMagAtk}
                       </span>
                     </div>
                     <div className="text-[11px] text-emerald-300 font-bold break-words">
@@ -1186,7 +1140,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TAB 2: 🏆 榮譽天梯 (Squad Stage, Solo Stage, Max Damage)           */}
       {/* ================================================================= */}
-      {mainSubTab === 'ladder' && (
+      {effectiveSubTab === 'ladder' && (
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
             {(
@@ -1235,28 +1189,24 @@ export const PlazaTab: React.FC = () => {
                   name: '健力泰坦 · 館長級巨巨',
                   title: '👑 連續打卡 45 天',
                   score: 'Stage 18',
-                  badge: '🥊 物攻 180',
                   isMe: false,
                 },
                 {
                   name: '有氧女神 · 小愛',
                   title: '⚡ 連續打卡 21 天',
                   score: 'Stage 11',
-                  badge: '🪄 魔攻 145',
                   isMe: false,
                 },
                 {
                   name: '重訓狂人 · 阿凱',
                   title: '🔥 連續打卡 14 天',
                   score: 'Stage 8',
-                  badge: '🥊 物攻 130',
                   isMe: false,
                 },
                 {
                   name: `${store.nickname} (我)`,
                   title: `🔥 連續打卡 ${streakDays} 天`,
                   score: `Stage ${store.personalMaxStage}`,
-                  badge: `🥊 ${myPhyAtk} / 🪄 ${myMagAtk}`,
                   isMe: true,
                 },
 
@@ -1264,7 +1214,6 @@ export const PlazaTab: React.FC = () => {
                   name: '街頭健體 · Leo',
                   title: '🤥 作弊被抓包懲處中',
                   score: 'Stage 1',
-                  badge: '🥊 物攻 45',
                   isMe: false,
                 },
               ]
@@ -1299,9 +1248,6 @@ export const PlazaTab: React.FC = () => {
                       <div>
                         <div className="text-xs font-black text-white flex items-center gap-1.5">
                           <span>{row.name}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[9px] text-cyan-300">
-                            {row.badge}
-                          </span>
                         </div>
                         <div className="text-[10px] text-slate-400">{row.title}</div>
                       </div>
@@ -1432,11 +1378,11 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TeammateInspectSheet (組隊確認／島／爬塔／我的隊伍清單 共用)          */}
       {/* ================================================================= */}
-      {store.inspectMemberId && store.squadMembers.length > 0 && !(mainSubTab === 'raid' && adventureStep === 'battle') && (
+      {store.inspectMemberId && store.squadMembers.length > 0 && !(effectiveSubTab === 'raid' && adventureStep === 'battle') && (
         <TeammateInspectSheet
           memberId={store.inspectMemberId}
           context={
-            mainSubTab !== 'raid'
+            effectiveSubTab !== 'raid'
               ? 'list'
               : adventureStep === 'squad_confirm'
               ? 'squad_confirm'

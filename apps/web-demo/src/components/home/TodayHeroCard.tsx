@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../../stores/useGameStore';
 import { xpToNext } from '../../config/economy';
 import { formatResetCountdown, getLocalDayKey } from '../../game/day';
+import { isWeeklyChestClaimable } from '../../game/economyRules';
 import { WeekStrip } from './WeekStrip';
 import {
   accumulateDayProgress,
@@ -47,6 +48,7 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
   const checkedIn = store.isCheckedInToday(nowMs);
   const bossDone = store.isBossDoneToday(nowMs);
   const damageInfo = store.getDamageInfo(nowMs);
+  const isChestClaimable = isWeeklyChestClaimable(store, damageInfo.daysThisWeek, nowMs);
   const nextResetAt = store.getNextResetAt(nowMs);
 
   const level = store.level;
@@ -238,21 +240,32 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
         )}
 
         {/* Damage line */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[13.5px] font-black text-[#29221E]">
-            本週動了 {damageInfo.daysThisWeek} 天，傷害 ×{damageInfo.damageMultiplier.toFixed(1)}
-          </span>
-          {damageInfo.isRookieFloor && (
-            <span
-              style={{
-                backgroundColor: '#FEF3C7',
-                color: '#92400E',
-                borderColor: '#F5C45A',
-              }}
-              className="px-1.5 py-0.2 rounded-full border text-[10px] font-black"
-            >
-              新手週保底
+        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[13.5px] font-black text-[#29221E]">
+              本週動了 {damageInfo.daysThisWeek} 天，傷害 ×{damageInfo.damageMultiplier.toFixed(1)}
             </span>
+            {damageInfo.isRookieFloor && (
+              <span
+                style={{
+                  backgroundColor: '#FEF3C7',
+                  color: '#92400E',
+                  borderColor: '#F5C45A',
+                }}
+                className="px-1.5 py-0.2 rounded-full border text-[10px] font-black"
+              >
+                新手週保底
+              </span>
+            )}
+          </div>
+          {isChestClaimable && (
+            <button
+              type="button"
+              onClick={() => store.claimWeeklyChest()}
+              className="px-2 py-0.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-[11px] font-black shadow-sm active:scale-95 cursor-pointer"
+            >
+              開寶箱
+            </button>
           )}
         </div>
 

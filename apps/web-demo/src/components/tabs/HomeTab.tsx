@@ -19,10 +19,13 @@ import {
 } from 'lucide-react';
 import { useGameStore, INITIAL_QUESTS } from '../../stores/useGameStore';
 import { previewCappedReward } from '../../game/economyRules';
+import { QUIZ_COINS, COIN_CAP_REACHED_COPY } from '../../config/economy';
+import { filterVisibleQuests } from '../../game/questFilter';
 
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { TodayHeroCard } from '../home/TodayHeroCard';
 import { DAILY_SCIENCE_QUIZZES, AvatarBodyStage } from '../../config/catalogConfig';
+import { useDevToolsEnabled } from '../../config/devTools';
 
 const STAGE_OPTIONS: {
   id: AvatarBodyStage;
@@ -41,6 +44,7 @@ export interface HomeTabProps {
 
 export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
   const [quizOpen, setQuizOpen] = useState(false);
   const [devPreviewOpen, setDevPreviewOpen] = useState(false);
   const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
@@ -48,6 +52,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
 
   const currentQuiz = DAILY_SCIENCE_QUIZZES[selectedQuizIdx % DAILY_SCIENCE_QUIZZES.length];
   const isQuizAnswered = store.answeredQuizIds.includes(currentQuiz.id);
+  const quizPreviewCapped = isQuizAnswered ? 0 : previewCappedReward(store, QUIZ_COINS);
   const isBareTop = store.equipped.top === 'top_bare_muscles';
 
   return (
@@ -60,15 +65,17 @@ export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
         />
 
         {/* Floating Corner Dev/Physique Preview Trigger (Hidden until tapped) */}
-        <button
-          onClick={() => setDevPreviewOpen((v) => !v)}
-          className="game-stage-dark absolute bottom-14 right-2.5 z-20 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-400/50 text-amber-300 text-[10px] font-black flex items-center gap-1 shadow-lg active:scale-95 transition"
-        >
-          <Wrench className="w-3 h-3" aria-hidden="true" />
-          <span>體態預覽</span>
-        </button>
+        {devToolsEnabled && (
+          <button
+            onClick={() => setDevPreviewOpen((v) => !v)}
+            className="game-stage-dark absolute bottom-14 right-2.5 z-20 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-400/50 text-amber-300 text-[10px] font-black flex items-center gap-1 shadow-lg active:scale-95 transition"
+          >
+            <Wrench className="w-3 h-3" aria-hidden="true" />
+            <span>體態預覽</span>
+          </button>
+        )}
 
-        {devPreviewOpen && (
+        {devToolsEnabled && devPreviewOpen && (
           <div className="game-stage-dark absolute bottom-24 right-2.5 left-2.5 z-30 p-2.5 rounded-2xl bg-slate-950/95 backdrop-blur-md border-2 border-amber-400 shadow-2xl space-y-2">
             <div className="flex items-center justify-between text-[11px] font-black text-amber-300">
               <span className="flex items-center gap-1">
@@ -158,18 +165,25 @@ export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
             >
               <Brain className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
               <span>科普問答</span>
-              <span className="font-mono flex items-center gap-0.5 text-amber-300">
-                +15
-                <Coins className="w-3 h-3 text-amber-400" aria-hidden="true" />
-              </span>
+              {quizPreviewCapped > 0 ? (
+                <span className="font-mono flex items-center gap-0.5 text-amber-300">
+                  +{quizPreviewCapped}
+                  <Coins className="w-3 h-3 text-amber-400" aria-hidden="true" />
+                </span>
+              ) : (
+                <span className="text-[10px] text-amber-300 font-bold">
+                  {COIN_CAP_REACHED_COPY}
+                </span>
+              )}
             </button>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          {store.quests.map((q) => {
+          {filterVisibleQuests(store.quests).map((q) => {
             const isReady = q.progress >= q.target && !q.claimed;
             const displayTitle = INITIAL_QUESTS.find((iq) => iq.id === q.id)?.titleZh || q.titleZh;
+            const cappedReward = previewCappedReward(store, q.rewardCoins);
             return (
               <div
                 key={q.id}
@@ -184,9 +198,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
                 <div className="flex items-center gap-2 min-w-0 flex-wrap">
                   <span className="text-xs font-black text-white break-words leading-snug">{displayTitle}</span>
                   <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono text-[10px] font-black shrink-0">
-                    +{previewCappedReward(store, q.rewardCoins)}🪙
+                    {cappedReward > 0 ? `實領 ${cappedReward}🪙` : COIN_CAP_REACHED_COPY}
                   </span>
-
                 </div>
 
                 {q.claimed ? (
@@ -230,7 +243,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ now }) => {
             <div className="flex items-center justify-between">
               <span className="text-sm font-black text-cyan-300 flex items-center gap-1.5">
                 <Brain className="w-4 h-4" />
-                每日運動科普問答 · +15🪙
+                {`每日運動科普問答 · ${quizPreviewCapped > 0 ? `+${quizPreviewCapped}🪙` : COIN_CAP_REACHED_COPY}`}
               </span>
               <button
                 onClick={() => setQuizOpen(false)}

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Dumbbell, Flame, Gift, Menu, Trophy, Users, Wrench, Zap } from 'lucide-react';
 import { AdventureBoss } from '../../../config/catalogConfig';
+import { useDevToolsEnabled } from '../../../config/devTools';
+import { HIDE_UNFINISHED } from '../../../config/demo';
 
 interface BattleHudProps {
   stage: number;
@@ -34,6 +36,8 @@ export const BattleHud: React.FC<BattleHudProps> = ({
   onOpenDevCheat,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const devToolsEnabled = useDevToolsEnabled();
+  const showLadder = !HIDE_UNFINISHED || devToolsEnabled;
   const weakness = WEAKNESS[boss.weakness];
   const WeaknessIcon = weakness.Icon;
   const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
@@ -111,15 +115,19 @@ export const BattleHud: React.FC<BattleHudProps> = ({
           <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-black text-foreground hover:bg-muted" onClick={() => go('squad_invite')}>
             <Users className="h-3.5 w-3.5" aria-hidden="true" /> 我的隊伍
           </button>
-          <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-black text-foreground hover:bg-muted" onClick={() => go('ladder')}>
-            <Trophy className="h-3.5 w-3.5" aria-hidden="true" /> 天梯
-          </button>
+          {showLadder && (
+            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-black text-foreground hover:bg-muted" onClick={() => go('ladder')}>
+              <Trophy className="h-3.5 w-3.5" aria-hidden="true" /> 天梯
+            </button>
+          )}
           <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-black text-foreground hover:bg-muted" onClick={() => { setMenuOpen(false); onOpenLootBag(); }}>
             <Gift className="h-3.5 w-3.5" aria-hidden="true" /> 寶物袋
           </button>
-          <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-black text-foreground hover:bg-muted" onClick={() => { setMenuOpen(false); onOpenDevCheat(); }}>
-            <Wrench className="h-3.5 w-3.5" aria-hidden="true" /> 測試外掛
-          </button>
+          {devToolsEnabled && (
+            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-black text-foreground hover:bg-muted" onClick={() => { setMenuOpen(false); onOpenDevCheat(); }}>
+              <Wrench className="h-3.5 w-3.5" aria-hidden="true" /> 測試外掛
+            </button>
+          )}
         </div>
       )}
     </header>

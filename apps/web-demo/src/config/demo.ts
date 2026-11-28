@@ -7,6 +7,9 @@ export const IS_DEMO = true;
 /** 試玩加速開關（供後續工單串接，試玩版預設與 IS_DEMO 連動） */
 export const DEMO_SPEEDUP_ENABLED = IS_DEMO;
 
+/** 隱藏未完成／無用途之功能（預設隱藏，僅在開發者工具開啟時可見） */
+export const HIDE_UNFINISHED = true;
+
 /** 試玩版檢舉警語（僅在 IS_DEMO 為 true 時提供/顯示） */
 export const DEMO_REPORT_DISCLAIMER = '試玩版不會真的送出檢舉';
 
@@ -34,8 +37,8 @@ export const DEMO_FAKE_SQUADS: DemoFakeSquad[] = IS_DEMO
             id: 'celeb_titan_chen',
             nameZh: '健力金牌 · 陳巨石',
             roleType: 'phy',
-            roleBadgeZh: '👑 泰坦物攻王',
-            gearDescZh: '奧林匹亞紀念腰帶 + 頂級魔攻加護',
+            roleBadgeZh: '👑 泰坦重訓',
+            gearDescZh: '斯巴達戰神披風 + 24K 奧林匹亞金槓',
             hasWorkedOutToday: true,
             workoutAuditZh: '✅ 巨力破壞 12組 · 心率 155bpm · 組間計時嚴謹',
             isSuspectedCheater: false,
@@ -55,7 +58,7 @@ export const DEMO_FAKE_SQUADS: DemoFakeSquad[] = IS_DEMO
             id: 'celeb_aesthetic_lin',
             nameZh: '林健美 · Jay',
             roleType: 'mag',
-            roleBadgeZh: '✨ 魔攻美學',
+            roleBadgeZh: '✨ 健美美學',
             gearDescZh: '無袖健美背心 + 緊身金短褲',
             hasWorkedOutToday: true,
             workoutAuditZh: '✅ 肩背雕塑 15組 · 組間計時 60s 完整',
@@ -85,7 +88,7 @@ export const DEMO_FAKE_SQUADS: DemoFakeSquad[] = IS_DEMO
             nameZh: '街頭健體 · Leo',
             roleType: 'phy',
             roleBadgeZh: '🥊 力量型',
-            gearDescZh: '黑魂訓練吊嘎 + 鑄鐵 20kg 啞鈴',
+            gearDescZh: '黑魂訓練吊嘎 + 鑄鐵啞鈴',
             hasWorkedOutToday: true,
             workoutAuditZh: '🤥 耗時 5 秒狂按 6 組深蹲 (組間休息 0秒 · 疑似空氣健身)',
             isSuspectedCheater: true,

@@ -89,7 +89,7 @@ export const TeammatePeekCard: React.FC<TeammatePeekCardProps> = ({
             <div
               key={item.id}
               className="h-6 w-6 shrink-0 overflow-hidden rounded-md border border-[#e5dccb] bg-amber-50/60 shadow-xs"
-              title={`${item.nameZh} (${item.combatStat?.labelZh || ''})`}
+              title={item.nameZh}
             >
               <ItemSpriteThumbnail item={item} size={24} />
             </div>
@@ -97,13 +97,10 @@ export const TeammatePeekCard: React.FC<TeammatePeekCardProps> = ({
         </div>
       )}
 
-      {/* Stats Row: 2-3 stats (damage, attack, today status) */}
+      {/* Stats Row: 2-3 stats (damage, today status) */}
       <div className="mt-2 space-y-1 border-t border-[#e5dccb]/70 pt-1.5 text-[10px]">
         <div className="flex items-center justify-between font-mono font-bold">
-          <span className="text-muted-foreground flex items-center gap-0.5">
-            <span>🥊</span>
-            <span>{stats.mainAtkLabel}</span>
-          </span>
+          <span className="text-muted-foreground">已消磨傷害</span>
           <span className="font-black text-rose-600">
             {member.damageDealt > 0 ? `-${member.damageDealt} HP` : '0 HP'}
           </span>
