@@ -96,7 +96,7 @@ export const AdventureRaidPane: React.FC<AdventureRaidPaneProps> = ({
   const strike = () => {
     if (phase !== 'idle') return;
     if (!store.isCheckedInToday()) {
-      store.setCheckinSheetOpen(true);
+      store.setBossLockedSheetOpen(true);
       return;
     }
     if (store.isBossDoneToday()) {

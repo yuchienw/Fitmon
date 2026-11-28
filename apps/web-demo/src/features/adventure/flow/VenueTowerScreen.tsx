@@ -744,7 +744,13 @@ export const VenueTowerScreen: React.FC<VenueTowerScreenProps> = ({
           ) : (
             <button
               type="button"
-              onClick={() => onEnterBattle()}
+              onClick={() => {
+                if (!store.isCheckedInToday()) {
+                  store.setBossLockedSheetOpen(true);
+                  return;
+                }
+                onEnterBattle();
+              }}
               className="retro-btn mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3 font-black text-white shadow-lg active:translate-y-0.5 bg-gradient-to-b from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
             >
               <span className="text-sm">進入戰鬥（挑戰第 {playerStage} 關）</span>
