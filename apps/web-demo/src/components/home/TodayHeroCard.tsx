@@ -89,9 +89,7 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
   );
 
   const handleGoToWorkout = () => {
-    store.requestWithDisclaimer(() => {
-      store.setActiveTab('workout');
-    });
+    store.goToSportTypePicker();
   };
 
   const handleGoToAdventure = () => {

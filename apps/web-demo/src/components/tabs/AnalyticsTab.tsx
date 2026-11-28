@@ -24,6 +24,7 @@ import { PrivacySafetyView } from '../social/PrivacySafetyView';
 import { evaluateImplausibleSession } from '../../game/implausibleCapsEvaluator';
 import { EditFlaggedSessionModal } from '../modals/EditFlaggedSessionModal';
 import { formatExerciseLogSummary } from '../../game/workoutRecord';
+import { getSessionSummaryVisibility, formatSessionDistance } from '../../game/sessionDisplay';
 
 type MeSubTab = 'history' | 'charts' | 'trophies';
 type HistoryViewMode = 'calendar' | 'weekly';
@@ -702,6 +703,8 @@ export const AnalyticsTab: React.FC = () => {
                   now: sDate,
                 });
                 const isFlagged = evaluation.flagReason !== null;
+                const summaryVis = getSessionSummaryVisibility(session);
+                const distStr = formatSessionDistance(session.distanceM, session.sportType);
 
                 if (isFlagged) {
                   return (
@@ -788,16 +791,34 @@ export const AnalyticsTab: React.FC = () => {
 
                       {/* Bottom Summary Strip */}
                       <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-amber-200/90 text-slate-600">
-                        <span>
-                          組數 <strong className="text-slate-900">{session.totalSets}組</strong>
-                        </span>
-                        <span>
-                          容量{' '}
-                          <strong className="text-emerald-700">
-                            {session.totalVolume.toLocaleString()} kg
-                          </strong>
-                        </span>
-                        <span className="text-amber-800 font-bold">+{session.coinsEarned}🪙</span>
+                        {summaryVis.showVolume ? (
+                          <>
+                            <span>
+                              組數 <strong className="text-slate-900">{session.totalSets}組</strong>
+                            </span>
+                            <span>
+                              容量{' '}
+                              <strong className="text-emerald-700">
+                                {session.totalVolume.toLocaleString()} kg
+                              </strong>
+                            </span>
+                            <span className="text-amber-800 font-bold">+{session.coinsEarned}🪙</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>
+                              時長 <strong className="text-slate-900">{session.durationMinutes}分</strong>
+                            </span>
+                            {distStr && (
+                              <span>
+                                距離 <strong className="text-emerald-700">{distStr}</strong>
+                              </span>
+                            )}
+                            {summaryVis.showCoins && (
+                              <span className="text-amber-800 font-bold">+{session.coinsEarned}🪙</span>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   );
@@ -863,16 +884,34 @@ export const AnalyticsTab: React.FC = () => {
 
                   {/* Bottom Summary Strip */}
                   <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-slate-800/80 text-slate-400">
-                    <span>
-                      組數 <strong className="text-white">{session.totalSets}組</strong>
-                    </span>
-                    <span>
-                      容量{' '}
-                      <strong className="text-emerald-400">
-                        {session.totalVolume.toLocaleString()} kg
-                      </strong>
-                    </span>
-                    <span className="text-amber-300 font-bold">+{session.coinsEarned}🪙</span>
+                    {summaryVis.showVolume ? (
+                      <>
+                        <span>
+                          組數 <strong className="text-white">{session.totalSets}組</strong>
+                        </span>
+                        <span>
+                          容量{' '}
+                          <strong className="text-emerald-400">
+                            {session.totalVolume.toLocaleString()} kg
+                          </strong>
+                        </span>
+                        <span className="text-amber-300 font-bold">+{session.coinsEarned}🪙</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>
+                          時長 <strong className="text-white">{session.durationMinutes}分</strong>
+                        </span>
+                        {distStr && (
+                          <span>
+                            距離 <strong className="text-emerald-400">{distStr}</strong>
+                          </span>
+                        )}
+                        {summaryVis.showCoins && (
+                          <span className="text-amber-300 font-bold">+{session.coinsEarned}🪙</span>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
                 );

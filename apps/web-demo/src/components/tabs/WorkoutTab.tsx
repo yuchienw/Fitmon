@@ -44,6 +44,10 @@ import {
 import { evaluateStrengthSessionTiming } from '../../game/strengthSessionTiming';
 import { ImplausibleSheet } from '../modals/ImplausibleSheet';
 import { WalkToRunSheet } from '../modals/WalkToRunSheet';
+import { SportTypePicker } from '../workout/SportTypePicker';
+import { SportSetupView } from '../workout/SportSetupView';
+import { SportLiveLogger } from '../workout/SportLiveLogger';
+import { SportFinishForm } from '../workout/SportFinishForm';
 
 type RoutineCategoryTab = 'favorite' | 'my_custom' | 'referenced' | 'recommended';
 
@@ -1301,11 +1305,65 @@ export const WorkoutTab: React.FC = () => {
     );
   }
 
+  if (store.workoutSubView === 'setup' && store.activeSportSession) {
+    return (
+      <SportSetupView
+        sportType={store.activeSportSession.sportType}
+        onBack={() => store.setWorkoutSubView('picker')}
+        onStartLive={(draft) => {
+          store.setActiveSportSession(draft);
+          store.setWorkoutSubView('live');
+        }}
+        onDirectInput={(draft) => {
+          store.setActiveSportSession(draft);
+          store.setWorkoutSubView('finish');
+        }}
+      />
+    );
+  }
+
+  if (store.workoutSubView === 'live' && store.activeSportSession) {
+    return (
+      <SportLiveLogger
+        draft={store.activeSportSession}
+        onFinish={(completedDraft) => {
+          store.setActiveSportSession(completedDraft);
+          store.setWorkoutSubView('finish');
+        }}
+      />
+    );
+  }
+
+  if (store.workoutSubView === 'finish' && store.activeSportSession) {
+    return (
+      <SportFinishForm
+        draft={store.activeSportSession}
+        onCancel={() => store.setWorkoutSubView('picker')}
+      />
+    );
+  }
+
+  if (store.workoutSubView === 'picker') {
+    return <SportTypePicker />;
+  }
+
   // ============================================================================
   // MODE B: DEFAULT ROUTINE HUB (課表管理中心 V2-14, V2-15, V2-17)
   // ============================================================================
   return (
-    <div className="p-3.5 space-y-3.5 pb-10">
+    <div data-testid="strength-plan-root" className="p-3.5 space-y-3.5 pb-10">
+      {/* 0. Top Bar to switch back to SportTypePicker */}
+      <div className="flex items-center justify-between pb-1">
+        <button
+          type="button"
+          onClick={() => store.setWorkoutSubView('picker')}
+          className="flex items-center gap-1 text-[13px] font-extrabold text-[#C2410C] hover:underline cursor-pointer"
+        >
+          <span>← 換類型</span>
+        </button>
+        <span className="text-xs font-bold text-[#786B63]">重訓課表</span>
+      </div>
+
       {/* 1. HEADER & NEW ROUTINE / FREE WORKOUT CTAs */}
       <div className="retro-box rounded-2xl p-3.5 space-y-3">
         <div className="flex items-center justify-between">

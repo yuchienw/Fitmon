@@ -13,6 +13,65 @@ export const SessionDetailModal: React.FC = () => {
   const session = store.workoutHistory.find((s) => s.id === sessionId);
   if (!session) return null;
 
+  // Q3（經幕僚長轉達定案）：
+  // 非重訓不顯示總容量／容量 kg；金額為 0 時隱藏零金額列（不顯示 +0 幣 / +0 XP / +0🪙）
+  const isNonStrength = Boolean(session.sportType && session.sportType !== 'strength');
+  const showVolume = !isNonStrength && session.totalVolume > 0;
+  const showCoins = session.coinsEarned > 0;
+  const showExp = Boolean(session.expEarned && session.expEarned > 0);
+
+  const kpis: { label: string; value: string; icon?: React.ReactNode; color: string }[] = [];
+  kpis.push({
+    label: '時長',
+    value: `${session.durationMinutes} 分`,
+    icon: <Clock className="w-3 h-3 text-cyan-400" />,
+    color: 'text-white',
+  });
+
+  if (showVolume) {
+    kpis.push({
+      label: '總容量',
+      value: session.totalVolume.toLocaleString(),
+      icon: <Flame className="w-3 h-3 text-emerald-400" />,
+      color: 'text-emerald-400',
+    });
+  } else if (session.distanceM && session.distanceM > 0) {
+    const distStr =
+      session.distanceM >= 1000
+        ? `${(session.distanceM / 1000).toFixed(1)} km`
+        : `${session.distanceM} 公尺`;
+    kpis.push({
+      label: '距離',
+      value: distStr,
+      color: 'text-emerald-400',
+    });
+  }
+
+  if (session.totalSets > 0) {
+    kpis.push({
+      label: '完成組數',
+      value: `${session.totalSets} 組`,
+      color: 'text-cyan-300',
+    });
+  }
+
+  if (showCoins) {
+    kpis.push({
+      label: '獲得金幣',
+      value: `+${session.coinsEarned}🪙`,
+      icon: <Coins className="w-3 h-3 text-amber-400" />,
+      color: 'text-amber-300',
+    });
+  }
+
+  if (showExp) {
+    kpis.push({
+      label: '獲得經驗',
+      value: `+${session.expEarned} XP`,
+      color: 'text-emerald-400',
+    });
+  }
+
   const handleSaveSessionAsRoutine = () => {
     const template: WorkoutTemplate = {
       id: `from_hist_${Date.now()}`,
@@ -54,40 +113,26 @@ export const SessionDetailModal: React.FC = () => {
         </div>
 
         {/* Summary KPI Strip */}
-        <div className="grid grid-cols-4 gap-1.5 text-center">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-            <div className="text-[10px] text-slate-400 flex items-center justify-center gap-0.5">
-              <Clock className="w-3 h-3 text-cyan-400" />
-              時長
+        <div
+          className={`grid gap-1.5 text-center ${
+            kpis.length <= 2
+              ? 'grid-cols-2'
+              : kpis.length === 3
+              ? 'grid-cols-3'
+              : 'grid-cols-4'
+          }`}
+        >
+          {kpis.map((kpi, idx) => (
+            <div key={idx} className="bg-slate-900 border border-slate-800 rounded-xl p-2">
+              <div className="text-[10px] text-slate-400 flex items-center justify-center gap-0.5">
+                {kpi.icon}
+                {kpi.label}
+              </div>
+              <div className={`text-xs font-black font-mono mt-0.5 ${kpi.color}`}>
+                {kpi.value}
+              </div>
             </div>
-            <div className="text-xs font-black font-mono text-white mt-0.5">
-              {session.durationMinutes} 分
-            </div>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-            <div className="text-[10px] text-slate-400 flex items-center justify-center gap-0.5">
-              <Flame className="w-3 h-3 text-emerald-400" />
-              總容量
-            </div>
-            <div className="text-xs font-black font-mono text-emerald-400 mt-0.5">
-              {session.totalVolume.toLocaleString()}
-            </div>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-            <div className="text-[10px] text-slate-400">完成組數</div>
-            <div className="text-xs font-black font-mono text-cyan-300 mt-0.5">
-              {session.totalSets} 組
-            </div>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-            <div className="text-[10px] text-slate-400 flex items-center justify-center gap-0.5">
-              <Coins className="w-3 h-3 text-amber-400" />
-              獲得金幣
-            </div>
-            <div className="text-xs font-black font-mono text-amber-300 mt-0.5">
-              +{session.coinsEarned}🪙
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Full Exercise & Set-by-Set Breakdown */}

@@ -173,7 +173,7 @@ export function evaluateImplausibleSession(
         flaggedFields.push('distanceM', 'duration');
         copy = {
           title: '這筆數字好像怪怪的',
-          message: `平均每 100 公尺 ${formatEvaluationNumber(secPer100m)} 秒，比頂尖選手還快，可能是距離或時間填錯了。`,
+          message: `平均每 100 公尺 ${formatEvaluationNumber(secPer100m)} 秒，比這項運動一般的速度快很多，可能是距離或時間填錯了。`,
           footnote: '這筆會先存著，暫時不算進今天的打卡。改好之後會重新計算。',
           primaryButton: '修改數字',
           secondaryButton: '先這樣存',
@@ -235,7 +235,7 @@ export function evaluateImplausibleSession(
         flaggedFields.push('distanceM', 'duration');
         copy = {
           title: '這筆數字好像怪怪的',
-          message: `平均時速 ${formatEvaluationNumber(avgKmh)} 公里，比頂尖選手的速度還快，可能是距離或時間填錯了。`,
+          message: `平均時速 ${formatEvaluationNumber(avgKmh)} 公里，比這項運動一般的速度快很多，可能是距離或時間填錯了。`,
           footnote: '這筆會先存著，暫時不算進今天的打卡。改好之後會重新計算。',
           primaryButton: '修改數字',
           secondaryButton: '先這樣存',
@@ -272,7 +272,7 @@ export function evaluateImplausibleSession(
         flaggedFields.push('distanceM', 'duration');
         copy = {
           title: '這筆數字好像怪怪的',
-          message: `平均時速 ${formatEvaluationNumber(avgKmh)} 公里，比頂尖選手的速度還快，可能是距離或時間填錯了。`,
+          message: `平均時速 ${formatEvaluationNumber(avgKmh)} 公里，比這項運動一般的速度快很多，可能是距離或時間填錯了。`,
           footnote: '這筆會先存著，暫時不算進今天的打卡。改好之後會重新計算。',
           primaryButton: '修改數字',
           secondaryButton: '先這樣存',

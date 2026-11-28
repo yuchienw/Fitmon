@@ -244,6 +244,7 @@ export interface ExerciseItem {
   defaultRestSec: number;
   unitLabel: string;
   iconType: 'squat' | 'bench' | 'deadlift' | 'press' | 'pull' | 'curl' | 'run' | 'bike' | 'yoga';
+  instructionCues?: [string, string, string];
   safetyCues: [string, string, string];
 }
 
@@ -1059,10 +1060,15 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
     defaultRestSec: 60,
     unitLabel: '分鐘',
     iconType: 'yoga',
+    instructionCues: [
+      '動作跟著呼吸走，一次吸氣或吐氣換一個姿勢',
+      '照自己的柔軟度做，有拉伸感就停',
+      '最後留幾分鐘躺下來放鬆',
+    ],
     safetyCues: [
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
+      '不要用彈的，也不要硬壓到痛',
+      '膝蓋或手腕不舒服，可以墊毛巾或換姿勢',
+      '懷孕或頸背有傷的人，倒立和深度扭轉請先問專業人員',
     ],
   },
 
@@ -1084,10 +1090,15 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
     defaultRestSec: 60,
     unitLabel: 'km',
     iconType: 'run',
+    instructionCues: [
+      '抬頭挺胸、眼睛看前方',
+      '手臂自然彎曲，前後擺動',
+      '腳跟先著地，再滾到腳尖',
+    ],
     safetyCues: [
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
+      '先用自己舒服的速度，能說話但不能唱歌就是中等強度',
+      '穿合腳的鞋，注意路面和來車',
+      '天熱多喝水，頭暈或胸悶就停下來',
     ],
   },
 
@@ -1109,10 +1120,15 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
     defaultRestSec: 60,
     unitLabel: '公尺',
     iconType: 'run',
+    instructionCues: [
+      '下水前先在岸上活動肩膀和腳踝',
+      '任何泳式都算，換氣順就好',
+      '累了可以抓池邊休息，或改成踢水、在水裡走路',
+    ],
     safetyCues: [
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
+      '在有救生員的地方游，不熟水性就待在淺水區',
+      '剛吃飽、喝過酒或身體不舒服時不要下水',
+      '抽筋時先抓池邊或仰漂，不要硬撐',
     ],
   },
 
@@ -1134,10 +1150,15 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
     defaultRestSec: 60,
     unitLabel: '分鐘',
     iconType: 'run',
+    instructionCues: [
+      '上場前先熱身 5–10 分鐘，例如慢跑、轉肩、轉腳踝',
+      '跳起來落地時膝蓋微彎，不要往內夾',
+      '換場或暫停時喝水',
+    ],
     safetyCues: [
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
+      '看球種戴護具，例如羽球、網球注意眼睛，籃球注意腳踝',
+      '急停和轉向容易扭傷，剛開始先打輕鬆一點',
+      '被撞到或扭傷後疼痛不退，就停下來，必要時就醫',
     ],
   },
 
@@ -1159,10 +1180,15 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
     defaultRestSec: 60,
     unitLabel: '分鐘',
     iconType: 'bike',
+    instructionCues: [
+      '一個動作做 20–40 秒，休息 10–30 秒，再換下一個',
+      '動作做標準比做得快重要',
+      '結束後慢走或伸展 3–5 分鐘',
+    ],
     safetyCues: [
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
+      '新手可以拉長休息，或換成簡單版，例如跪姿伏地挺身、不跳的開合跳',
+      '喘到說不出完整的句子就放慢',
+      '有心臟或血壓問題，或懷孕的人，請先問醫師再做高強度訓練',
     ],
   },
 
@@ -1184,10 +1210,15 @@ export const EXERCISE_LIBRARY: ExerciseItem[] = [
     defaultRestSec: 60,
     unitLabel: '分鐘',
     iconType: 'yoga',
+    instructionCues: [
+      '任何讓你動起來的活動都算，例如爬山、跳舞、划船',
+      '開始前先熱身幾分鐘',
+      '結束前放慢速度，記得補水',
+    ],
     safetyCues: [
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
-      '動作說明與安全提示待教練確認',
+      '第一次做的活動，先從短時間、輕鬆的強度開始',
+      '在戶外注意天氣、日曬和補水，爬山前把行程告訴家人',
+      '疼痛、頭暈或胸悶就停下來',
     ],
   },
 ];

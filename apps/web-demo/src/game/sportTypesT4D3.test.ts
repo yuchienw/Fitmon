@@ -243,16 +243,106 @@ describe('T4-D3: Multi-Sport Types, Mapping & Compatibility Settlement', () => {
       assert.equal(plank.nameZh, '徒手棒式核心');
     });
 
-    test('new catalog exercises exist with correct types and safety cues placeholder', () => {
+    test('new catalog exercises exist with correct types and coach 3 instructions + 3 safety cues', () => {
       const libraryMap = new Map(EXERCISE_LIBRARY.map((e) => [e.id, e]));
 
       const expectedNewItems = [
-        { id: 'yoga_dynamic_flow', type: 'yoga_stretch', nameZh: '動態流瑜珈', unit: '分鐘' },
-        { id: 'walk_brisk', type: 'walk', nameZh: '快走／健走', unit: 'km' },
-        { id: 'swim_freestyle', type: 'swim', nameZh: '游泳', unit: '公尺' },
-        { id: 'ball_sports', type: 'ball', nameZh: '球類', unit: '分鐘' },
-        { id: 'circuit_hiit', type: 'circuit_hiit', nameZh: '循環訓練／HIIT', unit: '分鐘' },
-        { id: 'custom_workout', type: 'custom', nameZh: '自訂', unit: '分鐘' },
+        {
+          id: 'yoga_dynamic_flow',
+          type: 'yoga_stretch',
+          nameZh: '動態流瑜珈',
+          unit: '分鐘',
+          instructionCues: [
+            '動作跟著呼吸走，一次吸氣或吐氣換一個姿勢',
+            '照自己的柔軟度做，有拉伸感就停',
+            '最後留幾分鐘躺下來放鬆',
+          ],
+          safetyCues: [
+            '不要用彈的，也不要硬壓到痛',
+            '膝蓋或手腕不舒服，可以墊毛巾或換姿勢',
+            '懷孕或頸背有傷的人，倒立和深度扭轉請先問專業人員',
+          ],
+        },
+        {
+          id: 'walk_brisk',
+          type: 'walk',
+          nameZh: '快走／健走',
+          unit: 'km',
+          instructionCues: [
+            '抬頭挺胸、眼睛看前方',
+            '手臂自然彎曲，前後擺動',
+            '腳跟先著地，再滾到腳尖',
+          ],
+          safetyCues: [
+            '先用自己舒服的速度，能說話但不能唱歌就是中等強度',
+            '穿合腳的鞋，注意路面和來車',
+            '天熱多喝水，頭暈或胸悶就停下來',
+          ],
+        },
+        {
+          id: 'swim_freestyle',
+          type: 'swim',
+          nameZh: '游泳',
+          unit: '公尺',
+          instructionCues: [
+            '下水前先在岸上活動肩膀和腳踝',
+            '任何泳式都算，換氣順就好',
+            '累了可以抓池邊休息，或改成踢水、在水裡走路',
+          ],
+          safetyCues: [
+            '在有救生員的地方游，不熟水性就待在淺水區',
+            '剛吃飽、喝過酒或身體不舒服時不要下水',
+            '抽筋時先抓池邊或仰漂，不要硬撐',
+          ],
+        },
+        {
+          id: 'ball_sports',
+          type: 'ball',
+          nameZh: '球類',
+          unit: '分鐘',
+          instructionCues: [
+            '上場前先熱身 5–10 分鐘，例如慢跑、轉肩、轉腳踝',
+            '跳起來落地時膝蓋微彎，不要往內夾',
+            '換場或暫停時喝水',
+          ],
+          safetyCues: [
+            '看球種戴護具，例如羽球、網球注意眼睛，籃球注意腳踝',
+            '急停和轉向容易扭傷，剛開始先打輕鬆一點',
+            '被撞到或扭傷後疼痛不退，就停下來，必要時就醫',
+          ],
+        },
+        {
+          id: 'circuit_hiit',
+          type: 'circuit_hiit',
+          nameZh: '循環訓練／HIIT',
+          unit: '分鐘',
+          instructionCues: [
+            '一個動作做 20–40 秒，休息 10–30 秒，再換下一個',
+            '動作做標準比做得快重要',
+            '結束後慢走或伸展 3–5 分鐘',
+          ],
+          safetyCues: [
+            '新手可以拉長休息，或換成簡單版，例如跪姿伏地挺身、不跳的開合跳',
+            '喘到說不出完整的句子就放慢',
+            '有心臟或血壓問題，或懷孕的人，請先問醫師再做高強度訓練',
+          ],
+        },
+        {
+          id: 'custom_workout',
+          type: 'custom',
+          nameZh: '自訂',
+          unit: '分鐘',
+          instructionCues: [
+            '任何讓你動起來的活動都算，例如爬山、跳舞、划船',
+            '開始前先熱身幾分鐘',
+            '結束前放慢速度，記得補水',
+          ],
+          safetyCues: [
+            '第一次做的活動，先從短時間、輕鬆的強度開始',
+            '在戶外注意天氣、日曬和補水，爬山前把行程告訴家人',
+            '疼痛、頭暈或胸悶就停下來',
+          ],
+        },
       ];
 
       for (const item of expectedNewItems) {
@@ -261,11 +351,8 @@ describe('T4-D3: Multi-Sport Types, Mapping & Compatibility Settlement', () => {
         assert.equal(found.sportType, item.type);
         assert.equal(found.nameZh, item.nameZh);
         assert.equal(found.unitLabel, item.unit);
-        assert.deepEqual(found.safetyCues, [
-          '動作說明與安全提示待教練確認',
-          '動作說明與安全提示待教練確認',
-          '動作說明與安全提示待教練確認',
-        ]);
+        assert.deepEqual(found.instructionCues, item.instructionCues);
+        assert.deepEqual(found.safetyCues, item.safetyCues);
       }
 
       // Swim distance must be metres (never km)
