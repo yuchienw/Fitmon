@@ -72,6 +72,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
     },
   ];
 
+  const handleTabClick = (tabId: MainTab) => {
+    if (tabId === 'workout') {
+      if (!store.isWorkoutFocusActive && store.workoutSubView !== 'live') {
+        store.setWorkoutSubView('picker');
+      }
+    }
+    setActiveTab(tabId);
+  };
+
   return (
     <nav
       className={`safe-bottom-nav shrink-0 backdrop-blur-md border-t-2 px-2 pt-1.5 z-30 transition-colors ${
@@ -89,7 +98,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleTabClick(item.id)}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={item.label}
                 className="relative flex flex-col items-center justify-end pb-1 group focus:outline-none min-h-[48px]"
@@ -126,7 +135,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ resolvedTheme = 'light' })
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleTabClick(item.id)}
               aria-current={isActive ? 'page' : undefined}
               aria-label={item.label}
               className={`relative flex flex-col items-center justify-center py-1.5 min-h-[48px] rounded-xl transition-all duration-150 ${

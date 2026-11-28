@@ -594,6 +594,7 @@ export interface GameState {
   answeredQuizIds: string[];
 
   // Saved Routines & Active Workout Focus Mode (V2-02, V2-06, V2-14, V2-15)
+  workoutSubView: 'picker' | 'strength_hub' | 'setup' | 'live' | 'finish';
   savedRoutines: WorkoutTemplate[];
   isWorkoutFocusActive: boolean;
   activeSessionSportType: WorkoutSessionSportType | null;
@@ -760,6 +761,8 @@ export interface GameState {
   finishWorkoutSession: (options?: { sportTypeOverride?: WorkoutSessionSportType }) => void;
   discardWorkoutSession: () => void;
   updateWorkoutHistorySession: (id: string, updates: Partial<WorkoutSessionRecord>) => void;
+  setWorkoutSubView: (view: 'picker' | 'strength_hub' | 'setup' | 'live' | 'finish') => void;
+  goToSportTypePicker: () => void;
 
   // Social & Adventure Actions (V2.9)
   toggleFriend: (profileId: string) => void;
@@ -1346,6 +1349,7 @@ export const useGameStore = create<GameState>()(
       quests: INITIAL_QUESTS,
       answeredQuizIds: [],
 
+      workoutSubView: 'picker',
       savedRoutines: INITIAL_SAVED_ROUTINES,
       isWorkoutFocusActive: false,
       activeSessionSportType: null,
@@ -2967,6 +2971,9 @@ export const useGameStore = create<GameState>()(
           workoutHistory: state.workoutHistory.map((s) => (s.id === id ? { ...s, ...updates } : s)),
         }));
       },
+
+      setWorkoutSubView: (view) => set({ workoutSubView: view }),
+      goToSportTypePicker: () => set({ activeTab: 'workout', workoutSubView: 'picker' }),
 
       // ================= SOCIAL ACTIONS WITH ANTI-ABUSE CAPS (V2-12, V2-16) =================
       toggleFriend: (profileId) => {

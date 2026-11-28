@@ -21,9 +21,7 @@ export const BossLockedSheet: React.FC = () => {
 
   const handleGoWorkout = () => {
     store.setBossLockedSheetOpen(false);
-    store.requestWithDisclaimer(() => {
-      store.setActiveTab('workout');
-    });
+    store.goToSportTypePicker();
   };
 
   const handleClose = () => {
