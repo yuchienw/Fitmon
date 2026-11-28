@@ -5,6 +5,7 @@ import { drawCreamChibiSilhouette, drawMapleChibiAvatar, drawZzz } from '../../.
 import { getVenueForStage } from './venueConfig';
 import { AvatarBodyStage, EquipSlot } from '../../../config/catalogConfig';
 import { useDevToolsEnabled } from '../../../config/devTools';
+import { HIDE_UNFINISHED } from '../../../config/demo';
 
 interface ModeIslandCanvasProps {
   hero: {
@@ -261,6 +262,7 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
 }) => {
   const store = useGameStore();
   const devToolsEnabled = useDevToolsEnabled();
+  const showLadder = !HIDE_UNFINISHED || devToolsEnabled;
 
   const soloVenue = getVenueForStage(store.soloStage);
   const squadVenue = getVenueForStage(store.squadStage);
@@ -300,14 +302,16 @@ export const AdventureModeSelect: React.FC<AdventureModeSelectProps> = ({
             <Users className="h-3 w-3 text-emerald-500" />
             <span>隊伍</span>
           </button>
-          <button
-            type="button"
-            onClick={() => onOpenSubTab('ladder')}
-            className="flex h-7 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-[11px] font-black text-foreground shadow-sm active:scale-95"
-          >
-            <Trophy className="h-3 w-3 text-secondary" />
-            <span>天梯</span>
-          </button>
+          {showLadder && (
+            <button
+              type="button"
+              onClick={() => onOpenSubTab('ladder')}
+              className="flex h-7 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-[11px] font-black text-foreground shadow-sm active:scale-95"
+            >
+              <Trophy className="h-3 w-3 text-secondary" />
+              <span>天梯</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenLootBag}

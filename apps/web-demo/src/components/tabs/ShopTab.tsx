@@ -41,6 +41,7 @@ import {
 import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { ItemSpriteThumbnail } from '../../game/ItemSpriteThumbnail';
 import { useDevToolsEnabled } from '../../config/devTools';
+import { HIDE_UNFINISHED } from '../../config/demo';
 
 type MainShopCategory = 'avatar' | 'room' | 'consumables' | 'iap';
 type AvatarSubFilter = 'all' | EquipSlot;
@@ -557,7 +558,12 @@ export const ShopTab: React.FC = () => {
 
             {/* Consumables Items */}
             <div className="space-y-2.5">
-              {CONSUMABLE_ITEMS.map((c: ConsumableItem) => {
+              {CONSUMABLE_ITEMS.filter((c: ConsumableItem) => {
+                if (c.id === 'gacha_ticket' && HIDE_UNFINISHED && !devToolsEnabled) {
+                  return false;
+                }
+                return true;
+              }).map((c: ConsumableItem) => {
                 const count = store.consumables[c.id] || 0;
                 return (
                   <div

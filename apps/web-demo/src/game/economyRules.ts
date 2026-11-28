@@ -692,7 +692,10 @@ export function bossAttack(
   const boss = ADVENTURE_BOSS_CATALOG[bossIndex];
 
   // Base attack from quests (streakDays removed per security review; equipment is purely cosmetic)
-  const completedQuests = (state.quests || []).filter((q) => q.progress >= q.target).length;
+  // T7-A1: 排除 q_daily_workout，舊存檔忽略此 id
+  const completedQuests = (state.quests || []).filter(
+    (q: any) => q.id !== 'q_daily_workout' && q.progress >= q.target
+  ).length;
   const baseDmg = 340 + completedQuests * 60;
 
   let isWeaknessHit = false;
@@ -980,6 +983,22 @@ export interface ClaimWeeklyChestRuleResult {
     coinsGranted: number;
     reward: typeof WEEKLY_CHEST_REWARD;
   };
+}
+
+/**
+ * 判定本週寶箱是否符合領取資格（動滿 3 天且本週尚未領取）
+ */
+export function isWeeklyChestClaimable(
+  state: { chestClaimedWeekKey: string | null },
+  daysThisWeek: number,
+  now: Date | number = Date.now()
+): boolean {
+  if (typeof daysThisWeek !== 'number' || daysThisWeek < WEEKLY_CHEST_DAYS_REQUIRED) {
+    return false;
+  }
+  const todayKey = getLocalDayKey(now);
+  const currentWeekKey = getWeekKey(todayKey);
+  return state.chestClaimedWeekKey !== currentWeekKey;
 }
 
 /**

@@ -27,7 +27,7 @@ import {
   SQUAD_CAP,
   DEMO_PLAYER_ID,
 } from '../../stores/useGameStore';
-import { IS_DEMO } from '../../config/demo';
+import { IS_DEMO, HIDE_UNFINISHED } from '../../config/demo';
 import { useDevToolsEnabled } from '../../config/devTools';
 
 import {
@@ -60,8 +60,10 @@ type LadderCategory = 'solo_stage' | 'squad_stage' | 'max_damage';
 export const PlazaTab: React.FC = () => {
   const store = useGameStore();
   const devToolsEnabled = useDevToolsEnabled();
+  const showLadder = !HIDE_UNFINISHED || devToolsEnabled;
   const streakDays = useGameStore(selectStreakDays);
   const [mainSubTab, setMainSubTab] = useState<AdventureMainSubTab>('raid');
+  const effectiveSubTab = !showLadder && mainSubTab === 'ladder' ? 'raid' : mainSubTab;
 
   const [adventureMode, setAdventureMode] = useState<'solo' | 'squad'>('solo');
   const [adventureStep, setAdventureStep] = useState<
@@ -139,8 +141,8 @@ export const PlazaTab: React.FC = () => {
   };
 
   return (
-    <div className={mainSubTab === 'raid' ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden' : 'relative space-y-2.5 p-3 pb-10'}>
-      {mainSubTab !== 'raid' && (
+    <div className={effectiveSubTab === 'raid' ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden' : 'relative space-y-2.5 p-3 pb-10'}>
+      {effectiveSubTab !== 'raid' && (
       <div className="flex items-center justify-between gap-1.5 flex-wrap">
         <div
           role="tablist"
@@ -149,18 +151,18 @@ export const PlazaTab: React.FC = () => {
         >
           {(
             [
-              { id: 'raid', label: '冒險', icon: Swords },
-              { id: 'combat_stats', label: '個人素質', icon: Sparkles },
+              { id: 'raid' as const, label: '冒險', icon: Swords },
+              { id: 'combat_stats' as const, label: '個人素質', icon: Sparkles },
               {
-                id: 'squad_invite',
+                id: 'squad_invite' as const,
                 label: `我的隊伍(${1 + store.squadMembers.length}/4)`,
                 icon: Users,
               },
-              { id: 'ladder', label: '天梯', icon: Trophy },
-            ] as const
+              ...(showLadder ? [{ id: 'ladder' as const, label: '天梯', icon: Trophy }] : []),
+            ]
           ).map((tab) => {
             const TabIcon = tab.icon;
-            const active = mainSubTab === tab.id;
+            const active = effectiveSubTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -284,7 +286,7 @@ export const PlazaTab: React.FC = () => {
         </div>
       )}
 
-      {mainSubTab === 'raid' && (
+      {effectiveSubTab === 'raid' && (
         <>
           {adventureStep === 'mode_select' && (
             <AdventureModeSelect
@@ -357,7 +359,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TAB 1.2: ⚡ 個人戰鬥素質 (獨立分頁：屬性傷害、裝備配裝、討伐生涯戰績) */}
       {/* ================================================================= */}
-      {mainSubTab === 'combat_stats' && (
+      {effectiveSubTab === 'combat_stats' && (
         <div className="space-y-3">
           {/* Header Card with Character Portrait */}
           <div className="retro-box rounded-2xl p-4 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 border-2 border-cyan-500/40 space-y-3">
@@ -567,7 +569,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TAB 1.5: 🛡️ 我的隊伍（隊長邀請制 · 固定隊友共同消磨同一隻怪）          */}
       {/* ================================================================= */}
-      {mainSubTab === 'squad_invite' && (
+      {effectiveSubTab === 'squad_invite' && (
         <div className="space-y-3">
           {/* 1. CAPTAIN INVITE & SHARED PROGRESS EXPLANATION */}
           <div className="retro-box rounded-2xl p-3.5 space-y-3 border-2 border-cyan-500/40">
@@ -1135,7 +1137,7 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TAB 2: 🏆 榮譽天梯 (Squad Stage, Solo Stage, Max Damage)           */}
       {/* ================================================================= */}
-      {mainSubTab === 'ladder' && (
+      {effectiveSubTab === 'ladder' && (
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
             {(
@@ -1373,11 +1375,11 @@ export const PlazaTab: React.FC = () => {
       {/* ================================================================= */}
       {/* TeammateInspectSheet (組隊確認／島／爬塔／我的隊伍清單 共用)          */}
       {/* ================================================================= */}
-      {store.inspectMemberId && store.squadMembers.length > 0 && !(mainSubTab === 'raid' && adventureStep === 'battle') && (
+      {store.inspectMemberId && store.squadMembers.length > 0 && !(effectiveSubTab === 'raid' && adventureStep === 'battle') && (
         <TeammateInspectSheet
           memberId={store.inspectMemberId}
           context={
-            mainSubTab !== 'raid'
+            effectiveSubTab !== 'raid'
               ? 'list'
               : adventureStep === 'squad_confirm'
               ? 'squad_confirm'

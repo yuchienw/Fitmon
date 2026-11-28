@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { calculateWorkoutExp, CalculationResult, ExerciseCategory } from '../../../../packages/engine/src/index.ts';
+import { filterVisibleQuests, IGNORED_QUEST_ID } from '../game/questFilter';
 import { ECONOMY_CONFIG, Locale } from '../config/economyConfig';
 import {
   CHECKIN_XP,
@@ -509,6 +510,7 @@ export interface VictorySettlementData {
   newPRs: string[];
   staminaDepletedNotice: boolean;
   topExerciseName: string;
+  sportType?: WorkoutSessionSportType;
 }
 
 // In-memory code lookup timestamps log (not persisted to LocalStorage, resets on refresh per constraint)
@@ -854,15 +856,6 @@ export const INITIAL_QUESTS: DailyQuest[] = [
     target: 1,
     claimed: false,
     targetTab: 'home',
-  },
-  {
-    id: 'q_daily_workout',
-    titleZh: '完成今日運動課表',
-    rewardCoins: ECONOMY_CONFIG.dailyWorkoutQuestCoins,
-    progress: 0,
-    target: 1,
-    claimed: false,
-    targetTab: 'workout',
   },
   {
     id: 'q_social_cheer',
@@ -1856,13 +1849,18 @@ export const useGameStore = create<GameState>()(
           set({
             answeredQuizIds: [...get().answeredQuizIds, quizId],
           });
-          state.showToast(`🧠 答對科普問答！獲得 +${grant.granted} 🪙`);
+          if (grant.granted > 0) {
+            state.showToast(`🧠 答對科普問答！獲得 +${grant.granted} 🪙`);
+          } else {
+            state.showToast(COIN_CAP_REACHED_COPY);
+          }
         } else {
           soundFX.playBlip();
         }
       },
 
       claimQuest: (questId) => {
+        if (questId === IGNORED_QUEST_ID) return;
         const state = get();
         const quest = state.quests.find((q) => q.id === questId);
         if (!quest || quest.claimed || quest.progress < quest.target) return;
@@ -1878,7 +1876,11 @@ export const useGameStore = create<GameState>()(
         set({
           quests: get().quests.map((q) => (q.id === questId ? { ...q, claimed: true } : q)),
         });
-        state.showToast(`🎉 領取任務獎勵 +${grantedCoins} 🪙！`);
+        if (grantedCoins > 0) {
+          state.showToast(`🎉 領取任務獎勵 +${grantedCoins} 🪙！`);
+        } else {
+          state.showToast(COIN_CAP_REACHED_COPY);
+        }
       },
 
       // ================= SHOP TRY-ON & CART ACTIONS (V2-05) =================
@@ -2904,9 +2906,7 @@ export const useGameStore = create<GameState>()(
           restSecondsLeft: 0,
           todaySportType: detectedSport,
           workoutHistory: [sessionRecord, ...currentState.workoutHistory],
-          quests: currentState.quests.map((q) =>
-            q.id === 'q_daily_workout' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
-          ),
+          quests: currentState.quests,
           sessionSets: [],
           activeTemplateName: null,
           templateQueue: [],
@@ -2928,6 +2928,7 @@ export const useGameStore = create<GameState>()(
             newPRs,
             staminaDepletedNotice: false,
             topExerciseName: topEx,
+            sportType: detectedSport,
           };
           patchToApply.checkinResult = null;
         }

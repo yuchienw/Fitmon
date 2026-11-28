@@ -7,6 +7,9 @@ export const IS_DEMO = true;
 /** 試玩加速開關（供後續工單串接，試玩版預設與 IS_DEMO 連動） */
 export const DEMO_SPEEDUP_ENABLED = IS_DEMO;
 
+/** 隱藏未完成／無用途之功能（預設隱藏，僅在開發者工具開啟時可見） */
+export const HIDE_UNFINISHED = true;
+
 /** 試玩版檢舉警語（僅在 IS_DEMO 為 true 時提供/顯示） */
 export const DEMO_REPORT_DISCLAIMER = '試玩版不會真的送出檢舉';
 

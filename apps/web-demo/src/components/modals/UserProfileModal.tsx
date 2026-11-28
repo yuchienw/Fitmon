@@ -26,13 +26,16 @@ import { PixelRoomCanvas } from '../../game/PixelRoomCanvas';
 import { ExerciseThumbnail } from '../../game/ExerciseThumbnail';
 import { getFriendRequestView } from '../../game/friendSocial';
 import { DEMO_PLAYER_ID } from '../../game/persistMigrate';
-import { IS_DEMO, DEMO_REPORT_DISCLAIMER } from '../../config/demo';
+import { IS_DEMO, DEMO_REPORT_DISCLAIMER, HIDE_UNFINISHED } from '../../config/demo';
+import { useDevToolsEnabled } from '../../config/devTools';
 import { DemoDevTag } from '../social/DemoDevTag';
 import { BlockConfirmModal } from '../social/BlockConfirmModal';
 import { ReportModal } from '../social/ReportModal';
 
 export const UserProfileModal: React.FC = () => {
   const store = useGameStore();
+  const devToolsEnabled = useDevToolsEnabled();
+  const showFollowers = !HIDE_UNFINISHED || devToolsEnabled;
   const profileId = store.selectedProfileId;
   const [menuOpen, setMenuOpen] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
@@ -175,7 +178,7 @@ export const UserProfileModal: React.FC = () => {
         </div>
 
         {/* Stats Pills */}
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className={`grid ${showFollowers ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-center`}>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
             <div className="text-[10px] text-slate-400">等級</div>
             <div className="text-xs font-black font-mono text-white">Lv.{profile.level}</div>
@@ -187,13 +190,15 @@ export const UserProfileModal: React.FC = () => {
               {profile.streakDays} 天
             </div>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-            <div className="text-[10px] text-slate-400">粉絲</div>
-            <div className="text-xs font-black font-mono text-cyan-300 flex items-center justify-center gap-1">
-              <Users className="w-3.5 h-3.5" />
-              {profile.followers}
+          {showFollowers && (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
+              <div className="text-[10px] text-slate-400">粉絲</div>
+              <div className="text-xs font-black font-mono text-cyan-300 flex items-center justify-center gap-1">
+                <Users className="w-3.5 h-3.5" />
+                {profile.followers}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 2. CO-PRESENCE ROOM VISIT */}

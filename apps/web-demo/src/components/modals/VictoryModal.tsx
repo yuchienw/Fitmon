@@ -15,7 +15,7 @@ export const VictoryModal: React.FC = () => {
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 text-xs font-mono font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            STAGE CLEAR · 訓練達成
+            訓練達成
           </div>
           <h2 className="font-pixel text-2xl text-amber-400 tracking-wider pt-2 drop-shadow">
             VICTORY!
@@ -40,34 +40,49 @@ export const VictoryModal: React.FC = () => {
         )}
 
         {/* Engine Stats Breakdown */}
-        <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div>
-              <div className="text-[10px] text-slate-400">總訓練容量</div>
-              <div className="text-sm font-mono font-black text-white mt-0.5">
-                {data.calcResult.totalRawVolume.toLocaleString()}kg
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-400">獲得經驗 EXP</div>
-              <div className="text-sm font-mono font-black text-emerald-400 mt-0.5">
-                +{data.calcResult.totalExperience}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-400">結算獎金</div>
-              <div className="text-sm font-mono font-black text-amber-400 mt-0.5 flex items-center justify-center gap-0.5">
-                <Coins className="w-3.5 h-3.5" />+{data.bonusCoins}
-              </div>
-            </div>
-          </div>
+        {(() => {
+          const sportType = data.sportType || store.workoutHistory[0]?.sportType || store.todaySportType;
+          const showVolume = sportType === 'strength' && (data.calcResult?.totalRawVolume || 0) > 0;
+          const showExp = (data.calcResult?.totalExperience || 0) > 0;
+          const showCoins = (data.bonusCoins || 0) > 0;
+          const statCount = (showVolume ? 1 : 0) + (showExp ? 1 : 0) + (showCoins ? 1 : 0);
+          if (statCount === 0) return null;
 
-          {data.calcResult.isCriticalHit && (
-            <div className="text-center text-[11px] font-bold text-purple-300 bg-purple-950/50 border border-purple-500/40 rounded py-1">
-              ⚡ 觸發預釀氮泵神經暴擊！經驗與收益翻倍！
+          return (
+            <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+              <div
+                className={`grid ${
+                  statCount === 3 ? 'grid-cols-3' : statCount === 2 ? 'grid-cols-2' : 'grid-cols-1'
+                } gap-2 text-center`}
+              >
+                {showVolume && (
+                  <div>
+                    <div className="text-[10px] text-slate-400">總訓練容量</div>
+                    <div className="text-sm font-mono font-black text-white mt-0.5">
+                      {data.calcResult.totalRawVolume.toLocaleString()}kg
+                    </div>
+                  </div>
+                )}
+                {showExp && (
+                  <div>
+                    <div className="text-[10px] text-slate-400">獲得經驗 EXP</div>
+                    <div className="text-sm font-mono font-black text-emerald-400 mt-0.5">
+                      +{data.calcResult.totalExperience}
+                    </div>
+                  </div>
+                )}
+                {showCoins && (
+                  <div>
+                    <div className="text-[10px] text-slate-400">結算獎金</div>
+                    <div className="text-sm font-mono font-black text-amber-400 mt-0.5 flex items-center justify-center gap-0.5">
+                      <Coins className="w-3.5 h-3.5" />+{data.bonusCoins}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-1">
@@ -76,10 +91,10 @@ export const VictoryModal: React.FC = () => {
               store.closeVictoryModal();
               store.setActiveTab('plaza');
             }}
-            className="retro-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg"
+            className="retro-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
           >
             <Swords className="w-4 h-4 stroke-[2.5px]" />
-            <span>⚔️ 帶著 100% 充能去痛扁 Boss！</span>
+            <span>去出擊</span>
           </button>
 
           <div className="grid grid-cols-2 gap-2">
