@@ -517,12 +517,15 @@ export const PlazaTab: React.FC = () => {
                 <Trophy className="w-4 h-4 text-amber-400" />
                 <span>生涯討伐數據與榮譽紀錄</span>
               </span>
-              <button
-                onClick={() => setMainSubTab('ladder')}
-                className="text-[11px] font-black text-cyan-400 hover:underline"
-              >
-                查看天梯榜單 ➔
-              </button>
+              {showLadder && (
+                <button
+                  type="button"
+                  onClick={() => setMainSubTab('ladder')}
+                  className="text-[11px] font-black text-cyan-400 hover:underline"
+                >
+                  查看天梯榜單 ➔
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
