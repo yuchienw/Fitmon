@@ -349,35 +349,13 @@ export const TeammateInspectSheet: React.FC<TeammateInspectSheetProps> = ({
             </div>
           </div>
 
-          {/* 5. Base Combat Stats (Aligned with 個人素質) */}
-          <div className="mt-3.5 rounded-xl border border-[#e5dccb] bg-[#faf6f0] p-2.5">
-            <div className="grid grid-cols-3 divide-x divide-[#e5dccb] text-center">
-              <div className="px-1">
-                <div className="text-[10px] font-bold text-muted-foreground">🥊 物攻</div>
-                <div className="font-mono text-sm font-black text-rose-700">
-                  {stats.phyAtk}
-                </div>
-              </div>
-              <div className="px-1">
-                <div className="text-[10px] font-bold text-muted-foreground">🪄 魔攻</div>
-                <div className="font-mono text-sm font-black text-indigo-700">
-                  {stats.magAtk}
-                </div>
-              </div>
-              <div className="px-1">
-                <div className="text-[10px] font-bold text-muted-foreground">💚 輔助</div>
-                <div className="font-mono text-sm font-black text-emerald-700">
-                  {stats.supportAtk}
-                </div>
-              </div>
+          {/* 5. Workout Audit Record */}
+          {member.workoutAuditZh && (
+            <div className="mt-3.5 rounded-xl border border-[#e5dccb] bg-[#faf6f0] p-2.5 text-[11px] text-[#29221e]">
+              <span className="font-bold">驗證紀錄：</span>
+              <span>{member.workoutAuditZh}</span>
             </div>
-            {member.workoutAuditZh && (
-              <div className="mt-2 rounded-lg bg-white/80 p-1.5 text-[10px] text-muted-foreground">
-                <span className="font-bold">驗證紀錄：</span>
-                <span>{member.workoutAuditZh}</span>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* 6. Management Action Area (Context-Aware) */}
           {hasManagementActions && (

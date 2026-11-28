@@ -124,8 +124,15 @@ export const SkillDeck: React.FC<SkillDeckProps> = ({
         {!tierTableExpanded ? (
           <div className="text-[10px] text-[#786B63] mt-0.5">點這一行可看明細</div>
         ) : (
-          <div className="mt-2 pt-2 border-t border-[#E5DCCB] space-y-1">
-            <div className="text-[10.5px] font-black text-[#29221E] mb-1">
+          <div className="mt-2 pt-2 border-t border-[#E5DCCB] space-y-2">
+            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-800 leading-relaxed">
+              本週動越多天，傷害越高，動滿 3 天就到最高。
+              <div className="text-[10px] text-[#786B63] font-normal mt-0.5">
+                現在是本週 {damageInfo.daysThisWeek} 天，傷害 ×{damageInfo.damageMultiplier.toFixed(1)}。裝備不會改變傷害。
+              </div>
+            </div>
+
+            <div className="text-[10.5px] font-black text-[#29221E]">
               本週傷害倍率
             </div>
 
@@ -190,8 +197,15 @@ export const SkillDeck: React.FC<SkillDeckProps> = ({
             </div>
 
             {damageInfo.isRookieFloor && (
-              <div className="text-[10px] text-[#786B63] pt-1">
-                新手第一週保底 ×1.2，實際倍率由伺服器回傳。
+              <div
+                style={{
+                  color: '#92400E',
+                  fontWeight: 800,
+                  fontSize: '12.5px',
+                }}
+                className="pt-1"
+              >
+                新手週保底 ×1.2
               </div>
             )}
           </div>

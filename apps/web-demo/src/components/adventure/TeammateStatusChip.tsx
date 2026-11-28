@@ -94,7 +94,7 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
     if (member.damageDealt > 0) {
       text = `-${member.damageDealt} HP`;
     } else {
-      text = stats.mainAtkLabel.replace(' ', '');
+      text = '已運動';
     }
   } else {
     text = '還沒動';

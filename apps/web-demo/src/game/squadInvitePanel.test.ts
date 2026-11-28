@@ -115,7 +115,7 @@ const mockFakeSquads: DemoFakeSquad[] = [
         id: 'member_b1',
         nameZh: '隊員B1',
         roleType: 'phy',
-        roleBadgeZh: '物攻',
+        roleBadgeZh: '重訓',
         gearDescZh: '裝備',
         hasWorkedOutToday: true,
         workoutAuditZh: '30m',
