@@ -424,6 +424,23 @@ export interface TemplateQueueItem {
   restSeconds: number;
 }
 
+export interface ActiveSportSessionDraft {
+  sportType: WorkoutSessionSportType;
+  venue?: 'outdoor' | 'treadmill' | 'indoor_bike' | 'pool_25' | 'pool_50';
+  loggingMode: 'live_focus';
+  startedAt: number;
+  durationSec: number;
+  distanceM?: number;
+  poolLengthM?: 25 | 50;
+  pauseSegments: { startedAt: number; endedAt: number }[];
+  isPaused: boolean;
+  pausedAt?: number;
+  customName?: string;
+  ballKind?: string;
+  exerciseList?: string[];
+  intensity?: '輕鬆' | '中等' | '喘喘';
+}
+
 export interface WorkoutSessionRecord {
   id: string;
   dateLabel: string;
@@ -595,6 +612,7 @@ export interface GameState {
 
   // Saved Routines & Active Workout Focus Mode (V2-02, V2-06, V2-14, V2-15)
   workoutSubView: 'picker' | 'strength_hub' | 'setup' | 'live' | 'finish';
+  activeSportSession: ActiveSportSessionDraft | null;
   savedRoutines: WorkoutTemplate[];
   isWorkoutFocusActive: boolean;
   activeSessionSportType: WorkoutSessionSportType | null;
@@ -762,6 +780,7 @@ export interface GameState {
   discardWorkoutSession: () => void;
   updateWorkoutHistorySession: (id: string, updates: Partial<WorkoutSessionRecord>) => void;
   setWorkoutSubView: (view: 'picker' | 'strength_hub' | 'setup' | 'live' | 'finish') => void;
+  setActiveSportSession: (session: ActiveSportSessionDraft | null) => void;
   goToSportTypePicker: () => void;
 
   // Social & Adventure Actions (V2.9)
@@ -1350,6 +1369,7 @@ export const useGameStore = create<GameState>()(
       answeredQuizIds: [],
 
       workoutSubView: 'picker',
+      activeSportSession: null,
       savedRoutines: INITIAL_SAVED_ROUTINES,
       isWorkoutFocusActive: false,
       activeSessionSportType: null,
@@ -2973,6 +2993,7 @@ export const useGameStore = create<GameState>()(
       },
 
       setWorkoutSubView: (view) => set({ workoutSubView: view }),
+      setActiveSportSession: (session) => set({ activeSportSession: session }),
       goToSportTypePicker: () => set({ activeTab: 'workout', workoutSubView: 'picker' }),
 
       // ================= SOCIAL ACTIONS WITH ANTI-ABUSE CAPS (V2-12, V2-16) =================

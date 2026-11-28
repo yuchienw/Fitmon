@@ -45,6 +45,8 @@ import { evaluateStrengthSessionTiming } from '../../game/strengthSessionTiming'
 import { ImplausibleSheet } from '../modals/ImplausibleSheet';
 import { WalkToRunSheet } from '../modals/WalkToRunSheet';
 import { SportTypePicker } from '../workout/SportTypePicker';
+import { SportSetupView } from '../workout/SportSetupView';
+import { SportLiveLogger } from '../workout/SportLiveLogger';
 
 type RoutineCategoryTab = 'favorite' | 'my_custom' | 'referenced' | 'recommended';
 
@@ -1299,6 +1301,35 @@ export const WorkoutTab: React.FC = () => {
         {/* T4-D6: Implausible and Walk-to-Run Sheets in Focus Mode */}
         {evaluationSheets}
       </div>
+    );
+  }
+
+  if (store.workoutSubView === 'setup' && store.activeSportSession) {
+    return (
+      <SportSetupView
+        sportType={store.activeSportSession.sportType}
+        onBack={() => store.setWorkoutSubView('picker')}
+        onStartLive={(draft) => {
+          store.setActiveSportSession(draft);
+          store.setWorkoutSubView('live');
+        }}
+        onDirectInput={(draft) => {
+          store.setActiveSportSession(draft);
+          store.setWorkoutSubView('finish');
+        }}
+      />
+    );
+  }
+
+  if (store.workoutSubView === 'live' && store.activeSportSession) {
+    return (
+      <SportLiveLogger
+        draft={store.activeSportSession}
+        onFinish={(completedDraft) => {
+          store.setActiveSportSession(completedDraft);
+          store.setWorkoutSubView('finish');
+        }}
+      />
     );
   }
 

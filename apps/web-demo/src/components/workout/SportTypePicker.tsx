@@ -141,12 +141,21 @@ export const SportTypePicker: React.FC<SportTypePickerProps> = ({ onStartSport }
       if (selectedType === 'strength') {
         store.setWorkoutSubView('strength_hub');
       } else {
-        if (onStartSport) {
-          onStartSport(selectedType);
-        } else {
-          // Fallback if not hooked up yet
-          store.setWorkoutSubView('strength_hub');
-        }
+        store.setActiveSportSession({
+          sportType: selectedType,
+          venue:
+            selectedType === 'run' || selectedType === 'walk' || selectedType === 'cycle'
+              ? 'outdoor'
+              : undefined,
+          poolLengthM: selectedType === 'swim' ? 25 : undefined,
+          loggingMode: 'live_focus',
+          startedAt: Date.now(),
+          durationSec: 0,
+          distanceM: 0,
+          pauseSegments: [],
+          isPaused: false,
+        });
+        store.setWorkoutSubView('setup');
       }
     });
   };
