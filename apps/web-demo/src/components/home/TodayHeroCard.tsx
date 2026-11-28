@@ -260,6 +260,7 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
         <WeekStrip
           checkinDayKeys={store.checkinDayKeys}
           joinDayKey={store.joinDayKey}
+          checkinLogs={store.checkinLogs}
           now={nowMs}
           showRookieNote={true}
         />

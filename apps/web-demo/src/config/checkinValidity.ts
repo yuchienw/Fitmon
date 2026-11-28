@@ -27,18 +27,10 @@ export interface CheckinValidityConfig {
   caps?: Partial<ImplausibleCapsConfig>;
   /** 每週「我不舒服」減半最大次數 - 預設 2 (11:00 已定案) */
   unwellHalfPerWeek: number;
-  /**
-   * 補本週的日期是否計入本週有動天數、週條與今天 Boss 傷害倍率。
-   * 待 YuChien 確認。產品與資安傾向計入（一天一次、一週最多 7 天），工單載明「先寫條件版」。
-   * 預設為 true（傾向計入）。改設定即可關閉。
-   * 已結算週（評估日週鍵早於 now 所在週）一律不計入週天數（資安 11:48 凍結），不受此開關影響。
-   */
-  countSameWeekBackfillTowardWeeklyDays: boolean;
 }
 
 export const DEFAULT_CHECKIN_VALIDITY_CONFIG: CheckinValidityConfig = {
   unwellHalfPerWeek: 2,
-  countSameWeekBackfillTowardWeeklyDays: true,
 };
 
 /**

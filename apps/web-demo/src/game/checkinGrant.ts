@@ -252,8 +252,7 @@ export function applyCheckinGrant(
       joinDayKey: state.joinDayKey || todayKey,
       checkinLogs: nextCheckinLogs,
     },
-    nowMs,
-    resolvedConfig
+    nowMs
   );
 
   const checkinResult: CheckinResultData = {

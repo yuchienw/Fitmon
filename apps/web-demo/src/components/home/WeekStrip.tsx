@@ -1,11 +1,14 @@
 import React from 'react';
 import { getLocalDayKey, getWeekKey, getWeekDayKeys, parseDayKey } from '../../game/day';
+import type { CheckinLogEntry } from '../../game/economyRules';
+import { collectBackfillOnlyDayKeys } from '../../game/economyRules';
 
 const DAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
 
 interface WeekStripProps {
   checkinDayKeys: string[];
   joinDayKey: string;
+  checkinLogs?: CheckinLogEntry[];
   now?: number;
   showRookieNote?: boolean;
 }
@@ -13,6 +16,7 @@ interface WeekStripProps {
 export const WeekStrip: React.FC<WeekStripProps> = ({
   checkinDayKeys,
   joinDayKey,
+  checkinLogs,
   now = Date.now(),
   showRookieNote = true,
 }) => {
@@ -23,6 +27,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
 
   const allWeekDayKeys = getWeekDayKeys(todayKey);
   const checkinSet = new Set(checkinDayKeys || []);
+  const backfillOnlyDays = collectBackfillOnlyDayKeys(checkinLogs);
 
   // For rookie week, hide days before join day
   const visibleDayIndices: number[] = [];
@@ -46,7 +51,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
       <div className="flex items-center gap-1">
         {visibleDayIndices.map((dayIdx) => {
           const dayKey = allWeekDayKeys[dayIdx];
-          const isDone = checkinSet.has(dayKey);
+          const isDone = checkinSet.has(dayKey) && !backfillOnlyDays.has(dayKey);
           const isTodayNotChecked = dayKey === todayKey && !isDone;
 
           if (isDone) {
@@ -85,7 +90,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
       <div className="flex items-center gap-1 mt-1">
         {visibleDayIndices.map((dayIdx) => {
           const dayKey = allWeekDayKeys[dayIdx];
-          const isDone = checkinSet.has(dayKey);
+          const isDone = checkinSet.has(dayKey) && !backfillOnlyDays.has(dayKey);
           const isToday = dayKey === todayKey;
 
           return (

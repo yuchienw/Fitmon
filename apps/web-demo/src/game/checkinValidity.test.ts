@@ -806,8 +806,8 @@ describe('FitMon Checkin Validity Engine (T1-D1)', () => {
     });
   });
 
-  describe('9. countSameWeekBackfillTowardWeeklyDays 開關與已結算週凍結', () => {
-    test('同一週過去日，開關 true -> countsTowardWeeklyDays true', () => {
+  describe('9. 補記一律不計入本週天數 (YuChien 11/28 決策卡 Q4) 與已結算週凍結', () => {
+    test('同一週過去日補記：countsTowardWeeklyDays 一律為 false', () => {
       const yesterdayMs = new Date('2026-11-21T10:00:00.000Z').getTime();
       const res = evaluateCheckinValidity({
         sessions: [
@@ -820,41 +820,37 @@ describe('FitMon Checkin Validity Engine (T1-D1)', () => {
         ],
         dayKey: yesterdayKey,
         now: baseNow,
-        config: {
-          countSameWeekBackfillTowardWeeklyDays: true,
-        },
       });
 
       assert.equal(res.met, true);
-      assert.equal(res.countsTowardWeeklyDays, true);
-    });
-
-    test('同一週過去日，開關 false -> countsTowardWeeklyDays false', () => {
-      const yesterdayMs = new Date('2026-11-21T10:00:00.000Z').getTime();
-      const res = evaluateCheckinValidity({
-        sessions: [
-          {
-            id: 'walk_yest',
-            sportType: 'walk',
-            durationSec: 600,
-            timestamp: yesterdayMs,
-          },
-        ],
-        dayKey: yesterdayKey,
-        now: baseNow,
-        config: {
-          countSameWeekBackfillTowardWeeklyDays: false,
-        },
-      });
-
-      assert.equal(res.met, true);
+      assert.equal(res.isBackfill, true);
       assert.equal(res.countsTowardWeeklyDays, false);
     });
 
-    test('上週 (已結算週)：無論開關為 true 或 false，一律 false (資安 11:48 凍結)', () => {
+    test('本週當天即時打卡：countsTowardWeeklyDays 為 true', () => {
+      const todayMs = new Date('2026-11-22T10:00:00.000Z').getTime();
+      const res = evaluateCheckinValidity({
+        sessions: [
+          {
+            id: 'walk_today',
+            sportType: 'walk',
+            durationSec: 600,
+            timestamp: todayMs,
+          },
+        ],
+        dayKey: todayKey,
+        now: baseNow,
+      });
+
+      assert.equal(res.met, true);
+      assert.equal(res.isBackfill, false);
+      assert.equal(res.countsTowardWeeklyDays, true);
+    });
+
+    test('上週 (已結算週)：countsTowardWeeklyDays 一律為 false (資安 11:48 凍結)', () => {
       const pastWeekMs = new Date('2026-11-15T10:00:00.000Z').getTime();
 
-      const resTrue = evaluateCheckinValidity({
+      const res = evaluateCheckinValidity({
         sessions: [
           {
             id: 'walk_settled_week',
@@ -865,30 +861,9 @@ describe('FitMon Checkin Validity Engine (T1-D1)', () => {
         ],
         dayKey: pastWeekDayKey,
         now: baseNow,
-        config: {
-          countSameWeekBackfillTowardWeeklyDays: true,
-        },
       });
-      assert.equal(resTrue.met, true);
-      assert.equal(resTrue.countsTowardWeeklyDays, false);
-
-      const resFalse = evaluateCheckinValidity({
-        sessions: [
-          {
-            id: 'walk_settled_week',
-            sportType: 'walk',
-            durationSec: 600,
-            timestamp: pastWeekMs,
-          },
-        ],
-        dayKey: pastWeekDayKey,
-        now: baseNow,
-        config: {
-          countSameWeekBackfillTowardWeeklyDays: false,
-        },
-      });
-      assert.equal(resFalse.met, true);
-      assert.equal(resFalse.countsTowardWeeklyDays, false);
+      assert.equal(res.met, true);
+      assert.equal(res.countsTowardWeeklyDays, false);
     });
   });
 
