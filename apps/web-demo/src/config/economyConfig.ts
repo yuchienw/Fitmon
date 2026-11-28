@@ -3,7 +3,7 @@
  * 未來調整商品定價、體力消耗、金幣產出或更換品牌名稱時，僅需修改此檔案。
  */
 
-import { GACHA_TICKET_COIN_PRICE } from './economy';
+import { GACHA_TICKET_COIN_PRICE } from './economy.ts';
 
 export const BRAND_CONFIG = {
   appName: 'FitMon',

@@ -178,6 +178,14 @@ export const SettingsModal: React.FC = () => {
               <Zap className="w-3.5 h-3.5" />
               <span>補滿 100 體力</span>
             </button>
+
+            <button
+              onClick={() => store.loadDemoSeedData()}
+              className="col-span-2 retro-btn py-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-300 text-xs font-bold flex items-center justify-center gap-1"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>載入示範資料</span>
+            </button>
           </div>
         </div>
 

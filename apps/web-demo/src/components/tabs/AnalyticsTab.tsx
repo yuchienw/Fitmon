@@ -46,21 +46,49 @@ export const AnalyticsTab: React.FC = () => {
   const { biometrics } = store;
 
   // Mifflin-St Jeor BMR & TDEE
-  const bmr = Math.round(
-    10 * biometrics.weightKg +
-      6.25 * biometrics.heightCm -
-      5 * biometrics.age +
-      (biometrics.gender === 'male' ? 5 : -161)
-  );
-  const tdee = Math.round(bmr * biometrics.activityMultiplier);
+  const hasBmrInputs =
+    typeof biometrics.weightKg === 'number' &&
+    typeof biometrics.heightCm === 'number' &&
+    typeof biometrics.age === 'number' &&
+    (biometrics.gender === 'male' || biometrics.gender === 'female');
+
+  const bmr = hasBmrInputs
+    ? Math.round(
+        10 * biometrics.weightKg! +
+          6.25 * biometrics.heightCm! -
+          5 * biometrics.age! +
+          (biometrics.gender === 'male' ? 5 : -161)
+      )
+    : null;
+  const tdee = bmr !== null ? Math.round(bmr * (biometrics.activityMultiplier || 1.55)) : null;
   const targetKcal =
-    biometrics.goal === 'cut' ? tdee - 400 : biometrics.goal === 'bulk' ? tdee + 300 : tdee;
-  const proteinGrams = Math.round(biometrics.weightKg * 2.0);
-  const fatGrams = Math.round(biometrics.weightKg * 0.9);
-  const carbsGrams = Math.max(
-    50,
-    Math.round((targetKcal - proteinGrams * 4 - fatGrams * 9) / 4)
-  );
+    tdee !== null
+      ? biometrics.goal === 'cut'
+        ? tdee - 400
+        : biometrics.goal === 'bulk'
+        ? tdee + 300
+        : tdee
+      : null;
+  const proteinGrams =
+    typeof biometrics.weightKg === 'number' ? Math.round(biometrics.weightKg * 2.0) : null;
+  const fatGrams =
+    typeof biometrics.weightKg === 'number' ? Math.round(biometrics.weightKg * 0.9) : null;
+  const carbsGrams =
+    targetKcal !== null && proteinGrams !== null && fatGrams !== null
+      ? Math.max(50, Math.round((targetKcal - proteinGrams * 4 - fatGrams * 9) / 4))
+      : null;
+
+  const bmi =
+    typeof biometrics.weightKg === 'number' &&
+    typeof biometrics.heightCm === 'number' &&
+    biometrics.heightCm > 0
+      ? biometrics.weightKg / Math.pow(biometrics.heightCm / 100, 2)
+      : null;
+
+  const lbm =
+    typeof biometrics.weightKg === 'number' && typeof biometrics.bodyFatPct === 'number'
+      ? biometrics.weightKg * (1 - biometrics.bodyFatPct / 100)
+      : null;
 
   const todayObj = new Date();
   const weekdayNames = ['日', '一', '二', '三', '四', '五', '六'];
@@ -1111,9 +1139,11 @@ export const AnalyticsTab: React.FC = () => {
                 <Calculator className="w-4 h-4 text-cyan-400" />
                 身體數值與每日熱量 TDEE
               </span>
-              <span className="text-xs font-mono font-black text-emerald-400">
-                {targetKcal} kcal/日
-              </span>
+              {targetKcal !== null && (
+                <span className="text-xs font-mono font-black text-emerald-400">
+                  {targetKcal} kcal/日
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -1121,8 +1151,12 @@ export const AnalyticsTab: React.FC = () => {
                 <label className="text-[10px] text-slate-400 block">身高 cm</label>
                 <input
                   type="number"
-                  value={biometrics.heightCm}
-                  onChange={(e) => store.updateBiometrics({ heightCm: Number(e.target.value) })}
+                  value={biometrics.heightCm ?? ''}
+                  onChange={(e) =>
+                    store.updateBiometrics({
+                      heightCm: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
                   className="w-full bg-transparent text-center font-mono font-black text-sm text-white outline-none mt-0.5"
                 />
               </div>
@@ -1130,8 +1164,12 @@ export const AnalyticsTab: React.FC = () => {
                 <label className="text-[10px] text-slate-400 block">體重 kg</label>
                 <input
                   type="number"
-                  value={biometrics.weightKg}
-                  onChange={(e) => store.updateBiometrics({ weightKg: Number(e.target.value) })}
+                  value={biometrics.weightKg ?? ''}
+                  onChange={(e) =>
+                    store.updateBiometrics({
+                      weightKg: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
                   className="w-full bg-transparent text-center font-mono font-black text-sm text-emerald-400 outline-none mt-0.5"
                 />
               </div>
@@ -1139,8 +1177,12 @@ export const AnalyticsTab: React.FC = () => {
                 <label className="text-[10px] text-slate-400 block">體脂 %</label>
                 <input
                   type="number"
-                  value={biometrics.bodyFatPct}
-                  onChange={(e) => store.updateBiometrics({ bodyFatPct: Number(e.target.value) })}
+                  value={biometrics.bodyFatPct ?? ''}
+                  onChange={(e) =>
+                    store.updateBiometrics({
+                      bodyFatPct: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
                   className="w-full bg-transparent text-center font-mono font-black text-sm text-amber-300 outline-none mt-0.5"
                 />
               </div>
@@ -1171,15 +1213,21 @@ export const AnalyticsTab: React.FC = () => {
             <div className="grid grid-cols-3 gap-2 pt-1 text-center">
               <div className="p-2 rounded-xl bg-rose-950/30 border border-rose-500/30">
                 <div className="text-[10px] text-rose-300 font-bold">蛋白質</div>
-                <div className="text-sm font-black font-mono text-white">{proteinGrams}g</div>
+                <div className="text-sm font-black font-mono text-white">
+                  {proteinGrams !== null ? `${proteinGrams}g` : '--'}
+                </div>
               </div>
               <div className="p-2 rounded-xl bg-amber-950/30 border border-amber-500/30">
                 <div className="text-[10px] text-amber-300 font-bold">碳水</div>
-                <div className="text-sm font-black font-mono text-white">{carbsGrams}g</div>
+                <div className="text-sm font-black font-mono text-white">
+                  {carbsGrams !== null ? `${carbsGrams}g` : '--'}
+                </div>
               </div>
               <div className="p-2 rounded-xl bg-cyan-950/30 border border-cyan-500/30">
                 <div className="text-[10px] text-cyan-300 font-bold">脂肪</div>
-                <div className="text-sm font-black font-mono text-white">{fatGrams}g</div>
+                <div className="text-sm font-black font-mono text-white">
+                  {fatGrams !== null ? `${fatGrams}g` : '--'}
+                </div>
               </div>
             </div>
           </div>
@@ -1198,9 +1246,11 @@ export const AnalyticsTab: React.FC = () => {
                 <Activity className="w-4 h-4 text-emerald-400" />
                 當前體態數據與營養目標
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-black">
-                BMI {(biometrics.weightKg / Math.pow(biometrics.heightCm / 100, 2)).toFixed(1)}
-              </span>
+              {bmi !== null && (
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-black">
+                  BMI {bmi.toFixed(1)}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -1208,8 +1258,12 @@ export const AnalyticsTab: React.FC = () => {
                 <label className="text-[10px] text-slate-400 block">身高 cm</label>
                 <input
                   type="number"
-                  value={biometrics.heightCm}
-                  onChange={(e) => store.updateBiometrics({ heightCm: Number(e.target.value) })}
+                  value={biometrics.heightCm ?? ''}
+                  onChange={(e) =>
+                    store.updateBiometrics({
+                      heightCm: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
                   className="w-full bg-transparent text-center font-mono font-black text-sm text-white outline-none mt-0.5"
                 />
               </div>
@@ -1217,8 +1271,12 @@ export const AnalyticsTab: React.FC = () => {
                 <label className="text-[10px] text-slate-400 block">體重 kg</label>
                 <input
                   type="number"
-                  value={biometrics.weightKg}
-                  onChange={(e) => store.updateBiometrics({ weightKg: Number(e.target.value) })}
+                  value={biometrics.weightKg ?? ''}
+                  onChange={(e) =>
+                    store.updateBiometrics({
+                      weightKg: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
                   className="w-full bg-transparent text-center font-mono font-black text-sm text-emerald-400 outline-none mt-0.5"
                 />
               </div>
@@ -1226,8 +1284,12 @@ export const AnalyticsTab: React.FC = () => {
                 <label className="text-[10px] text-slate-400 block">體脂率 %</label>
                 <input
                   type="number"
-                  value={biometrics.bodyFatPct}
-                  onChange={(e) => store.updateBiometrics({ bodyFatPct: Number(e.target.value) })}
+                  value={biometrics.bodyFatPct ?? ''}
+                  onChange={(e) =>
+                    store.updateBiometrics({
+                      bodyFatPct: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
                   className="w-full bg-transparent text-center font-mono font-black text-sm text-amber-300 outline-none mt-0.5"
                 />
               </div>
@@ -1237,19 +1299,19 @@ export const AnalyticsTab: React.FC = () => {
               <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="text-[10px] text-slate-400">除脂體重 LBM</div>
                 <div className="text-xs font-black font-mono text-cyan-300 mt-0.5">
-                  {(biometrics.weightKg * (1 - biometrics.bodyFatPct / 100)).toFixed(1)} kg
+                  {lbm !== null ? `${lbm.toFixed(1)} kg` : '--'}
                 </div>
               </div>
               <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="text-[10px] text-slate-400">目標熱量</div>
                 <div className="text-xs font-black font-mono text-emerald-400 mt-0.5">
-                  {targetKcal} kcal
+                  {targetKcal !== null ? `${targetKcal} kcal` : '--'}
                 </div>
               </div>
               <div className="p-2 rounded-xl bg-slate-900/90 border border-slate-800">
                 <div className="text-[10px] text-slate-400">每日蛋白質</div>
                 <div className="text-xs font-black font-mono text-rose-300 mt-0.5">
-                  {proteinGrams} g
+                  {proteinGrams !== null ? `${proteinGrams} g` : '--'}
                 </div>
               </div>
             </div>
