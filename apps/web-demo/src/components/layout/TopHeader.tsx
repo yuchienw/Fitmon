@@ -18,6 +18,8 @@ import {
   getUnreadBadgeText,
   type RecipientNotifyContext,
 } from '../../game/notificationCenter';
+import { getLocalDayKey } from '../../game/day';
+import { getRecipientSkipFlags } from '../../game/skipToday';
 
 import { BRAND_CONFIG } from '../../config/economyConfig';
 
@@ -46,16 +48,24 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ resolvedTheme = 'light' })
   const devMinorTestAccount = useGameStore((s) => s.devMinorTestAccount);
   const friendIds = useGameStore((s) => s.friendIds);
   const blockedIds = useGameStore((s) => s.blockedIds);
+  const restDayKeys = useGameStore((s) => s.restDayKeys);
+  const caringDayKeys = useGameStore((s) => s.caringDayKeys);
 
-  const recipientCtx: RecipientNotifyContext = useMemo(
-    () => ({
+  const recipientCtx: RecipientNotifyContext = useMemo(() => {
+    const todayKey = getLocalDayKey(Date.now());
+    const skipFlags = getRecipientSkipFlags(
+      { restDayKeys, caringDayKeys },
+      todayKey,
+      devRecipientNotifyDemo
+    );
+    return {
       ...devRecipientNotifyDemo,
+      ...skipFlags,
       isMinor: devMinorTestAccount,
       friendIds,
       blockedIds: blockedIds || [],
-    }),
-    [devRecipientNotifyDemo, devMinorTestAccount, friendIds, blockedIds]
-  );
+    };
+  }, [restDayKeys, caringDayKeys, devRecipientNotifyDemo, devMinorTestAccount, friendIds, blockedIds]);
 
   const unreadCountNum = useMemo(() => {
     const visible = visibleNotifications(notifications, recipientCtx, Date.now()).all;

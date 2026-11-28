@@ -1,24 +1,42 @@
-export type TodayHeroCardState = 'idle' | 'progress' | 'ready' | 'sortied';
+export type TodayHeroCardState = 'idle' | 'progress' | 'ready' | 'sortied' | 'rest' | 'caring';
 
 export interface TodayStateDecisionParams {
   checkedIn: boolean;
   bossDone: boolean;
   daySessionsCount: number;
   dayProgressMet?: boolean;
+  skipStatus?: 'rest' | 'caring' | null;
 }
 
 /**
- * 判定 TodayHeroCard 的四種主要狀態 (T1-D3 / T4-D5)：
+ * 判定 TodayHeroCard 的狀態 (T1-D3 / T4-D5 / T1-D5 / T1-D6)：
  * - idle: 今天尚未打卡，且當天沒有運動紀錄
  * - progress: 尚未打卡，但當天已有紀錄且尚未達標
  * - ready: 當日已打卡，且尚未出擊討伐 Boss
  * - sortied: 當日已打卡，且已完成今日 Boss 出擊
+ * - rest: 當日標記休息日 (D5b)
+ * - caring: 當日標記照顧身體中 (D6f)
  *
- * 舊存檔相容：若 checkedIn 為真（即便無當日紀錄），不收回獎勵，依 bossDone 走 ready 或 sortied。
+ * 規則：
+ * 1. checkedIn 優先：若當日已打卡（例如休息或照顧中留下有效運動達標發獎），
+ *    一律依 bossDone 走 ready 或 sortied，標記絕不遮蔽有效打卡 (YuChien 11/14 11:44)。
+ * 2. 若未打卡且 skipStatus 為 'caring' -> 'caring'。
+ * 3. 若未打卡且 skipStatus 為 'rest' -> 'rest'。
+ * 4. 其餘維持既有 idle / progress 判定。
  */
-export function getTodayHeroCardState(params: TodayStateDecisionParams): TodayHeroCardState {
+export function getTodayHeroCardState(
+  params: TodayStateDecisionParams,
+  skipStatusParam?: 'rest' | 'caring' | null
+): TodayHeroCardState {
   if (params.checkedIn) {
     return params.bossDone ? 'sortied' : 'ready';
+  }
+  const skipStatus = skipStatusParam !== undefined ? skipStatusParam : params.skipStatus;
+  if (skipStatus === 'caring') {
+    return 'caring';
+  }
+  if (skipStatus === 'rest') {
+    return 'rest';
   }
   if (params.daySessionsCount > 0 && !params.dayProgressMet) {
     return 'progress';

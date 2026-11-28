@@ -7,7 +7,7 @@ export const UnwellSheet: React.FC = () => {
   if (!store.unwellSheetOpen) return null;
 
   const handleAcknowledge = () => {
-    store.setUnwellSheetOpen(false);
+    store.confirmUnwellToday();
   };
 
   return (

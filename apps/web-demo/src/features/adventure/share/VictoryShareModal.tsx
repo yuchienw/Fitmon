@@ -6,6 +6,7 @@ import { ShareActions, shareOrDownloadCanvas } from './ShareActions';
 import { SharePosterCanvas } from './SharePosterCanvas';
 import { PosterIdentity, ShareAspect, VictoryPosterData } from './types';
 import { watermarkCopy } from './watermark';
+import { getTeammatePublicStatus } from '../../../game/skipToday';
 
 interface VictoryShareModalProps {
   report: VictoryPosterData;
@@ -31,11 +32,16 @@ export const VictoryShareModal: React.FC<VictoryShareModalProps> = ({ report, on
           damageText: `${report.finalBlowDamage.toLocaleString()} HP`,
           highlight: true,
         },
-        ...store.squadMembers.map((member) => ({
-          nameZh: member.nameZh,
-          damageText: member.hasWorkedOutToday ? `${member.damageDealt.toLocaleString()} HP` : '還沒動',
-          highlight: false,
-        })),
+        ...store.squadMembers.map((member) => {
+          const publicStatus = getTeammatePublicStatus(member);
+          return {
+            nameZh: member.nameZh,
+            damageText: publicStatus.worked
+              ? `${member.damageDealt.toLocaleString()} HP`
+              : (publicStatus.label ?? '還沒動'),
+            highlight: false,
+          };
+        }),
       ],
     }),
     [
