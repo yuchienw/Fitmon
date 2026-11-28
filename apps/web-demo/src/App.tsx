@@ -37,36 +37,55 @@ export const App: React.FC = () => {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const [toastTop, setToastTop] = useState<string>('calc(var(--safe-top, 0px) + 3.5rem)');
 
-  // Position toast below TopHeader (normal) or below Focus Sticky Top Bar (focus mode)
+  // Position toast below TopHeader (normal), below NotificationCenter header (when panel open), or below Focus Sticky Top Bar (focus mode)
   useEffect(() => {
-    if (!isWorkoutFocusActive) {
+    if (!notificationsOpen && !isWorkoutFocusActive) {
       setToastTop('calc(var(--safe-top, 0px) + 3.5rem)');
       return;
     }
 
     const updateToastPosition = () => {
-      const stickyBar = shellRef.current?.querySelector<HTMLElement>(
-        '[data-testid="focus-sticky-top-bar"]'
-      );
-      if (stickyBar && shellRef.current) {
-        const shellRect = shellRef.current.getBoundingClientRect();
-        const barRect = stickyBar.getBoundingClientRect();
-        const topPx = Math.round(barRect.bottom - shellRect.top + 8);
-        setToastTop(`${topPx}px`);
-      } else {
-        setToastTop('calc(var(--safe-top, 0px) + 3.5rem + var(--focus-sticky-bar-height, 56px) + 8px)');
+      if (notificationsOpen) {
+        const notifHeader =
+          shellRef.current?.querySelector<HTMLElement>('[data-testid="notif-panel-header"]') ||
+          shellRef.current?.querySelector<HTMLElement>('[data-testid="notif-panel"] > div:first-child');
+        if (notifHeader && shellRef.current) {
+          const shellRect = shellRef.current.getBoundingClientRect();
+          const headerRect = notifHeader.getBoundingClientRect();
+          const topPx = Math.round(headerRect.bottom - shellRect.top + 8);
+          setToastTop(`${topPx}px`);
+        } else {
+          setToastTop('calc(var(--safe-top, 0px) + 3.5rem + 46px + 8px)');
+        }
+        return;
+      }
+
+      if (isWorkoutFocusActive) {
+        const stickyBar = shellRef.current?.querySelector<HTMLElement>(
+          '[data-testid="focus-sticky-top-bar"]'
+        );
+        if (stickyBar && shellRef.current) {
+          const shellRect = shellRef.current.getBoundingClientRect();
+          const barRect = stickyBar.getBoundingClientRect();
+          const topPx = Math.round(barRect.bottom - shellRect.top + 8);
+          setToastTop(`${topPx}px`);
+        } else {
+          setToastTop('calc(var(--safe-top, 0px) + 3.5rem + var(--focus-sticky-bar-height, 56px) + 8px)');
+        }
       }
     };
 
     updateToastPosition();
 
-    const stickyBar = shellRef.current?.querySelector<HTMLElement>(
-      '[data-testid="focus-sticky-top-bar"]'
-    );
+    const targetEl = notificationsOpen
+      ? (shellRef.current?.querySelector<HTMLElement>('[data-testid="notif-panel-header"]') ||
+         shellRef.current?.querySelector<HTMLElement>('[data-testid="notif-panel"] > div:first-child'))
+      : shellRef.current?.querySelector<HTMLElement>('[data-testid="focus-sticky-top-bar"]');
+
     let ro: ResizeObserver | null = null;
-    if (stickyBar && typeof ResizeObserver !== 'undefined') {
+    if (targetEl && typeof ResizeObserver !== 'undefined') {
       ro = new ResizeObserver(updateToastPosition);
-      ro.observe(stickyBar);
+      ro.observe(targetEl);
     }
     window.addEventListener('resize', updateToastPosition);
 
@@ -74,7 +93,7 @@ export const App: React.FC = () => {
       ro?.disconnect();
       window.removeEventListener('resize', updateToastPosition);
     };
-  }, [isWorkoutFocusActive, activeTab, toastMessage]);
+  }, [notificationsOpen, isWorkoutFocusActive, activeTab, toastMessage]);
 
   // Detect system color scheme with fallback to 'light'
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {

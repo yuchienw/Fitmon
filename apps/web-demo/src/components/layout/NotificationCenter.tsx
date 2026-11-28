@@ -299,7 +299,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             <button
               onClick={() => setActiveMenuId(isMenuOpen ? null : item.id)}
               aria-label="更多選項"
-              className="p-1 rounded-md text-[#A89A8C] hover:text-[#5C4A3E] dark:hover:text-[#D1C5B8] transition"
+              className="min-w-[44px] min-h-[44px] -my-2.5 -mr-2.5 rounded-md text-[#A89A8C] hover:text-[#5C4A3E] dark:hover:text-[#D1C5B8] transition flex items-center justify-center"
             >
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
@@ -344,39 +344,43 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
         {/* 動作按鈕列 */}
         {view.actionType === 'invite' && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="pt-1">
             {view.isExpired || view.isInvalid ? (
-              <>
-                <button
-                  disabled
-                  className="h-[34px] px-3.5 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed"
-                >
-                  加入
-                </button>
-                <button
-                  disabled
-                  className="h-[34px] px-3 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed"
-                >
-                  拒絕
-                </button>
-                <button
-                  data-testid="notif-action-find-squad"
-                  onClick={() => {
-                    store.setNotificationsOpen(false);
-                    store.setActiveTab('plaza');
-                  }}
-                  className="h-[30px] px-3 rounded-lg border border-[#FB923C] text-[#C2410C] dark:text-[#FB923C] bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 text-xs font-black active:scale-95 transition"
-                >
-                  去找隊伍
-                </button>
-              </>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 w-full">
+                  <button
+                    disabled
+                    className="flex-1 min-h-[44px] px-3.5 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed flex items-center justify-center"
+                  >
+                    加入
+                  </button>
+                  <button
+                    disabled
+                    className="flex-1 min-h-[44px] px-3 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed flex items-center justify-center"
+                  >
+                    拒絕
+                  </button>
+                </div>
+                <div className="flex items-center">
+                  <button
+                    data-testid="notif-action-find-squad"
+                    onClick={() => {
+                      store.setNotificationsOpen(false);
+                      store.setActiveTab('plaza');
+                    }}
+                    className="min-h-[44px] px-3 rounded-lg border border-[#FB923C] text-[#C2410C] dark:text-[#FB923C] bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 text-xs font-black active:scale-95 transition flex items-center justify-center"
+                  >
+                    去找隊伍
+                  </button>
+                </div>
+              </div>
             ) : !view.isHandled ? (
-              <>
+              <div className="flex items-center gap-2 w-full">
                 <button
                   data-testid="notif-action-join"
                   disabled={isActing}
                   onClick={() => handleJoinClick(item)}
-                  className="h-[34px] px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center min-w-[64px]"
+                  className="flex-1 min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center min-w-[64px]"
                 >
                   {isActing ? '加入中...' : '加入'}
                 </button>
@@ -384,28 +388,28 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   data-testid="notif-action-decline"
                   disabled={isActing}
                   onClick={() => handleAction(item.id, 'decline')}
-                  className="h-[34px] px-3.5 rounded-xl bg-[#FFFCF7] dark:bg-[#2A2420] border border-[#E5DCCB] dark:border-[#4A4038] text-[#5C4A3E] dark:text-[#D1C5B8] hover:bg-[#F5EFE6] text-xs font-bold active:scale-95 transition"
+                  className="flex-1 min-h-[44px] px-3.5 rounded-xl bg-[#FFFCF7] dark:bg-[#2A2420] border border-[#E5DCCB] dark:border-[#4A4038] text-[#5C4A3E] dark:text-[#D1C5B8] hover:bg-[#F5EFE6] text-xs font-bold active:scale-95 transition flex items-center justify-center"
                 >
                   拒絕
                 </button>
-              </>
+              </div>
             ) : null}
           </div>
         )}
 
         {view.actionType === 'join_request' && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 w-full">
             {view.isExpired || view.isInvalid ? (
               <>
                 <button
                   disabled
-                  className="h-[34px] px-3.5 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed"
+                  className="flex-1 min-h-[44px] px-3.5 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed flex items-center justify-center"
                 >
                   同意
                 </button>
                 <button
                   disabled
-                  className="h-[34px] px-3 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed"
+                  className="flex-1 min-h-[44px] px-3 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed flex items-center justify-center"
                 >
                   拒絕
                 </button>
@@ -416,7 +420,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   data-testid="notif-action-accept"
                   disabled={isActing}
                   onClick={() => handleAction(item.id, 'accept')}
-                  className="h-[34px] px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center min-w-[64px]"
+                  className="flex-1 min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center min-w-[64px]"
                 >
                   {isActing ? '處理中...' : '同意'}
                 </button>
@@ -424,7 +428,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   data-testid="notif-action-decline"
                   disabled={isActing}
                   onClick={() => handleAction(item.id, 'decline')}
-                  className="h-[34px] px-3.5 rounded-xl bg-[#FFFCF7] dark:bg-[#2A2420] border border-[#E5DCCB] dark:border-[#4A4038] text-[#5C4A3E] dark:text-[#D1C5B8] hover:bg-[#F5EFE6] text-xs font-bold active:scale-95 transition"
+                  className="flex-1 min-h-[44px] px-3.5 rounded-xl bg-[#FFFCF7] dark:bg-[#2A2420] border border-[#E5DCCB] dark:border-[#4A4038] text-[#5C4A3E] dark:text-[#D1C5B8] hover:bg-[#F5EFE6] text-xs font-bold active:scale-95 transition flex items-center justify-center"
                 >
                   拒絕
                 </button>
@@ -434,18 +438,18 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         )}
 
         {view.actionType === 'friend_request' && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 w-full">
             {view.isExpired || view.isInvalid ? (
               <>
                 <button
                   disabled
-                  className="h-[34px] px-3.5 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed"
+                  className="flex-1 min-h-[44px] px-3.5 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed flex items-center justify-center"
                 >
                   同意
                 </button>
                 <button
                   disabled
-                  className="h-[34px] px-3 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed"
+                  className="flex-1 min-h-[44px] px-3 rounded-xl bg-[#EFE8DC] dark:bg-[#2A2521] text-[#A89A8C] dark:text-[#6E6259] text-xs font-bold cursor-not-allowed flex items-center justify-center"
                 >
                   略過
                 </button>
@@ -456,7 +460,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   data-testid="notif-action-accept"
                   disabled={isActing}
                   onClick={() => handleAction(item.id, 'accept')}
-                  className="h-[34px] px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center min-w-[64px]"
+                  className="flex-1 min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center min-w-[64px]"
                 >
                   {isActing ? '處理中...' : '同意'}
                 </button>
@@ -464,7 +468,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   data-testid="notif-action-skip"
                   disabled={isActing}
                   onClick={() => handleAction(item.id, 'skip')}
-                  className="h-[34px] px-3.5 rounded-xl bg-[#FFFCF7] dark:bg-[#2A2420] border border-[#E5DCCB] dark:border-[#4A4038] text-[#5C4A3E] dark:text-[#D1C5B8] hover:bg-[#F5EFE6] text-xs font-bold active:scale-95 transition"
+                  className="flex-1 min-h-[44px] px-3.5 rounded-xl bg-[#FFFCF7] dark:bg-[#2A2420] border border-[#E5DCCB] dark:border-[#4A4038] text-[#5C4A3E] dark:text-[#D1C5B8] hover:bg-[#F5EFE6] text-xs font-bold active:scale-95 transition flex items-center justify-center"
                 >
                   略過
                 </button>
@@ -481,7 +485,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 store.setNotificationsOpen(false);
                 store.setActiveTab('home');
               }}
-              className="h-[30px] px-3 rounded-lg border border-[#FB923C] text-[#C2410C] dark:text-[#FB923C] bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 text-xs font-black active:scale-95 transition"
+              className="min-h-[44px] px-3 rounded-lg border border-[#FB923C] text-[#C2410C] dark:text-[#FB923C] bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 text-xs font-black active:scale-95 transition flex items-center justify-center"
             >
               看看 Boss
             </button>
@@ -496,7 +500,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 store.setNotificationsOpen(false);
                 store.setActiveTab('plaza');
               }}
-              className="h-[30px] px-3 rounded-lg border border-[#FB923C] text-[#C2410C] dark:text-[#FB923C] bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 text-xs font-black active:scale-95 transition"
+              className="min-h-[44px] px-3 rounded-lg border border-[#FB923C] text-[#C2410C] dark:text-[#FB923C] bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 text-xs font-black active:scale-95 transition flex items-center justify-center"
             >
               前往隊伍
             </button>
@@ -511,7 +515,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 store.setNotificationsOpen(false);
                 store.setActiveTab('plaza');
               }}
-              className="h-[30px] px-3 rounded-lg border border-[#FB923C] text-[#C2410C] dark:text-[#FB923C] bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 text-xs font-black active:scale-95 transition"
+              className="min-h-[44px] px-3 rounded-lg border border-[#FB923C] text-[#C2410C] dark:text-[#FB923C] bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 text-xs font-black active:scale-95 transition flex items-center justify-center"
             >
               去找隊伍
             </button>
@@ -532,6 +536,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     >
       {/* 標題列 (高約 46px)：鈴鐺 + 「通知」 + ✕ 按鈕 */}
       <div
+        data-testid="notif-panel-header"
         className={`h-[46px] px-3.5 flex items-center justify-between border-b shrink-0 ${
           resolvedTheme === 'dark'
             ? 'bg-[#26211E] border-[#3D3530]'
@@ -549,14 +554,14 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
           data-testid="notif-close"
           onClick={() => store.setNotificationsOpen(false)}
           aria-label="關閉通知"
-          className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800 transition active:scale-95"
+          className="min-w-[44px] min-h-[44px] -mr-1.5 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800 transition active:scale-95"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* 列表捲動區 */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 pt-3 pb-8 space-y-4">
         {!hasNotifications ? (
           /* 空狀態 (2j) */
           <div
@@ -571,7 +576,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               <div className="text-base font-bold text-[#2C241E] dark:text-[#F3ECE2]">
                 目前沒有通知
               </div>
-              <div className="text-xs text-[#786B63] dark:text-[#A89A8C] max-w-[240px]">
+              <div className="text-xs text-[#786B63] dark:text-[#A89A8C] max-w-[290px]">
                 隊友的邀請、入隊申請和好友申請會出現在這裡
               </div>
             </div>
@@ -582,7 +587,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 store.setNotificationsOpen(false);
                 store.setInvitePanelOpen(true);
               }}
-              className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black shadow-sm active:scale-95 transition"
+              className="mt-2 w-full max-w-[290px] min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black shadow-sm active:scale-95 transition flex items-center justify-center"
             >
               去邀請隊友
             </button>
