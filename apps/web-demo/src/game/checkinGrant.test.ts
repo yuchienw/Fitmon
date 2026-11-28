@@ -6,7 +6,7 @@ import {
   type CheckinGrantStateSnapshot,
 } from './checkinGrant.ts';
 import { evaluateCheckinValidity } from './checkinValidity.ts';
-import { getDamageInfo } from './economyRules.ts';
+import { collectBackfillOnlyDayKeys, getDamageInfo } from './economyRules.ts';
 import { getWeekKey } from './day.ts';
 
 describe('FitMon Checkin Grant Pure Engine (T1-D2)', () => {
@@ -610,9 +610,9 @@ describe('FitMon Checkin Grant Pure Engine (T1-D2)', () => {
     assert.equal(grantRes.patch?.coinsEarnedToday, 140);
   });
 
-  test('countSameWeekBackfillTowardWeeklyDays=false 時，補本週日不計入 getDamageInfo 的 daysThisWeek；true 時計入', () => {
-    // 今天是週五 (2026-11-20)。假設打卡日包含今天 11-20，以及補記週二 11-17。
-    // 補記特徵：log.dayKey !== getLocalDayKey(log.timestamp)
+  test('1. 同週補記不計入 daysThisWeek 與傷害倍率 (YuChien 11/28 決策卡 Q4)', () => {
+    // 今天是週五 (2026-11-20)。包含今天 11-20 即時打卡，以及補記週二 11-17。
+    // joinDayKey 為 11-01，非新手週，故 rookie floor 不適用。
     const state = {
       checkinDayKeys: ['2026-11-17', '2026-11-20'],
       joinDayKey: '2026-11-01',
@@ -628,22 +628,72 @@ describe('FitMon Checkin Grant Pure Engine (T1-D2)', () => {
       ],
     };
 
-    // 預設 true：計入補記日，故本週有 2 天
-    const damageInfoTrue = getDamageInfo(state, BASE_NOW_MS, {
-      countSameWeekBackfillTowardWeeklyDays: true,
-    });
-    assert.equal(damageInfoTrue.daysThisWeek, 2);
-    assert.equal(damageInfoTrue.damageMultiplier, 1.2);
-
-    // 開關 false：不計入補記日，故本週只有 1 天
-    const damageInfoFalse = getDamageInfo(state, BASE_NOW_MS, {
-      countSameWeekBackfillTowardWeeklyDays: false,
-    });
-    assert.equal(damageInfoFalse.daysThisWeek, 1);
-    assert.equal(damageInfoFalse.damageMultiplier, 1.0);
+    const damageInfo = getDamageInfo(state, BASE_NOW_MS);
+    assert.equal(damageInfo.daysThisWeek, 1);
+    assert.equal(damageInfo.damageMultiplier, 1.0);
+    assert.equal(damageInfo.multiplierTier, '1');
+    assert.equal(damageInfo.isRookieFloor, false);
   });
 
-  test('補上週（已結算週）：不改變本週 daysThisWeek、不影響寶箱資格計算所用的本週天數', () => {
+  test('2. 當週零即時天數＋一筆同週補記：daysThisWeek === 0', () => {
+    // 案例 A：一般玩家 (非新手週)，daysThisWeek === 0, damageMultiplier === 1.0
+    const stateNonRookie = {
+      checkinDayKeys: ['2026-11-17'],
+      joinDayKey: '2026-11-01',
+      checkinLogs: [
+        {
+          dayKey: '2026-11-17',
+          timestamp: BASE_NOW_MS, // 11-20 補記 11-17
+        },
+      ],
+    };
+    const infoNonRookie = getDamageInfo(stateNonRookie, BASE_NOW_MS);
+    assert.equal(infoNonRookie.daysThisWeek, 0);
+    assert.equal(infoNonRookie.damageMultiplier, 1.0);
+    assert.equal(infoNonRookie.isRookieFloor, false);
+
+    // 案例 B：新手週 (joinDayKey 在當週 2026-11-16)，daysThisWeek 仍為 0，且 isRookieFloor 為 true (1.2)
+    const stateRookie = {
+      checkinDayKeys: ['2026-11-17'],
+      joinDayKey: '2026-11-16',
+      checkinLogs: [
+        {
+          dayKey: '2026-11-17',
+          timestamp: BASE_NOW_MS,
+        },
+      ],
+    };
+    const infoRookie = getDamageInfo(stateRookie, BASE_NOW_MS);
+    assert.equal(infoRookie.daysThisWeek, 0);
+    assert.equal(infoRookie.isRookieFloor, true);
+    assert.equal(infoRookie.damageMultiplier, 1.2);
+  });
+
+  test('3. 即時當日打卡照常計入本週天數與倍率', () => {
+    // 兩天即時打卡 (週三 11-18 與 週五 11-20)
+    const WED_MS = new Date('2026-11-18T10:00:00+08:00').getTime();
+    const state = {
+      checkinDayKeys: ['2026-11-18', '2026-11-20'],
+      joinDayKey: '2026-11-01',
+      checkinLogs: [
+        {
+          dayKey: '2026-11-18',
+          timestamp: WED_MS, // 即時打卡
+        },
+        {
+          dayKey: '2026-11-20',
+          timestamp: BASE_NOW_MS, // 即時打卡
+        },
+      ],
+    };
+
+    const damageInfo = getDamageInfo(state, BASE_NOW_MS);
+    assert.equal(damageInfo.daysThisWeek, 2);
+    assert.equal(damageInfo.damageMultiplier, 1.2);
+    assert.equal(damageInfo.multiplierTier, '2');
+  });
+
+  test('4. 補上週（已結算週）：不改變本週 daysThisWeek、不影響傷害倍率與寶箱資格', () => {
     // 今天是 2026-11-20 (W47)。補記上週二 2026-11-10 (W46)。
     const state = {
       checkinDayKeys: ['2026-11-10', '2026-11-20'],
@@ -660,16 +710,100 @@ describe('FitMon Checkin Grant Pure Engine (T1-D2)', () => {
       ],
     };
 
-    // 不論 countSameWeekBackfillTowardWeeklyDays 是 true 還是 false，本週天數都只有 1 天
-    const info1 = getDamageInfo(state, BASE_NOW_MS, {
-      countSameWeekBackfillTowardWeeklyDays: true,
+    const info = getDamageInfo(state, BASE_NOW_MS);
+    assert.equal(info.daysThisWeek, 1);
+    assert.equal(info.damageMultiplier, 1.0);
+  });
+
+  test('6. applyCheckinGrant 過去日未達後補達標：checkedIn true, granted false, 無幣/XP, unlockCheckinDays 不變', () => {
+    const PAST_DAY = '2026-11-17';
+    const pastSession = createValid10MinWalkSession(
+      PAST_DAY,
+      BASE_NOW_MS - 3 * 86400000
+    );
+
+    const validity = evaluateCheckinValidity({
+      sessions: [pastSession],
+      dayKey: PAST_DAY,
+      now: BASE_NOW_MS,
+      checkinDayKeys: [],
     });
-    const info2 = getDamageInfo(state, BASE_NOW_MS, {
-      countSameWeekBackfillTowardWeeklyDays: false,
+    assert.equal(validity.isBackfill, true);
+    assert.equal(validity.wouldCheckIn, true);
+    assert.equal(validity.wouldGrantRewards, false);
+
+    const state = createInitialState({
+      lastCheckinDate: null,
+      coins: 200,
+      level: 3,
+      exp: 50,
+      unlockCheckinDays: 5,
+      checkinDayKeys: [],
     });
 
-    assert.equal(info1.daysThisWeek, 1);
-    assert.equal(info2.daysThisWeek, 1);
-    assert.equal(info1.damageMultiplier, 1.0);
+    const grantRes = applyCheckinGrant({
+      dayKey: PAST_DAY,
+      nowMs: BASE_NOW_MS,
+      validity,
+      state,
+    });
+
+    assert.equal(grantRes.ok, true);
+    assert.equal(grantRes.granted, false);
+    assert.equal(grantRes.checkedIn, true);
+    assert.equal(grantRes.reason, 'backfill_no_rewards');
+
+    // checkinDayKeys 包含該過去日
+    assert.deepEqual(grantRes.patch?.checkinDayKeys, [PAST_DAY]);
+    assert.equal(grantRes.patch?.checkinLogs?.length, 1);
+    assert.equal(grantRes.patch?.checkinLogs?.[0].dayKey, PAST_DAY);
+    assert.equal(grantRes.patch?.checkinLogs?.[0].timestamp, BASE_NOW_MS);
+
+    // 不發幣、不發 XP、不增 unlockCheckinDays
+    assert.equal(grantRes.patch?.coins, undefined);
+    assert.equal(grantRes.patch?.level, undefined);
+    assert.equal(grantRes.patch?.exp, undefined);
+    assert.equal(grantRes.patch?.unlockCheckinDays, undefined);
+    assert.equal(state.unlockCheckinDays, 5);
+  });
+
+  test('7. 舊存檔無 checkinLogs：checkinDayKeys 天數正常計入 (不誤判為補記)', () => {
+    // 舊存檔只有 checkinDayKeys，沒有 checkinLogs (undefined 或空陣列)
+    const stateWithoutLogs = {
+      checkinDayKeys: ['2026-11-17', '2026-11-20'],
+      joinDayKey: '2026-11-01',
+      checkinLogs: undefined,
+    };
+
+    const damageInfo = getDamageInfo(stateWithoutLogs, BASE_NOW_MS);
+    assert.equal(damageInfo.daysThisWeek, 2);
+    assert.equal(damageInfo.damageMultiplier, 1.2);
+
+    const stateWithEmptyLogs = {
+      checkinDayKeys: ['2026-11-17', '2026-11-20'],
+      joinDayKey: '2026-11-01',
+      checkinLogs: [],
+    };
+    const damageInfoEmpty = getDamageInfo(stateWithEmptyLogs, BASE_NOW_MS);
+    assert.equal(damageInfoEmpty.daysThisWeek, 2);
+    assert.equal(damageInfoEmpty.damageMultiplier, 1.2);
+  });
+
+  test('8. collectBackfillOnlyDayKeys 輔助函式邏輯驗證', () => {
+    assert.equal(collectBackfillOnlyDayKeys(undefined).size, 0);
+    assert.equal(collectBackfillOnlyDayKeys([]).size, 0);
+
+    const WED_MS = new Date('2026-11-18T10:00:00+08:00').getTime();
+    const logs = [
+      { dayKey: '2026-11-20', timestamp: BASE_NOW_MS }, // 即時打卡 (2026-11-20 === 2026-11-20)
+      { dayKey: '2026-11-17', timestamp: BASE_NOW_MS }, // 補記 (2026-11-20 !== 2026-11-17)
+      { dayKey: '2026-11-18', timestamp: WED_MS }, // 即時打卡 (2026-11-18 === 2026-11-18)
+      { dayKey: '2026-11-18', timestamp: BASE_NOW_MS }, // 該日亦有補記，但已有即時打卡，故不是 backfill-only
+    ];
+
+    const backfillOnly = collectBackfillOnlyDayKeys(logs);
+    assert.equal(backfillOnly.has('2026-11-17'), true);
+    assert.equal(backfillOnly.has('2026-11-20'), false);
+    assert.equal(backfillOnly.has('2026-11-18'), false);
   });
 });

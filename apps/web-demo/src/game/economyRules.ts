@@ -326,33 +326,19 @@ export function calculateLevelProgression(
 }
 
 /**
- * 2. getDamageInfo
- * Computes weekly damage multiplier and whether rookie floor applies.
- * Supports countSameWeekBackfillTowardWeeklyDays:
- * Uses existing checkinLogs to infer backfill (getLocalDayKey(timestamp) !== dayKey).
- * When countSameWeekBackfillTowardWeeklyDays is false, backfilled days in this week are not counted.
- * Past settled weeks are frozen (only current week days are examined).
+ * Collect day keys that are backfill-only based on checkinLogs.
+ * A day is backfill-only if some checkinLog has getLocalDayKey(timestamp) !== dayKey
+ * AND there is no log for that dayKey with timestamp on the same local day.
+ * If checkinLogs is missing or empty (old saves), returns empty Set (days still count).
  */
-export function getDamageInfo(
-  state: {
-    checkinDayKeys: string[];
-    joinDayKey: string;
-    checkinLogs?: CheckinLogEntry[];
-  },
-  now: Date | number = Date.now(),
-  config?: { countSameWeekBackfillTowardWeeklyDays?: boolean }
-): DamageInfoResult {
-  const todayKey = getLocalDayKey(now);
-  const currentWeekDays = getWeekDayKeys(todayKey);
-  const checkinSet = new Set(state.checkinDayKeys || []);
-  const countSameWeekBackfill =
-    config?.countSameWeekBackfillTowardWeeklyDays ?? true;
-
+export function collectBackfillOnlyDayKeys(
+  checkinLogs?: CheckinLogEntry[]
+): Set<string> {
   const backfilledDayKeys = new Set<string>();
-  if (state.checkinLogs && Array.isArray(state.checkinLogs)) {
+  if (checkinLogs && Array.isArray(checkinLogs)) {
     const immediateDays = new Set<string>();
     const mismatchedDays = new Set<string>();
-    for (const log of state.checkinLogs) {
+    for (const log of checkinLogs) {
       if (!log || !log.dayKey || typeof log.timestamp !== 'number') continue;
       const logLocalDay = getLocalDayKey(log.timestamp);
       if (logLocalDay === log.dayKey) {
@@ -367,10 +353,32 @@ export function getDamageInfo(
       }
     }
   }
+  return backfilledDayKeys;
+}
+
+/**
+ * 2. getDamageInfo
+ * Computes weekly damage multiplier and whether rookie floor applies.
+ * Backfilled days in this week never count toward weekly days or multiplier (YuChien 11/28 Q4).
+ * Uses existing checkinLogs to infer backfill (getLocalDayKey(timestamp) !== dayKey).
+ * Past settled weeks are frozen (only current week days are examined).
+ */
+export function getDamageInfo(
+  state: {
+    checkinDayKeys: string[];
+    joinDayKey: string;
+    checkinLogs?: CheckinLogEntry[];
+  },
+  now: Date | number = Date.now()
+): DamageInfoResult {
+  const todayKey = getLocalDayKey(now);
+  const currentWeekDays = getWeekDayKeys(todayKey);
+  const checkinSet = new Set(state.checkinDayKeys || []);
+  const backfilledDayKeys = collectBackfillOnlyDayKeys(state.checkinLogs);
 
   const daysThisWeek = currentWeekDays.filter((k) => {
     if (!checkinSet.has(k)) return false;
-    if (!countSameWeekBackfill && backfilledDayKeys.has(k)) {
+    if (backfilledDayKeys.has(k)) {
       return false;
     }
     return true;

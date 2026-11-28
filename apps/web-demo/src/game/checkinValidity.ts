@@ -442,9 +442,9 @@ export function evaluateCheckinValidity(
   const wouldGrantRewards = wouldCheckIn && !isBackfill;
 
   // 10. 本週天數計入判定 (countsTowardWeeklyDays)
-  // - 已結算的週（評估日的週鍵早於 now 所在週）一律不計入週天數（資安 11:48 凍結），不受開關影響。
-  // - 本週過去日：依 countSameWeekBackfillTowardWeeklyDays 開關判定（待 YuChien 確認，預設 true）。
-  // - 本週當天：達標即計入。
+  // - 已結算的週（評估日的週鍵早於 now 所在週）一律不計入週天數（資安 11:48 凍結）。
+  // - 補記一律不計入本週天數（YuChien 11/28 決策卡 Q4 定案）。
+  // - 本週當天即時打卡：達標即計入。
   const isCurrentWeek = targetWeekKey === currentWeekKey;
   const isSettledWeek = targetWeekKey < currentWeekKey;
   let countsTowardWeeklyDays = false;
@@ -453,13 +453,7 @@ export function evaluateCheckinValidity(
     if (isSettledWeek) {
       countsTowardWeeklyDays = false;
     } else if (isCurrentWeek) {
-      if (!isBackfill) {
-        countsTowardWeeklyDays = true;
-      } else {
-        countsTowardWeeklyDays = Boolean(
-          resolvedConfig.countSameWeekBackfillTowardWeeklyDays
-        );
-      }
+      countsTowardWeeklyDays = !isBackfill;
     }
   }
 

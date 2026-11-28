@@ -250,6 +250,7 @@ export const CheckInResultModal: React.FC = () => {
           <WeekStrip
             checkinDayKeys={store.checkinDayKeys}
             joinDayKey={store.joinDayKey}
+            checkinLogs={store.checkinLogs}
             showRookieNote={true}
           />
         </div>
