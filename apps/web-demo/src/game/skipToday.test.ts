@@ -529,4 +529,90 @@ describe('T1-D5 / T1-D6 Skip Today Pure Logic & Privacy Engine (skipToday)', () 
       assert.equal(storeCode.includes('removeCaringDay'), false);
     });
   });
+
+  describe('9. Milestone 2 UI components & source verification (T1-D5 / T1-D6 UI)', () => {
+    test('TodayHeroCard source adheres to single skip entry and state cards', () => {
+      const heroCode = fs.readFileSync(
+        new URL('../components/home/TodayHeroCard.tsx', import.meta.url),
+        'utf8'
+      );
+
+      // (A) Combined entry replaces the two side-by-side chips
+      assert.ok(heroCode.includes('data-testid="today-skip-entry"'));
+      assert.ok(heroCode.includes('今天先不動・休息或不舒服'));
+      assert.equal(heroCode.includes('today-chip-rest'), false);
+      assert.equal(heroCode.includes('today-chip-unwell'), false);
+      assert.ok(heroCode.includes('canShowSkipEntry'));
+
+      // (D) Rest-day card and caring card
+      assert.ok(heroCode.includes('data-testid="today-rest-card"'));
+      assert.ok(heroCode.includes('今天休息，好好充電'));
+      assert.ok(heroCode.includes('data-testid="today-rest-log-workout"'));
+      assert.ok(heroCode.includes('房間互動、問答照樣可以領'));
+      assert.ok(heroCode.includes('今天不會跳提醒，隊友也不會催你'));
+
+      assert.ok(heroCode.includes('data-testid="today-caring-card"'));
+      assert.ok(heroCode.includes('今天先照顧身體'));
+      assert.ok(heroCode.includes('data-testid="today-caring-room"'));
+      assert.ok(heroCode.includes('如果胸痛、呼吸困難或快昏倒，請立即撥打 119。'));
+
+      // Passes real arrays to WeekStrip
+      assert.ok(heroCode.includes('restDayKeys={store.restDayKeys}'));
+      assert.ok(heroCode.includes('caringDayKeys={store.caringDayKeys}'));
+    });
+
+    test('SkipTodaySheets source contains SkipChoiceSheet and RestConfirmSheet specifications', () => {
+      const sheetsCode = fs.readFileSync(
+        new URL('../components/sheets/SkipTodaySheets.tsx', import.meta.url),
+        'utf8'
+      );
+
+      // (B) SkipChoiceSheet
+      assert.ok(sheetsCode.includes('data-testid="skip-choice-sheet"'));
+      assert.ok(sheetsCode.includes('今天先不動'));
+      assert.ok(sheetsCode.includes('data-testid="skip-choice-unwell"'));
+      assert.ok(sheetsCode.includes('先照顧身體，今天不會跳提醒，隊友也不會催你。'));
+      assert.ok(sheetsCode.includes('data-testid="skip-choice-rest"'));
+      assert.ok(sheetsCode.includes('休息也是訓練的一部分。按下後今天就不能改回來。'));
+      assert.ok(sheetsCode.includes('如果胸痛、呼吸困難或快昏倒，請立即撥打 119。'));
+      assert.ok(sheetsCode.includes('再想想'));
+
+      // (B) RestConfirmSheet
+      assert.ok(sheetsCode.includes('data-testid="rest-confirm-sheet"'));
+      assert.ok(sheetsCode.includes('今天休息？'));
+      assert.ok(sheetsCode.includes('休息也是訓練的一部分。今天不會跳提醒，隊友也不會催你。'));
+      assert.ok(sheetsCode.includes('房間互動和問答照樣可以領遊戲幣'));
+      assert.ok(sheetsCode.includes('不影響本週已經動的天數'));
+      assert.ok(sheetsCode.includes('休息日想動也可以，動滿 10 分鐘照樣算數。'));
+      assert.ok(sheetsCode.includes('按下後，今天就不能再改回來囉。好好放鬆一天吧！'));
+      assert.ok(sheetsCode.includes('data-testid="rest-confirm-primary"'));
+    });
+
+    test('UnwellSheet source calls confirmUnwellToday and retains exact promise', () => {
+      const unwellCode = fs.readFileSync(
+        new URL('../components/sheets/UnwellSheet.tsx', import.meta.url),
+        'utf8'
+      );
+
+      // (C) confirmUnwellToday called on acknowledge & backdrop dismiss
+      assert.ok(unwellCode.includes('store.confirmUnwellToday()'));
+      assert.ok(unwellCode.includes('今天不會跳提醒，隊友也不會催你。已經存的紀錄不受影響。'));
+    });
+
+    test('WeekStrip source renders rest and caring day markers & testids', () => {
+      const weekCode = fs.readFileSync(
+        new URL('../components/home/WeekStrip.tsx', import.meta.url),
+        'utf8'
+      );
+
+      // (E) Optional props, aria-labels and testids
+      assert.ok(weekCode.includes('restDayKeys?: string[]'));
+      assert.ok(weekCode.includes('caringDayKeys?: string[]'));
+      assert.ok(weekCode.includes('data-testid="week-day-rest"'));
+      assert.ok(weekCode.includes('aria-label="休息日"'));
+      assert.ok(weekCode.includes('data-testid="week-day-caring"'));
+      assert.ok(weekCode.includes('aria-label="照顧身體日"'));
+      assert.ok(weekCode.includes("labelText = '休'"));
+    });
+  });
 });

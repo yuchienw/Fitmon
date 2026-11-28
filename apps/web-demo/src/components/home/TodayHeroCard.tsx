@@ -13,6 +13,14 @@ import {
   formatTodaySessionSummary,
   getTodayHeroCardState,
 } from '../../game/todayCardState';
+import {
+  canShowSkipEntry,
+  getSkipTodayStatus,
+} from '../../game/skipToday';
+import {
+  SkipChoiceSheet,
+  RestConfirmSheet,
+} from '../sheets/SkipTodaySheets';
 
 export interface TodayHeroCardProps {
   now?: number | Date;
@@ -64,12 +72,26 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
     now: nowMs,
   });
 
+  const skipStatus = getSkipTodayStatus(
+    { restDayKeys: store.restDayKeys, caringDayKeys: store.caringDayKeys },
+    todayKey
+  );
+
   const cardState = getTodayHeroCardState({
     checkedIn,
     bossDone,
     daySessionsCount: daySessions.length,
     dayProgressMet: dayProgress.met,
+    skipStatus,
   });
+
+  const canShowSkip = canShowSkipEntry({
+    cardState,
+    status: skipStatus,
+  });
+
+  const [skipChoiceOpen, setSkipChoiceOpen] = useState(false);
+  const [restConfirmOpen, setRestConfirmOpen] = useState(false);
 
   // T4-D5 既有「再 X 分鐘就算數」進度提示（progress 狀態且尚未達標時顯示，達標後消失）
   const showProgress = cardState === 'progress';
@@ -98,13 +120,21 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
     store.setActiveTab('plaza');
   };
 
-  const handleRestClick = () => {
-    // 休息確認與休息日卡歸 T1-D5，本單只放 D3a 入口但不發明 D5 文案／狀態
-    store.showToast('休息也是訓練的一部分');
-  };
-
-  const handleUnwellClick = () => {
-    store.setUnwellSheetOpen(true);
+  const handleScrollToRoom = () => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const mainEl =
+        document.querySelector('main') ||
+        document.querySelector('.overflow-y-auto') ||
+        document.body;
+      if (mainEl && 'scrollTo' in mainEl) {
+        try {
+          mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch {
+          // ignore
+        }
+      }
+    }
   };
 
   const todaySummary = cardState === 'ready' ? formatTodaySessionSummary(daySessions) : null;
@@ -136,12 +166,40 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
               今日已打卡
             </span>
           )}
+          {cardState === 'rest' && (
+            <span
+              data-testid="today-rest-card"
+              style={{
+                backgroundColor: '#F3EEE4',
+                color: '#6B5B4E',
+                borderColor: '#E0D4C0',
+              }}
+              className="ml-1.5 text-[10.5px] font-extrabold px-1.5 py-0.2 rounded-full border"
+            >
+              休息日
+            </span>
+          )}
+          {cardState === 'caring' && (
+            <span
+              data-testid="today-caring-card"
+              style={{
+                backgroundColor: '#FFF8F8',
+                color: '#8E3B4C',
+                borderColor: '#E9C9CF',
+              }}
+              className="ml-1.5 text-[10.5px] font-extrabold px-1.5 py-0.2 rounded-full border"
+            >
+              照顧身體中
+            </span>
+          )}
         </div>
         <div className="text-[17px] font-black leading-snug mt-0.5">
           {cardState === 'idle' && '今天還沒動，動一下就能出擊'}
           {cardState === 'progress' && (dayProgress.primary_hint || '今天還沒動，動一下就能出擊')}
           {cardState === 'ready' && '可以出擊了'}
           {cardState === 'sortied' && '今天已出擊，明天 00:00 再來'}
+          {cardState === 'rest' && '今天休息，好好充電'}
+          {cardState === 'caring' && '今天先照顧身體'}
         </div>
       </div>
 
@@ -262,10 +320,12 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
           joinDayKey={store.joinDayKey}
           now={nowMs}
           showRookieNote={true}
+          restDayKeys={store.restDayKeys}
+          caringDayKeys={store.caringDayKeys}
         />
 
-        {/* Thin Level Bar (progress 狀態由上方進度面板取代，因此隱藏；idle/ready/sortied 維持原樣) */}
-        {cardState !== 'progress' && (
+        {/* Thin Level Bar (progress/rest/caring 狀態依規格隱藏；idle/ready/sortied 維持原樣) */}
+        {cardState !== 'progress' && cardState !== 'rest' && cardState !== 'caring' && (
           <div className="flex items-center gap-1.5 pt-0.5">
             <span className="text-[11px] font-extrabold shrink-0 text-[#29221E]">
               Lv.{level}
@@ -365,60 +425,27 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
             去運動
           </button>
 
-          {/* D3a: 次要小按鈕「今天休息」「我不舒服」 */}
-          <div className="flex items-center gap-2">
+          {/* D3a: 單一合併次要入口「今天先不動・休息或不舒服」 */}
+          {canShowSkip && (
             <button
               type="button"
-              data-testid="today-chip-rest"
-              onClick={handleRestClick}
+              data-testid="today-skip-entry"
+              onClick={() => setSkipChoiceOpen(true)}
               style={{
                 backgroundColor: '#FFFDF8',
-                borderColor: '#E5DCCB',
-                color: '#5C4A3E',
-                boxShadow: '0 2px 0 #E5DCCB',
+                borderColor: '#C4B39A',
+                color: '#4A3B32',
+                boxShadow: '0 2px 0 #E0D4C0',
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border-[1.5px] text-[12.5px] font-extrabold active:translate-y-0.5 transition cursor-pointer"
+              className="w-full min-h-[44px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-[14px] border-[1.5px] text-[14px] font-extrabold active:translate-y-0.5 transition cursor-pointer leading-tight text-center"
             >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#8A6A4E"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M4 9h12v6a5 5 0 01-5 5H9a5 5 0 01-5-5z" fill="#F5E6CC" />
-                <path d="M16 11h2a2 2 0 010 4h-2M8 3c0 2 2 2 2 4M12 3c0 2 2 2 2 4" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#8A6A4E" className="shrink-0">
+                <rect x="6" y="5" width="4.5" height="14" rx="1.2" />
+                <rect x="13.5" y="5" width="4.5" height="14" rx="1.2" />
               </svg>
-              <span>今天休息</span>
+              <span>今天先不動・休息或不舒服</span>
             </button>
-
-            <button
-              type="button"
-              data-testid="today-chip-unwell"
-              onClick={handleUnwellClick}
-              style={{
-                backgroundColor: '#FFF8F8',
-                borderColor: '#EBD3D8',
-                color: '#8E3B4C',
-                boxShadow: '0 2px 0 #E5DCCB',
-              }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border-[1.5px] text-[12.5px] font-extrabold active:translate-y-0.5 transition cursor-pointer"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="#E8A3B0"
-                stroke="#8E3B4C"
-                strokeWidth="1.6"
-              >
-                <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
-              </svg>
-              <span>我不舒服</span>
-            </button>
-          </div>
+          )}
         </div>
       )}
 
@@ -455,60 +482,106 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
             {progressHint?.ctaText || '繼續運動'}
           </button>
 
-          {/* D4: 次要小按鈕「今天休息」「我不舒服」保留 */}
-          <div className="flex items-center gap-2">
+          {/* D4: 單一合併次要入口「今天先不動・休息或不舒服」 */}
+          {canShowSkip && (
             <button
               type="button"
-              data-testid="today-chip-rest"
-              onClick={handleRestClick}
+              data-testid="today-skip-entry"
+              onClick={() => setSkipChoiceOpen(true)}
               style={{
                 backgroundColor: '#FFFDF8',
-                borderColor: '#E5DCCB',
-                color: '#5C4A3E',
-                boxShadow: '0 2px 0 #E5DCCB',
+                borderColor: '#C4B39A',
+                color: '#4A3B32',
+                boxShadow: '0 2px 0 #E0D4C0',
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border-[1.5px] text-[12.5px] font-extrabold active:translate-y-0.5 transition cursor-pointer"
+              className="w-full min-h-[44px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-[14px] border-[1.5px] text-[14px] font-extrabold active:translate-y-0.5 transition cursor-pointer leading-tight text-center"
             >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#8A6A4E"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M4 9h12v6a5 5 0 01-5 5H9a5 5 0 01-5-5z" fill="#F5E6CC" />
-                <path d="M16 11h2a2 2 0 010 4h-2M8 3c0 2 2 2 2 4M12 3c0 2 2 2 2 4" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#8A6A4E" className="shrink-0">
+                <rect x="6" y="5" width="4.5" height="14" rx="1.2" />
+                <rect x="13.5" y="5" width="4.5" height="14" rx="1.2" />
               </svg>
-              <span>今天休息</span>
+              <span>今天先不動・休息或不舒服</span>
             </button>
+          )}
+        </div>
+      )}
 
-            <button
-              type="button"
-              data-testid="today-chip-unwell"
-              onClick={handleUnwellClick}
-              style={{
-                backgroundColor: '#FFF8F8',
-                borderColor: '#EBD3D8',
-                color: '#8E3B4C',
-                boxShadow: '0 2px 0 #E5DCCB',
-              }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border-[1.5px] text-[12.5px] font-extrabold active:translate-y-0.5 transition cursor-pointer"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="#E8A3B0"
-                stroke="#8E3B4C"
-                strokeWidth="1.6"
-              >
-                <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
-              </svg>
-              <span>我不舒服</span>
-            </button>
+      {/* D5b: 休息日卡 */}
+      {cardState === 'rest' && (
+        <div className="space-y-2.5">
+          <div
+            onClick={handleScrollToRoom}
+            style={{
+              backgroundColor: '#FFFDF8',
+              borderColor: '#E5DCCB',
+            }}
+            className="rounded-xl border-[1.5px] p-2.5 flex items-center justify-between cursor-pointer active:scale-[0.99] transition"
+          >
+            <span className="text-[12.5px] font-extrabold text-[#29221E]">
+              房間互動、問答照樣可以領
+            </span>
+            <span className="text-[12px] font-extrabold text-[#C2410C]">
+              去房間
+            </span>
           </div>
+
+          <div className="text-center text-[11.5px] text-[#786B63] pt-1">
+            想動一下也可以
+          </div>
+
+          <button
+            type="button"
+            data-testid="today-rest-log-workout"
+            onClick={handleGoToWorkout}
+            style={{
+              backgroundColor: '#FFFDF8',
+              borderColor: '#E5DCCB',
+              color: '#5C4A3E',
+              boxShadow: '0 3px 0 #E5DCCB',
+            }}
+            className="w-full py-2.5 rounded-xl border-[1.5px] text-[13px] font-black active:translate-y-0.5 transition cursor-pointer text-center"
+          >
+            記錄運動
+          </button>
+
+          <div className="text-center text-[11.5px] text-[#786B63]">
+            今天不會跳提醒，隊友也不會催你
+          </div>
+        </div>
+      )}
+
+      {/* D6f: 照顧身體中卡 */}
+      {cardState === 'caring' && (
+        <div className="space-y-2.5">
+          <div className="text-center text-[11.5px] text-[#786B63]">
+            今天不會跳提醒，隊友也不會催你。
+          </div>
+
+          <div
+            style={{
+              backgroundColor: '#FFF1F2',
+              borderColor: '#FECDD3',
+              color: '#9F1239',
+            }}
+            className="rounded-xl border border-dashed p-2.5 text-[12px] font-extrabold text-center leading-relaxed"
+          >
+            如果胸痛、呼吸困難或快昏倒，請立即撥打 119。
+          </div>
+
+          <button
+            type="button"
+            data-testid="today-caring-room"
+            onClick={handleScrollToRoom}
+            style={{
+              backgroundColor: '#FFFDF8',
+              borderColor: '#E5DCCB',
+              color: '#5C4A3E',
+              boxShadow: '0 3px 0 #E5DCCB',
+            }}
+            className="w-full py-2.5 rounded-xl border-[1.5px] text-[13px] font-black active:translate-y-0.5 transition cursor-pointer text-center"
+          >
+            房間互動
+          </button>
         </div>
       )}
 
@@ -560,6 +633,33 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
           </div>
         </div>
       )}
+
+      {/* Skip today sheets (Choice & Rest Confirm) */}
+      <SkipChoiceSheet
+        isOpen={skipChoiceOpen}
+        onClose={() => setSkipChoiceOpen(false)}
+        onSelectUnwell={() => {
+          setSkipChoiceOpen(false);
+          store.setUnwellSheetOpen(true);
+        }}
+        onSelectRest={() => {
+          setSkipChoiceOpen(false);
+          setRestConfirmOpen(true);
+        }}
+      />
+
+      <RestConfirmSheet
+        isOpen={restConfirmOpen}
+        onClose={() => setRestConfirmOpen(false)}
+        onBack={() => {
+          setRestConfirmOpen(false);
+          setSkipChoiceOpen(true);
+        }}
+        onConfirm={() => {
+          store.markRestDayToday();
+          setRestConfirmOpen(false);
+        }}
+      />
     </div>
   );
 };
