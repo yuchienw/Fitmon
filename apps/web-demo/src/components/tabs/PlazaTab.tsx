@@ -583,7 +583,7 @@ export const PlazaTab: React.FC = () => {
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
                 <div className="text-[10px] text-slate-400 font-bold">撿尾刀次數</div>
                 <div className="text-base font-mono font-black text-rose-400">
-                  {store.totalFinalBlows ?? 2} 次
+                  {store.totalFinalBlows ?? 0} 次
                 </div>
                 <div className="text-[10px] text-slate-500">Boss 終結斬殺</div>
               </div>
@@ -591,7 +591,7 @@ export const PlazaTab: React.FC = () => {
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
                 <div className="text-[10px] text-slate-400 font-bold">擊敗 Boss 隻數</div>
                 <div className="text-base font-mono font-black text-emerald-400">
-                  {store.totalBossesDefeated ?? 3} 隻
+                  {store.totalBossesDefeated ?? 0} 隻
                 </div>
                 <div className="text-[10px] text-slate-500">
                   個人 S.{store.personalMaxStage} · 戰隊 S.{store.squadMaxStage}
@@ -601,10 +601,10 @@ export const PlazaTab: React.FC = () => {
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
                 <div className="text-[10px] text-slate-400 font-bold">累計總輸出</div>
                 <div className="text-base font-mono font-black text-cyan-300">
-                  {((store.totalDamageDealt ?? 6420) / 1000).toFixed(1)}k
+                  {((store.totalDamageDealt ?? 0) / 1000).toFixed(1)}k
                 </div>
                 <div className="text-[10px] text-slate-500">
-                  累計揮拳 {store.totalStrikesCount ?? 11} 次
+                  累計揮拳 {store.totalStrikesCount ?? 0} 次
                 </div>
               </div>
             </div>
@@ -1504,7 +1504,7 @@ export const PlazaTab: React.FC = () => {
                           setBagLootReport({
                             stage: b.stageNumber,
                             boss: b,
-                            strikeDamage: store.personalMaxDamage || 680,
+                            strikeDamage: store.personalMaxDamage ?? 0,
                           });
                         }}
                         className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-black shrink-0 flex items-center gap-1 shadow"
