@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 export interface SkipChoiceSheetProps {
   isOpen: boolean;
@@ -14,8 +15,9 @@ export const SkipChoiceSheet: React.FC<SkipChoiceSheetProps> = ({
   onSelectRest,
 }) => {
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-[#29221E]/45 backdrop-blur-[2px]"
       onClick={(e) => {
@@ -131,7 +133,8 @@ export const SkipChoiceSheet: React.FC<SkipChoiceSheetProps> = ({
           再想想
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -149,8 +152,9 @@ export const RestConfirmSheet: React.FC<RestConfirmSheetProps> = ({
   onConfirm,
 }) => {
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-[#29221E]/45 backdrop-blur-[2px]"
       onClick={(e) => {
@@ -284,6 +288,7 @@ export const RestConfirmSheet: React.FC<RestConfirmSheetProps> = ({
           再想想
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

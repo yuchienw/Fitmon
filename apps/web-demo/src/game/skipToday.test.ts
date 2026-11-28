@@ -567,6 +567,11 @@ describe('T1-D5 / T1-D6 Skip Today Pure Logic & Privacy Engine (skipToday)', () 
         'utf8'
       );
 
+      // (QA) Portal & SSR guard
+      assert.ok(sheetsCode.includes('createPortal('));
+      assert.ok(sheetsCode.includes('document.body'));
+      assert.ok(sheetsCode.includes("typeof document === 'undefined'"));
+
       // (B) SkipChoiceSheet
       assert.ok(sheetsCode.includes('data-testid="skip-choice-sheet"'));
       assert.ok(sheetsCode.includes('今天先不動'));
