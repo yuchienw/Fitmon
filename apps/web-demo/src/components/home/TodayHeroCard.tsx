@@ -8,6 +8,7 @@ import {
   formatAltDistanceHint,
   getSessionDayKey,
 } from '../../game/dayProgress';
+import { resolveTodayProgressHint } from '../../game/todayProgressHint';
 import {
   formatTodaySessionSummary,
   getTodayHeroCardState,
@@ -73,6 +74,15 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
   // T4-D5 既有「再 X 分鐘就算數」進度提示（progress 狀態且尚未達標時顯示，達標後消失）
   const showProgress = cardState === 'progress';
 
+  // T1-D4: 對齊 D4a / D4b 進度提示面板模型（純函式計算）
+  const progressHint = showProgress
+    ? resolveTodayProgressHint({
+        dayProgress,
+        daySessions,
+        now: nowMs,
+      })
+    : null;
+
   // Teammates who worked out today
   const activeTeammates = store.squadMembers.filter(
     (m) => m.hasWorkedOutToday && !m.isSuspectedCheater
@@ -134,9 +144,10 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
       </div>
 
       {/* Day Progress Hint (T1-D4 / T4-D5) */}
-      {showProgress && (
+      {showProgress && progressHint && (
         <div
           data-testid="day-progress-hint"
+          data-variant={progressHint.variant}
           style={{
             backgroundColor: '#FFFDF8',
             borderColor: '#E5DCCB',
@@ -145,50 +156,45 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
         >
           <div className="flex items-center justify-between">
             <span className="text-[13.5px] font-black text-[#29221E]">
-              今天的運動 {Math.min(10, dayProgress.minutes_done)}／10 分
+              {progressHint.panelTitle}
             </span>
             <span
               style={{
-                backgroundColor: '#FEF3C7',
-                color: '#92400E',
-                borderColor: '#F5C45A',
+                backgroundColor: '#F4EFE6',
+                color: '#786B63',
+                borderColor: '#E5DCCB',
               }}
-              className="px-1.5 py-0.5 rounded-md border text-[10.5px] font-black"
+              className="px-2 py-0.5 rounded-full border text-[10.5px] font-extrabold"
             >
-              可以累加
+              {progressHint.panelTag}
             </span>
           </div>
 
-          {/* 10-segment Progress Bar */}
-          <div className="flex gap-1">
-            {Array.from({ length: 10 }).map((_, idx) => {
-              const isFilled = idx < dayProgress.minutes_done;
+          {/* Segmented Progress Bar (10 for minutes, needed for sets) */}
+          <div className="flex gap-[3px]">
+            {Array.from({ length: progressHint.totalSegments }).map((_, idx) => {
+              const isFilled = idx < progressHint.filledSegments;
               return (
                 <div
                   key={idx}
                   style={{
-                    backgroundColor: isFilled ? '#EA580C' : '#EFE8DC',
+                    background: isFilled
+                      ? 'linear-gradient(180deg, #FDBA74, #EA580C)'
+                      : '#EFE8DC',
                     borderColor: isFilled ? '#C2410C' : '#E5DCCB',
                   }}
-                  className="flex-1 h-2.5 rounded-[3px] border"
+                  className="flex-1 h-3 rounded-[3px] border"
                 />
               );
             })}
           </div>
 
-          {/* Subtext: primary hint + alt distance secondary hint */}
-          <div className="text-[12px] text-[#786B63] leading-relaxed">
-            {dayProgress.primary_hint && (
-              <span className="font-black text-[#C2410C] mr-1">
-                {dayProgress.primary_hint}
-              </span>
-            )}
-            {dayProgress.alt_distance && dayProgress.alt_distance.remaining_m > 0 && (
-              <span className="text-[#786B63]">
-                {dayProgress.primary_hint ? '・' : ''}
-                {formatAltDistanceHint(dayProgress.alt_distance)}
-              </span>
-            )}
+          {/* Subtext: Saved record summary + alt distance (T1-D4 / copy 56, 57) */}
+          <div
+            data-testid="day-progress-sub"
+            className="text-[11.5px] text-[#786B63] leading-relaxed"
+          >
+            {progressHint.subText}
           </div>
         </div>
       )}
@@ -256,27 +262,29 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
           showRookieNote={true}
         />
 
-        {/* Thin Level Bar */}
-        <div className="flex items-center gap-1.5 pt-0.5">
-          <span className="text-[11px] font-extrabold shrink-0 text-[#29221E]">
-            Lv.{level}
-          </span>
-          <div
-            style={{ backgroundColor: '#EFE8DC' }}
-            className="flex-1 h-2 rounded-full overflow-hidden relative"
-          >
+        {/* Thin Level Bar (progress 狀態由上方進度面板取代，因此隱藏；idle/ready/sortied 維持原樣) */}
+        {cardState !== 'progress' && (
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <span className="text-[11px] font-extrabold shrink-0 text-[#29221E]">
+              Lv.{level}
+            </span>
             <div
-              style={{
-                width: `${expPercent}%`,
-                background: 'linear-gradient(90deg, #FB923C, #EA580C)',
-              }}
-              className="h-full rounded-full transition-all duration-300"
-            />
+              style={{ backgroundColor: '#EFE8DC' }}
+              className="flex-1 h-2 rounded-full overflow-hidden relative"
+            >
+              <div
+                style={{
+                  width: `${expPercent}%`,
+                  background: 'linear-gradient(90deg, #FB923C, #EA580C)',
+                }}
+                className="h-full rounded-full transition-all duration-300"
+              />
+            </div>
+            <span className="text-[11px] text-[#786B63] font-mono shrink-0">
+              {exp}/{maxExp}
+            </span>
           </div>
-          <span className="text-[11px] text-[#786B63] font-mono shrink-0">
-            {exp}/{maxExp}
-          </span>
-        </div>
+        )}
       </div>
 
       {/* 3. Teammate Row (ready / sortied 保留；idle / progress 依 D3a 隱藏) */}
@@ -332,8 +340,8 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
         </div>
       )}
 
-      {/* 4. Subtitle / Helper (idle & progress) */}
-      {(cardState === 'idle' || cardState === 'progress') && (
+      {/* 4. Subtitle / Helper (idle only; progress 依 D4a/D4b 移除) */}
+      {cardState === 'idle' && (
         <div className="text-center text-[11.5px] text-[#786B63] pt-0.5">
           任何運動都算，一天加起來滿 10 分鐘就算數
         </div>
@@ -414,6 +422,24 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
 
       {cardState === 'progress' && (
         <div className="space-y-2.5">
+          {/* D4b 變體琥珀提示框（僅在 rest-rule 變體時顯示；只是組數還差時不顯示） */}
+          {progressHint?.amberAlert && (
+            <div
+              data-testid="day-progress-rest-amber"
+              style={{
+                backgroundColor: '#FFF7E0',
+                borderColor: '#F5D58A',
+                color: '#7A4E00',
+              }}
+              className="rounded-xl border-[1.5px] p-2.5 text-[11.5px] font-bold leading-relaxed space-y-1"
+            >
+              <div>{progressHint.amberAlert.title}</div>
+              {progressHint.amberAlert.lines.map((line, idx) => (
+                <div key={idx}>・{line}</div>
+              ))}
+            </div>
+          )}
+
           <button
             type="button"
             data-testid="today-cta-continue"
@@ -424,10 +450,10 @@ export const TodayHeroCard: React.FC<TodayHeroCardProps> = ({ now: propNow }) =>
             }}
             className="w-full py-3 rounded-2xl text-white font-black text-base active:translate-y-0.5 transition cursor-pointer"
           >
-            繼續運動
+            {progressHint?.ctaText || '繼續運動'}
           </button>
 
-          {/* D4: 次要小按鈕「今天休息」「我不舒服」 */}
+          {/* D4: 次要小按鈕「今天休息」「我不舒服」保留 */}
           <div className="flex items-center gap-2">
             <button
               type="button"
