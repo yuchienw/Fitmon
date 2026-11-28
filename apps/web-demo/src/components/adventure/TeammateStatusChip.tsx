@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, Heart, Sparkles, UserPlus } from 'lucide-react';
 import { SquadMemberState } from '../../stores/useGameStore';
 import { calculateMemberStats } from './memberStats';
+import { getTeammatePublicStatus } from '../../game/skipToday';
 
 export interface TeammateStatusChipProps {
   member?: SquadMemberState;
@@ -44,7 +45,7 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
   }
 
   const stats = calculateMemberStats(member);
-  const worked = member.hasWorkedOutToday;
+  const { worked, label: teammatePublicLabel } = getTeammatePublicStatus(member);
 
   if (variant === 'attendance') {
     return (
@@ -97,14 +98,14 @@ export const TeammateStatusChip: React.FC<TeammateStatusChipProps> = ({
       text = stats.mainAtkLabel.replace(' ', '');
     }
   } else {
-    text = '還沒動';
+    text = teammatePublicLabel ?? '還沒動';
   }
 
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={`隊友狀態：${member.nameZh} ${worked ? text : '💤 還沒動'}`}
+      aria-label={`隊友狀態：${member.nameZh} ${worked ? text : `💤 ${teammatePublicLabel ?? '還沒動'}`}`}
       className={`inline-flex min-h-[44px] min-w-0 max-w-full items-center justify-center p-0 bg-transparent border-0 cursor-pointer transition-transform active:scale-95 ${className}`}
     >
       <span

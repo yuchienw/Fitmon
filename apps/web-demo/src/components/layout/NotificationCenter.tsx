@@ -19,6 +19,8 @@ import {
   type NotificationView,
   type RecipientNotifyContext,
 } from '../../game/notificationCenter';
+import { getLocalDayKey } from '../../game/day';
+import { getRecipientSkipFlags } from '../../game/skipToday';
 import {
   previewSwitchSquadFromInvite,
   type SquadSocialStateSnapshot,
@@ -43,21 +45,29 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const devMinorTestAccount = useGameStore((s) => s.devMinorTestAccount);
   const friendIds = useGameStore((s) => s.friendIds);
   const blockedIds = useGameStore((s) => s.blockedIds);
+  const restDayKeys = useGameStore((s) => s.restDayKeys);
+  const caringDayKeys = useGameStore((s) => s.caringDayKeys);
 
   const [actingId, setActingId] = useState<string | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [blockingTarget, setBlockingTarget] = useState<{ id: string; nickname: string } | null>(null);
   const [reportingTarget, setReportingTarget] = useState<{ id: string; nickname: string } | null>(null);
 
-  const recipientCtx: RecipientNotifyContext = useMemo(
-    () => ({
+  const recipientCtx: RecipientNotifyContext = useMemo(() => {
+    const todayKey = getLocalDayKey(Date.now());
+    const skipFlags = getRecipientSkipFlags(
+      { restDayKeys, caringDayKeys },
+      todayKey,
+      devRecipientNotifyDemo
+    );
+    return {
       ...devRecipientNotifyDemo,
+      ...skipFlags,
       isMinor: devMinorTestAccount,
       friendIds,
       blockedIds: blockedIds || [],
-    }),
-    [devRecipientNotifyDemo, devMinorTestAccount, friendIds, blockedIds]
-  );
+    };
+  }, [restDayKeys, caringDayKeys, devRecipientNotifyDemo, devMinorTestAccount, friendIds, blockedIds]);
 
   const now = Date.now();
 

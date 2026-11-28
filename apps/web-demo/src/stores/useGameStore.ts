@@ -196,6 +196,7 @@ import {
 } from '../game/economyRules';
 import { evaluateCheckinValidity } from '../game/checkinValidity';
 import { applyCheckinGrant } from '../game/checkinGrant';
+import { markSkipToday } from '../game/skipToday';
 import {
   applySquadMembershipAction,
   previewLeaveSquad,
@@ -776,6 +777,8 @@ export interface GameState {
   getDamageInfo: (now?: number) => DamageInfoResult;
   getStreakDays: (now?: number) => number;
   isCheckedInToday: (now?: number) => boolean;
+  markRestDayToday: () => boolean;
+  confirmUnwellToday: () => boolean;
 
   isBossDoneToday: (now?: number) => boolean;
   getNextResetAt: (now?: number) => number;
@@ -3241,8 +3244,38 @@ export const useGameStore = create<GameState>()(
       },
 
       isCheckedInToday: (now = Date.now()) => {
-
         return get().lastCheckinDate === getLocalDayKey(now);
+      },
+
+      markRestDayToday: () => {
+        const todayKey = getLocalDayKey(Date.now());
+        const patch = markSkipToday(
+          get(),
+          'rest',
+          todayKey,
+          { checkedIn: get().isCheckedInToday() }
+        );
+        if (patch) {
+          set(patch);
+          return true;
+        }
+        return false;
+      },
+
+      confirmUnwellToday: () => {
+        const todayKey = getLocalDayKey(Date.now());
+        const patch = markSkipToday(
+          get(),
+          'caring',
+          todayKey,
+          { checkedIn: get().isCheckedInToday() }
+        );
+        if (patch) {
+          set({ ...patch, unwellSheetOpen: false });
+          return true;
+        }
+        set({ unwellSheetOpen: false });
+        return false;
       },
 
       isBossDoneToday: (now = Date.now()) => {
