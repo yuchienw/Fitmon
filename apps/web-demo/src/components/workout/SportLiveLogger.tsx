@@ -3,6 +3,10 @@ import { useGameStore, ActiveSportSessionDraft } from '../../stores/useGameStore
 import { getSportIcon, getSportName } from './SportTypePicker';
 import { getLocalDayKey } from '../../game/day';
 import { accumulateDayProgress, getSessionDayKey } from '../../game/dayProgress';
+import { computeActiveDurationSec } from '../../game/sportLiveTiming';
+
+export { computeActiveDurationSec } from '../../game/sportLiveTiming';
+export type { ComputeActiveDurationOptions, PauseSegment } from '../../game/sportLiveTiming';
 
 interface SportLiveLoggerProps {
   draft: ActiveSportSessionDraft;
@@ -31,10 +35,21 @@ export function formatRemainingTimeNotice(remainingSec: number): string {
 export const SportLiveLogger: React.FC<SportLiveLoggerProps> = ({ draft, onFinish }) => {
   const store = useGameStore();
 
-  const [activeDurationSec, setActiveDurationSec] = useState<number>(draft.durationSec || 0);
-  const [isPaused, setIsPaused] = useState<boolean>(draft.isPaused || false);
+  const [isPaused, setIsPaused] = useState<boolean>(() => draft.isPaused || false);
   const [pauseSegments, setPauseSegments] = useState<{ startedAt: number; endedAt: number }[]>(
-    draft.pauseSegments || []
+    () => draft.pauseSegments || []
+  );
+  const pauseStartedAtRef = useRef<number | null>(
+    draft.isPaused && draft.pausedAt ? draft.pausedAt : null
+  );
+
+  const [activeDurationSec, setActiveDurationSec] = useState<number>(() =>
+    computeActiveDurationSec({
+      startedAt: draft.startedAt,
+      now: Date.now(),
+      pauseSegments: draft.pauseSegments || [],
+      currentPauseStartedAt: draft.isPaused && draft.pausedAt ? draft.pausedAt : null,
+    })
   );
   const [distanceM, setDistanceM] = useState<number>(draft.distanceM || 0);
   const [hiitExercises, setHiitExercises] = useState<string[]>(
@@ -43,19 +58,42 @@ export const SportLiveLogger: React.FC<SportLiveLoggerProps> = ({ draft, onFinis
   const [newHiitExercise, setNewHiitExercise] = useState('');
   const [isAddingHiit, setIsAddingHiit] = useState(false);
 
-  const pauseStartedAtRef = useRef<number | null>(draft.isPaused && draft.pausedAt ? draft.pausedAt : null);
   const poolLengthM = draft.poolLengthM || (draft.venue === 'pool_50' ? 50 : 25);
 
-  // Active workout timer ticking
+  // Active workout timer ticking: display ticker only, re-reads Date.now()
   useEffect(() => {
     if (isPaused) return;
 
-    const interval = window.setInterval(() => {
-      setActiveDurationSec((prev) => prev + 1);
-    }, 1000);
+    const tick = () => {
+      setActiveDurationSec(
+        computeActiveDurationSec({
+          startedAt: draft.startedAt,
+          now: Date.now(),
+          pauseSegments,
+          currentPauseStartedAt: null,
+        })
+      );
+    };
 
-    return () => window.clearInterval(interval);
-  }, [isPaused]);
+    tick();
+    const interval = window.setInterval(tick, 1000);
+
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        tick();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisible);
+    }
+
+    return () => {
+      window.clearInterval(interval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisible);
+      }
+    };
+  }, [isPaused, draft.startedAt, pauseSegments]);
 
   // Handle Pause / Resume
   const handleTogglePause = () => {
@@ -64,16 +102,34 @@ export const SportLiveLogger: React.FC<SportLiveLoggerProps> = ({ draft, onFinis
       // Pause
       pauseStartedAtRef.current = now;
       setIsPaused(true);
+      setActiveDurationSec(
+        computeActiveDurationSec({
+          startedAt: draft.startedAt,
+          now,
+          pauseSegments,
+          currentPauseStartedAt: now,
+        })
+      );
     } else {
       // Resume
+      let nextPauseSegments = pauseSegments;
       if (pauseStartedAtRef.current) {
-        setPauseSegments((prev) => [
-          ...prev,
-          { startedAt: pauseStartedAtRef.current!, endedAt: now },
-        ]);
+        nextPauseSegments = [
+          ...pauseSegments,
+          { startedAt: pauseStartedAtRef.current, endedAt: now },
+        ];
+        setPauseSegments(nextPauseSegments);
         pauseStartedAtRef.current = null;
       }
       setIsPaused(false);
+      setActiveDurationSec(
+        computeActiveDurationSec({
+          startedAt: draft.startedAt,
+          now,
+          pauseSegments: nextPauseSegments,
+          currentPauseStartedAt: null,
+        })
+      );
     }
   };
 
@@ -83,6 +139,14 @@ export const SportLiveLogger: React.FC<SportLiveLoggerProps> = ({ draft, onFinis
     if (!isPaused) {
       pauseStartedAtRef.current = now;
       setIsPaused(true);
+      setActiveDurationSec(
+        computeActiveDurationSec({
+          startedAt: draft.startedAt,
+          now,
+          pauseSegments,
+          currentPauseStartedAt: now,
+        })
+      );
     }
     store.setUnwellSheetOpen(true);
   };
@@ -103,9 +167,16 @@ export const SportLiveLogger: React.FC<SportLiveLoggerProps> = ({ draft, onFinis
       });
     }
 
+    const durationSec = computeActiveDurationSec({
+      startedAt: draft.startedAt,
+      now,
+      pauseSegments: finalPauseSegments,
+      currentPauseStartedAt: null,
+    });
+
     const completed: ActiveSportSessionDraft = {
       ...draft,
-      durationSec: activeDurationSec,
+      durationSec,
       distanceM: distanceM,
       pauseSegments: finalPauseSegments,
       isPaused: false,
