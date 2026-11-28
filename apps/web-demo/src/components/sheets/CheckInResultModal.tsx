@@ -7,6 +7,8 @@ import { isWeeklyChestClaimable } from '../../game/economyRules';
 
 export const CheckInResultModal: React.FC = () => {
   const store = useGameStore();
+  // hook 要放在 early return 之前
+  const [justClaimedChest, setJustClaimedChest] = useState(false);
   const result = store.checkinResult;
 
   if (!result) return null;
@@ -36,7 +38,6 @@ export const CheckInResultModal: React.FC = () => {
     isRookieFloor,
   } = result;
 
-  const [justClaimedChest, setJustClaimedChest] = useState(false);
   const isChestReady = isWeeklyChestClaimable(store, daysThisWeek);
   const isChestClaimedThisWeek = store.chestClaimedWeekKey === currentWeekKey;
 
