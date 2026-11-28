@@ -441,6 +441,22 @@ export interface ActiveSportSessionDraft {
   intensity?: '輕鬆' | '中等' | '喘喘';
 }
 
+export interface SaveSportSessionInput {
+  sportType: WorkoutSessionSportType;
+  durationMinutes: number;
+  durationSec?: number;
+  distanceM?: number;
+  pauseSegments?: { startedAt: number; endedAt: number }[];
+  customName?: string;
+  ballKind?: string;
+  exerciseList?: string[];
+  intensity?: '輕鬆' | '中等' | '喘喘';
+  venue?: 'outdoor' | 'treadmill' | 'indoor_bike' | 'pool_25' | 'pool_50';
+  startedAt?: number;
+  source?: 'in_app' | 'health_app';
+  loggingMode?: 'live_focus' | 'after_the_fact';
+}
+
 export interface WorkoutSessionRecord {
   id: string;
   dateLabel: string;
@@ -526,6 +542,7 @@ export interface VictorySettlementData {
   newPRs: string[];
   staminaDepletedNotice: boolean;
   topExerciseName: string;
+  sportType?: WorkoutSessionSportType;
 }
 
 // In-memory code lookup timestamps log (not persisted to LocalStorage, resets on refresh per constraint)
@@ -781,6 +798,7 @@ export interface GameState {
   updateWorkoutHistorySession: (id: string, updates: Partial<WorkoutSessionRecord>) => void;
   setWorkoutSubView: (view: 'picker' | 'strength_hub' | 'setup' | 'live' | 'finish') => void;
   setActiveSportSession: (session: ActiveSportSessionDraft | null) => void;
+  saveSportSession: (input: SaveSportSessionInput) => void;
   goToSportTypePicker: () => void;
 
   // Social & Adventure Actions (V2.9)
@@ -2943,16 +2961,23 @@ export const useGameStore = create<GameState>()(
           patchToApply.checkinResult = grantRes.result;
           patchToApply.victoryModalData = null;
         } else {
-          // 未發打卡獎（未達標、或今日已打卡的第二筆）：正常開啟 VictoryModal
-          patchToApply.victoryModalData = {
-            calcResult,
-            routineName: routineTitle,
-            setsCount: currentState.sessionSets.length,
-            bonusCoins: settlementCoins,
-            newPRs,
-            staminaDepletedNotice: false,
-            topExerciseName: topEx,
-          };
+          // 未發打卡獎（未達標、或今日已打卡的第二筆）：
+          // Q3（經幕僚長轉達定案）：舊 12 項重訓結算若真的有發幣／XP，維持原樣顯示；金額為 0 時不要開帶著空金額的 VictoryModal
+          const hasRealEarnings = settlementCoins > 0 || calcResult.totalExperience > 0;
+          if (sessionSportType === 'strength' && hasRealEarnings) {
+            patchToApply.victoryModalData = {
+              calcResult,
+              routineName: routineTitle,
+              setsCount: currentState.sessionSets.length,
+              bonusCoins: settlementCoins,
+              newPRs,
+              staminaDepletedNotice: false,
+              topExerciseName: topEx,
+            };
+          } else {
+            patchToApply.victoryModalData = null;
+            currentState.showToast('已存下紀錄');
+          }
           patchToApply.checkinResult = null;
         }
 
@@ -2994,6 +3019,164 @@ export const useGameStore = create<GameState>()(
 
       setWorkoutSubView: (view) => set({ workoutSubView: view }),
       setActiveSportSession: (session) => set({ activeSportSession: session }),
+      saveSportSession: (input: SaveSportSessionInput) => {
+        const sessionNow = Date.now();
+        const todayKey = getLocalDayKey(sessionNow);
+        const currentState = get();
+
+        let dateLabel = '今日運動';
+        try {
+          dateLabel = new Intl.DateTimeFormat('zh-TW', {
+            month: 'numeric',
+            day: 'numeric',
+            weekday: 'short',
+          }).format(new Date(sessionNow));
+        } catch (_) {}
+
+        let routineName = '運動';
+        switch (input.sportType) {
+          case 'strength':
+            routineName = '重訓';
+            break;
+          case 'run':
+            routineName = '跑步';
+            break;
+          case 'walk':
+            routineName = '快走';
+            break;
+          case 'swim':
+            routineName = '游泳';
+            break;
+          case 'cycle':
+            routineName = '單車';
+            break;
+          case 'yoga_stretch':
+            routineName = '瑜珈／伸展';
+            break;
+          case 'ball':
+            routineName = input.ballKind ? `${input.ballKind}` : '球類';
+            break;
+          case 'circuit_hiit':
+            routineName = '循環訓練／HIIT';
+            break;
+          case 'custom':
+            routineName = input.customName?.trim() || '自訂';
+            break;
+        }
+
+        const durationMin = Math.max(1, input.durationMinutes);
+        const durationSec =
+          typeof input.durationSec === 'number' && input.durationSec > 0
+            ? input.durationSec
+            : durationMin * 60;
+
+        // Q3 (經幕僚長轉達定案): 新運動類型結算幣與結算經驗維持 0；舊 12 項動作公式維持不變
+        // 非重訓紀錄不得寫入 weightKg，不得假造 restShare，距離寫入 distanceM
+        const sessionRecord: WorkoutSessionRecord = {
+          id: `sport_${sessionNow}_${Math.random().toString(36).slice(2, 7)}`,
+          dateLabel,
+          timestamp: input.startedAt || sessionNow,
+          routineName,
+          durationMinutes: durationMin,
+          durationSec,
+          totalDurationSec: durationSec,
+          ...(input.distanceM && input.distanceM > 0 ? { distanceM: input.distanceM } : {}),
+          totalVolume: 0,
+          totalSets: 0,
+          coinsEarned: 0,
+          expEarned: 0,
+          topExerciseZh: routineName,
+          exerciseLogs: [],
+          sportType: input.sportType,
+          source: input.source || 'in_app',
+          loggingMode: input.loggingMode || 'live_focus',
+          endedUnwell: false,
+          pauseSegments: input.pauseSegments || [],
+        };
+
+        let annotationType: '重訓' | '散步' | '瑜珈' | '球類' | '自訂' | undefined = undefined;
+        if (input.sportType === 'strength') annotationType = '重訓';
+        else if (input.sportType === 'walk') annotationType = '散步';
+        else if (input.sportType === 'yoga_stretch') annotationType = '瑜珈';
+        else if (input.sportType === 'ball') annotationType = '球類';
+        else if (input.sportType === 'custom') annotationType = '自訂';
+
+        const daySessions = [sessionRecord, ...currentState.workoutHistory];
+        const validity = evaluateCheckinValidity({
+          sessions: daySessions,
+          dayKey: todayKey,
+          now: sessionNow,
+          restDayKeys: currentState.restDayKeys,
+          caringDayKeys: currentState.caringDayKeys,
+          unwellHalfUsedByWeek: currentState.unwellHalfUsedByWeek,
+          checkinDayKeys: currentState.checkinDayKeys,
+          joinDayKey: currentState.joinDayKey,
+        });
+
+        const grantRes = applyCheckinGrant({
+          dayKey: todayKey,
+          nowMs: sessionNow,
+          validity,
+          state: {
+            lastCheckinDate: currentState.lastCheckinDate,
+            checkinDayKeys: currentState.checkinDayKeys,
+            checkinLogs: currentState.checkinLogs,
+            level: currentState.level,
+            exp: currentState.exp,
+            joinDayKey: currentState.joinDayKey,
+            coins: currentState.coins,
+            coinsEarnedToday: currentState.coinsEarnedToday,
+            coinsEarnedDayKey: currentState.coinsEarnedDayKey,
+            doubleCoinUntil: currentState.doubleCoinUntil,
+            unlockCheckinDays: currentState.unlockCheckinDays,
+            unwellHalfUsedByWeek: currentState.unwellHalfUsedByWeek,
+            unlockedPoseIds: currentState.unlockedPoseIds,
+            unlockedOutfitIds: currentState.unlockedOutfitIds,
+          },
+          annotation: {
+            type: annotationType,
+            minutes: durationMin,
+            intensity: input.intensity || '中等',
+          },
+        });
+
+        const grantedRewards = Boolean(grantRes.ok && grantRes.granted && grantRes.result);
+        if (grantedRewards && grantRes.result) {
+          sessionRecord.expEarned = grantRes.result.xpGained;
+        }
+
+        const patchToApply: Record<string, any> = {
+          workoutSubView: 'picker',
+          activeSportSession: null,
+          todaySportType: input.sportType,
+          workoutHistory: [sessionRecord, ...currentState.workoutHistory],
+          quests: currentState.quests.map((q) =>
+            q.id === 'q_daily_workout' ? { ...q, progress: Math.min(q.target, q.progress + 1) } : q
+          ),
+        };
+
+        if (grantedRewards && grantRes.patch && grantRes.result) {
+          soundFX.playVictory();
+          Object.assign(patchToApply, grantRes.patch);
+          patchToApply.checkinResult = grantRes.result;
+          patchToApply.victoryModalData = null;
+        } else {
+          // Q3 (經幕僚長轉達定案): 未達標或當日第二筆：只顯示「已存紀錄」（toast 或結果條），不要開帶著空金額的 VictoryModal／STAGE CLEAR
+          patchToApply.checkinResult = null;
+          patchToApply.victoryModalData = null;
+          currentState.showToast('已存下紀錄');
+        }
+
+        set(patchToApply);
+
+        if (grantedRewards && grantRes.result) {
+          if (grantRes.result.leveledUp) {
+            currentState.showToast(`🎉 升上 Lv.${grantRes.result.levelAfter}！+${grantRes.result.xpGained} XP`);
+          } else {
+            currentState.showToast(`✅ 今日打卡成功！+${grantRes.result.xpGained} XP`);
+          }
+        }
+      },
       goToSportTypePicker: () => set({ activeTab: 'workout', workoutSubView: 'picker' }),
 
       // ================= SOCIAL ACTIONS WITH ANTI-ABUSE CAPS (V2-12, V2-16) =================

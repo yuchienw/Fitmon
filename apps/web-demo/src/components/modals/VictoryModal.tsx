@@ -8,6 +8,40 @@ export const VictoryModal: React.FC = () => {
   const data = store.victoryModalData;
   if (!data) return null;
 
+  // Q3（經幕僚長轉達定案）：
+  // 任何畫面不得出現 +0 幣/+0 EXP 零金額列；金額為 0 時隱藏；非重訓不得顯示總訓練容量/容量 kg
+  const isNonStrength = Boolean(data.sportType && data.sportType !== 'strength');
+  const showVolume = !isNonStrength && data.calcResult.totalRawVolume > 0;
+  const showExp = data.calcResult.totalExperience > 0;
+  const showCoins = data.bonusCoins > 0;
+
+  const statItems: { label: string; value: React.ReactNode; color: string }[] = [];
+  if (showVolume) {
+    statItems.push({
+      label: '總訓練容量',
+      value: `${data.calcResult.totalRawVolume.toLocaleString()}kg`,
+      color: 'text-white',
+    });
+  }
+  if (showExp) {
+    statItems.push({
+      label: '獲得經驗 EXP',
+      value: `+${data.calcResult.totalExperience}`,
+      color: 'text-emerald-400',
+    });
+  }
+  if (showCoins) {
+    statItems.push({
+      label: '結算獎金',
+      value: (
+        <span className="flex items-center justify-center gap-0.5">
+          <Coins className="w-3.5 h-3.5" />+{data.bonusCoins}
+        </span>
+      ),
+      color: 'text-amber-400',
+    });
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
       <div className="w-full max-w-sm retro-box-amber rounded-2xl p-5 space-y-4 border-2 border-amber-400 shadow-2xl animate-bounce-once">
@@ -40,34 +74,34 @@ export const VictoryModal: React.FC = () => {
         )}
 
         {/* Engine Stats Breakdown */}
-        <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div>
-              <div className="text-[10px] text-slate-400">總訓練容量</div>
-              <div className="text-sm font-mono font-black text-white mt-0.5">
-                {data.calcResult.totalRawVolume.toLocaleString()}kg
-              </div>
+        {statItems.length > 0 && (
+          <div className="bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+            <div
+              className={`grid gap-2 text-center ${
+                statItems.length === 1
+                  ? 'grid-cols-1'
+                  : statItems.length === 2
+                  ? 'grid-cols-2'
+                  : 'grid-cols-3'
+              }`}
+            >
+              {statItems.map((item, idx) => (
+                <div key={idx}>
+                  <div className="text-[10px] text-slate-400">{item.label}</div>
+                  <div className={`text-sm font-mono font-black mt-0.5 ${item.color}`}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div>
-              <div className="text-[10px] text-slate-400">獲得經驗 EXP</div>
-              <div className="text-sm font-mono font-black text-emerald-400 mt-0.5">
-                +{data.calcResult.totalExperience}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-400">結算獎金</div>
-              <div className="text-sm font-mono font-black text-amber-400 mt-0.5 flex items-center justify-center gap-0.5">
-                <Coins className="w-3.5 h-3.5" />+{data.bonusCoins}
-              </div>
-            </div>
-          </div>
 
-          {data.calcResult.isCriticalHit && (
-            <div className="text-center text-[11px] font-bold text-purple-300 bg-purple-950/50 border border-purple-500/40 rounded py-1">
-              ⚡ 觸發預釀氮泵神經暴擊！經驗與收益翻倍！
-            </div>
-          )}
-        </div>
+            {data.calcResult.isCriticalHit && (
+              <div className="text-center text-[11px] font-bold text-purple-300 bg-purple-950/50 border border-purple-500/40 rounded py-1">
+                ⚡ 觸發預釀氮泵神經暴擊！經驗與收益翻倍！
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-1">

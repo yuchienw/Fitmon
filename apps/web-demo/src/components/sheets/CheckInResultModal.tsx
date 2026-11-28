@@ -110,8 +110,8 @@ export const CheckInResultModal: React.FC = () => {
             今日打卡
           </span>
           <div className="text-2xl font-black text-[#C2410C] mt-1 font-mono flex items-center justify-center gap-2">
-            <span>+{xpGained} XP</span>
-            {result.coinsGranted !== undefined && (
+            {xpGained > 0 && <span>+{xpGained} XP</span>}
+            {result.coinsGranted !== undefined && result.coinsGranted > 0 && (
               <span className="text-base font-bold text-amber-600 font-sans">
                 +{result.coinsGranted} 🪙
               </span>

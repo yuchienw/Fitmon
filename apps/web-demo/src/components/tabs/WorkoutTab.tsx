@@ -47,6 +47,7 @@ import { WalkToRunSheet } from '../modals/WalkToRunSheet';
 import { SportTypePicker } from '../workout/SportTypePicker';
 import { SportSetupView } from '../workout/SportSetupView';
 import { SportLiveLogger } from '../workout/SportLiveLogger';
+import { SportFinishForm } from '../workout/SportFinishForm';
 
 type RoutineCategoryTab = 'favorite' | 'my_custom' | 'referenced' | 'recommended';
 
@@ -1329,6 +1330,15 @@ export const WorkoutTab: React.FC = () => {
           store.setActiveSportSession(completedDraft);
           store.setWorkoutSubView('finish');
         }}
+      />
+    );
+  }
+
+  if (store.workoutSubView === 'finish' && store.activeSportSession) {
+    return (
+      <SportFinishForm
+        draft={store.activeSportSession}
+        onCancel={() => store.setWorkoutSubView('picker')}
       />
     );
   }
