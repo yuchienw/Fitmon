@@ -103,7 +103,7 @@ describe('T4-D6: Implausible Caps & Evaluation Pure Functions', () => {
       });
       assert.equal(flaggedSwim.countsTowardCheckin, false);
       assert.equal(flaggedSwim.flagReason, 'implausible_speed');
-      assert.ok(flaggedSwim.copy?.message.includes('平均每 100 公尺 44.9 秒，比頂尖選手還快'));
+      assert.ok(flaggedSwim.copy?.message.includes('平均每 100 公尺 44.9 秒，比這項運動一般的速度快很多'));
     });
 
     test('walk 12.0 km/h is normal; walk 13.0 km/h suggests run and counts; walk 25.0 km/h still suggests; walk 25.1 / 26 km/h flagged', () => {
@@ -148,6 +148,7 @@ describe('T4-D6: Implausible Caps & Evaluation Pure Functions', () => {
       });
       assert.equal(walk25_1.countsTowardCheckin, false);
       assert.equal(walk25_1.flagReason, 'implausible_speed');
+      assert.ok(walk25_1.copy?.message.includes('平均時速 25.1 公里，比這項運動一般的速度快很多'));
       assert.equal(walk25_1.suggestSportType, null);
 
       // 26 km/h

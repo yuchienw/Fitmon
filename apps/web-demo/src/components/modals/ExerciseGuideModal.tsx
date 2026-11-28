@@ -136,6 +136,29 @@ export const ExerciseGuideModal: React.FC = () => {
             </div>
           </div>
 
+          {/* 3.5. INSTRUCTION CUES (IF PRESENT) */}
+          {exercise.instructionCues && exercise.instructionCues.length > 0 && (
+            <div className="p-3 rounded-xl bg-cyan-950/25 border border-cyan-500/40 space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-black text-cyan-300">
+                <BookOpen className="w-4 h-4 text-cyan-400" />
+                <span>教練說明要領</span>
+              </div>
+              <div className="space-y-1.5">
+                {exercise.instructionCues.map((cue, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 bg-slate-950/75 px-2.5 py-2 rounded-lg border border-slate-800/90 text-xs"
+                  >
+                    <span className="w-4 h-4 rounded-full bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 font-mono text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span className="text-slate-200 font-bold leading-relaxed">{cue}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 4. BIOMECHANICAL SAFETY CUES & COACHING TIPS */}
           <div className="p-3 rounded-xl bg-emerald-950/25 border border-emerald-500/40 space-y-2">
             <div className="flex items-center gap-1.5 text-xs font-black text-emerald-300">
